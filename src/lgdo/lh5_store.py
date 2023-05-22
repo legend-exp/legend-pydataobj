@@ -20,19 +20,19 @@ import pandas as pd
 
 from . import compression as compress
 from .compression import WaveformCodec
+from .lgdo_utils import expand_path, parse_datatype
 from .types import (
     Array,
+    ArrayOfEncodedEqualSizedArrays,
     ArrayOfEqualSizedArrays,
-    ArrayOfEncodedEqualSizedArrays, VectorOfEncodedVectors,
     FixedSizeArray,
     Scalar,
     Struct,
     Table,
+    VectorOfEncodedVectors,
     VectorOfVectors,
     WaveformTable,
 )
-
-from .lgdo_utils import expand_path, parse_datatype
 
 LGDO = Union[Array, Scalar, Struct, VectorOfVectors]
 

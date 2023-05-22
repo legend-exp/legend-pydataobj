@@ -7,8 +7,8 @@ from typing import Any
 
 import numpy as np
 
-from .lgdo import LGDO
 from ..lgdo_utils import get_element_type
+from .lgdo import LGDO
 
 log = logging.getLogger(__name__)
 

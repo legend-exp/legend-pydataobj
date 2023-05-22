@@ -8,7 +8,6 @@ from numpy import int16, int32, ubyte, uint16, uint32
 from numpy.typing import NDArray
 
 from .. import types as lgdo
-
 from .base import WaveformCodec
 
 # fmt: off

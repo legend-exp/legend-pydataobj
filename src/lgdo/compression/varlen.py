@@ -11,7 +11,6 @@ from numpy import int32, ubyte, uint32
 from numpy.typing import NDArray
 
 from .. import types as lgdo
-
 from .base import WaveformCodec
 
 log = logging.getLogger(__name__)
