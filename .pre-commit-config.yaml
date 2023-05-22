@@ -73,7 +73,7 @@ repos:
   rev: "0.6.1"
   hooks:
     - id: nbstripout
-      args: ["--strip-empty-cells",
+      args: ["--drop-empty-cells",
              "--extra-keys", "metadata.kernelspec metadata.language_info"]
 
 - repo: https://github.com/mgedmin/check-manifest
