@@ -38,12 +38,16 @@ browsed easily in python like any `HDF5 <https://www.hdfgroup.org>`_ file using
 `h5py <https://www.h5py.org>`_.
 """
 
-from .types import (
-    Array, ArrayOfEqualSizedArrays, ArrayOfEncodedEqualSizedArrays, VectorOfEncodedVectors,
-    FixedSizeArray, LGDO, Scalar, Struct, Table, VectorOfVectors, WaveformTable
-)
-from .lgdo_utils import copy
-from .lh5_store import LH5Iterator, LH5Store, load_dfs, load_nda, ls, show
+from .array import Array
+from .arrayofequalsizedarrays import ArrayOfEqualSizedArrays
+from .encoded import ArrayOfEncodedEqualSizedArrays, VectorOfEncodedVectors
+from .fixedsizearray import FixedSizeArray
+from .lgdo import LGDO
+from .scalar import Scalar
+from .struct import Struct
+from .table import Table
+from .vectorofvectors import VectorOfVectors
+from .waveform_table import WaveformTable
 
 __all__ = [
     "Array",
@@ -57,11 +61,8 @@ __all__ = [
     "VectorOfVectors",
     "VectorOfEncodedVectors",
     "WaveformTable",
-    "LH5Iterator",
-    "LH5Store",
-    "load_dfs",
-    "load_nda",
-    "ls",
-    "show",
-    "copy",
 ]
+
+import numpy as np
+
+np.set_printoptions(threshold=10)
