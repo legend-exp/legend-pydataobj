@@ -6,9 +6,9 @@ from typing import Any
 import numpy as np
 from numpy.typing import NDArray
 
+from ..lgdo_utils import get_element_type
 from .array import Array
 from .lgdo import LGDO
-from ..lgdo_utils import get_element_type
 from .scalar import Scalar
 from .vectorofvectors import VectorOfVectors
 
