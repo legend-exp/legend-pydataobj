@@ -19,7 +19,7 @@ class FixedSizeArray(Array):
     application to application.  This data type is used for optimized memory
     handling on some platforms. We are not that sophisticated so we are just
     storing this identification for LGDO validity, i.e. for now this class is
-    just an alias for :class:`~.Array`, but keeps track of the datatype name.
+    just an alias for :class:`.Array`, but keeps track of the datatype name.
     """
 
     def __init__(

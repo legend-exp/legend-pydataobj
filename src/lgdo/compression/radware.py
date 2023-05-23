@@ -22,7 +22,7 @@ class RadwareSigcompress(WaveformCodec):
 
     Examples
     --------
-    >>> from pygama.lgdo.compression import RadwareSigcompress
+    >>> from lgdo.compression import RadwareSigcompress
     >>> codec = RadwareSigcompress(codec_shift=-32768)
     """
 

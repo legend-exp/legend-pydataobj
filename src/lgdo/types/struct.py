@@ -62,7 +62,7 @@ class Struct(LGDO, dict):
         Parameters
         ----------
         name
-            name of the field to be removed
+            name of the field to be removed.
         delete
             if ``True``, delete the field object by calling :any:`del`.
         """
