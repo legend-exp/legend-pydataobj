@@ -1,6 +1,6 @@
 import numpy as np
 
-import lgdo
+import lgdo.lgdo_utils as utils
 from lgdo import Array
 
 
@@ -29,7 +29,7 @@ def test_resize():
 
 def test_copy():
     a1 = Array(np.array([1, 2, 3, 4]))
-    a2 = lgdo.copy(a1)
+    a2 = utils.copy(a1)
     assert a1 == a2
 
 
