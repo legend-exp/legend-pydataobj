@@ -1,6 +1,6 @@
 r"""Data compression utilities.
 
-This subpackage collects all *pygama* custom data compression (encoding) and
+This subpackage collects all LEGEND custom data compression (encoding) and
 decompression (decoding) algorithms.
 
 Available lossless waveform compression algorithms:
@@ -16,7 +16,7 @@ abstract class.
 :func:`~.generic.encode` and :func:`~.generic.decode` provide a high-level
 interface for encoding/decoding :class:`~.lgdo.LGDO`\ s.
 
->>> from pygama.lgdo import WaveformTable, compression
+>>> from lgdo import WaveformTable, compression
 >>> wftbl = WaveformTable(...)
 >>> enc_wft = compression.encode(wftable, RadwareSigcompress(codec_shift=-23768)
 >>> compression.decode(enc_wft) # == wftbl

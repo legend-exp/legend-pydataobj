@@ -2,11 +2,7 @@ from pathlib import Path
 
 import numpy as np
 
-from lgdo import (
-    ArrayOfEncodedEqualSizedArrays,
-    ArrayOfEqualSizedArrays,
-    LH5Store,
-)
+from lgdo import ArrayOfEncodedEqualSizedArrays, ArrayOfEqualSizedArrays, LH5Store
 from lgdo.compression.radware import (
     _get_hton_u16,
     _radware_sigcompress_decode,

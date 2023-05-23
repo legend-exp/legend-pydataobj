@@ -20,19 +20,19 @@ import pandas as pd
 
 from . import compression as compress
 from .compression import WaveformCodec
+from .lgdo_utils import expand_path, parse_datatype
 from .types import (
     Array,
+    ArrayOfEncodedEqualSizedArrays,
     ArrayOfEqualSizedArrays,
-    ArrayOfEncodedEqualSizedArrays, VectorOfEncodedVectors,
     FixedSizeArray,
     Scalar,
     Struct,
     Table,
+    VectorOfEncodedVectors,
     VectorOfVectors,
     WaveformTable,
 )
-
-from .lgdo_utils import expand_path, parse_datatype
 
 LGDO = Union[Array, Scalar, Struct, VectorOfVectors]
 
@@ -48,11 +48,11 @@ class LH5Store:
 
     Examples
     --------
-    >>> from pygama.lgdo import LH5Store
+    >>> from lgdo import LH5Store
     >>> store = LH5Store()
     >>> obj, _ = store.read_object("/geds/waveform", "file.lh5")
     >>> type(obj)
-    pygama.lgdo.waveform_table.WaveformTable
+    lgdo.waveform_table.WaveformTable
     """
 
     def __init__(self, base_path: str = "", keep_open: bool = False) -> None:
@@ -219,7 +219,7 @@ class LH5Store:
             Start location in ``obj_buf`` for read. For concatenating data to
             array-like objects.
         decompress
-            Decompress data encoded with pygama's compression routines right
+            Decompress data encoded with LGDO's compression routines right
             after reading. The option has no effect on data encoded with HDF5
             built-in filters, which is always decompressed upstream by HDF5.
 
@@ -919,7 +919,7 @@ class LH5Store:
                     del group[key]
 
             for field in obj.keys():
-                # eventually compress waveform table values with pygama's
+                # eventually compress waveform table values with LGDO's
                 # custom codecs before writing
                 # if waveformtable.values.attrs["compression"] is a string,
                 # interpret it as an HDF5 built-in filter
@@ -1245,7 +1245,7 @@ def show(
 
     Examples
     --------
-    >>> from pygama.lgdo import show
+    >>> from lgdo import show
     >>> show("file.lh5", "/geds/raw")
     /geds/raw
     ├── channel · array<1>{real}

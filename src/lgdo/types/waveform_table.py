@@ -22,7 +22,7 @@ log = logging.getLogger(__name__)
 class WaveformTable(Table):
     r"""An LGDO for storing blocks of (1D) time-series data.
 
-    A :class:`WaveformTable` is an LGDO :class:`~.lgdo.table.Table` with the 3
+    A :class:`WaveformTable` is an LGDO :class:`.Table` with the 3
     columns ``t0``, ``dt``, and ``values``:
 
     * ``t0[i]`` is a time offset (relative to a user-defined global reference)

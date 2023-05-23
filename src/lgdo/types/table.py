@@ -48,7 +48,7 @@ class Table(Struct):
         Parameters
         ----------
         size
-            sets the number of rows in the table. :class:`~.Array`\ s in
+            sets the number of rows in the table. :class:`.Array`\ s in
             `col_dict will be resized to match size if both are not ``None``.
             If `size` is left as ``None``, the number of table rows is
             determined from the length of the first array in `col_dict`. If
@@ -263,7 +263,8 @@ class Table(Struct):
             - ``expression`` is an expression string supported by
               :meth:`numexpr.evaluate` (see also `here
               <https://numexpr.readthedocs.io/projects/NumExpr3/en/latest/index.html>`_
-              for documentation). Note: because of internal limitations, reduction operations must appear the last in the stack.
+              for documentation). Note: because of internal limitations,
+              reduction operations must appear the last in the stack.
             - ``parameters`` is a dictionary of function parameters. Passed to
               :meth:`numexpr.evaluate`` as `local_dict` argument.
 

@@ -6,9 +6,9 @@ from typing import Any
 import numpy as np
 from numpy.typing import NDArray
 
+from .. import lgdo_utils as utils
 from .array import Array
 from .lgdo import LGDO
-from ..lgdo_utils import get_element_type
 from .scalar import Scalar
 from .vectorofvectors import VectorOfVectors
 
@@ -71,7 +71,7 @@ class VectorOfEncodedVectors(LGDO):
         return "array"
 
     def form_datatype(self) -> str:
-        et = get_element_type(self.encoded_data)
+        et = utils.get_element_type(self.encoded_data)
         return "array<1>{encoded_array<1>{" + et + "}}"
 
     def __len__(self) -> int:
@@ -276,7 +276,7 @@ class ArrayOfEncodedEqualSizedArrays(LGDO):
         return "array"
 
     def form_datatype(self) -> str:
-        et = get_element_type(self.encoded_data)
+        et = utils.get_element_type(self.encoded_data)
         return "array_of_encoded_equalsized_arrays<1,1>{" + et + "}"
 
     def __len__(self) -> int:

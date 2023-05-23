@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 
 import lgdo
+import lgdo.lgdo_utils as utils
 from lgdo import VectorOfVectors
 from lgdo.types import vectorofvectors as vov
 
@@ -180,7 +181,7 @@ def test_insert(lgdo_vov):
 
 
 def test_replace(lgdo_vov):
-    v = lgdo.copy(lgdo_vov)
+    v = utils.copy(lgdo_vov)
     v.replace(1, np.zeros(3))
     assert v == VectorOfVectors(
         [
@@ -192,7 +193,7 @@ def test_replace(lgdo_vov):
         ]
     )
 
-    v = lgdo.copy(lgdo_vov)
+    v = utils.copy(lgdo_vov)
     v.replace(1, np.zeros(2))
     assert v == VectorOfVectors(
         [
@@ -204,7 +205,7 @@ def test_replace(lgdo_vov):
         ]
     )
 
-    v = lgdo.copy(lgdo_vov)
+    v = utils.copy(lgdo_vov)
     v.replace(1, np.zeros(4))
     assert v == VectorOfVectors(
         [
@@ -268,4 +269,4 @@ def test_build_cl_and_explodes():
 
 
 def test_copy(lgdo_vov):
-    assert lgdo_vov == lgdo.copy(lgdo_vov)
+    assert lgdo_vov == utils.copy(lgdo_vov)
