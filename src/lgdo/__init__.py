@@ -1,10 +1,10 @@
 """
-Pygama works with "LEGEND Data Objects" (LGDO) defined in the `LEGEND data
-format specification <https://github.com/legend-exp/legend-data-format-specs>`_.
-This subpackage serves as the Python implementation of that specification. The
-general strategy for the implementation is to dress standard Python and NumPy
-objects with an ``attr`` dictionary holding LGDO metadata, plus some convenience
-functions. The basic data object classes are:
+LEGEND Data Objects (LGDO) are defined in the `LEGEND data format specification
+<https://github.com/legend-exp/legend-data-format-specs>`_.  This package
+serves as the Python implementation of that specification. The general strategy
+for the implementation is to dress standard Python and NumPy objects with an
+``attr`` dictionary holding LGDO metadata, plus some convenience functions. The
+basic data object classes are:
 
 * :class:`.LGDO`: abstract base class for all LGDOs
 * :class:`.Scalar`: typed Python scalar. Access data via the :attr:`value`
