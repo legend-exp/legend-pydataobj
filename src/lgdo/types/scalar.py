@@ -7,7 +7,7 @@ from typing import Any
 
 import numpy as np
 
-from ..lgdo_utils import get_element_type
+from .. import lgdo_utils as utils
 from .lgdo import LGDO
 
 log = logging.getLogger(__name__)
@@ -37,7 +37,7 @@ class Scalar(LGDO):
         if hasattr(self.value, "datatype_name"):
             return self.value.datatype_name
         else:
-            return get_element_type(self.value)
+            return utils.get_element_type(self.value)
 
     def form_datatype(self) -> str:
         return self.datatype_name()
