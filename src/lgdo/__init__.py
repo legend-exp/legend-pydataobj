@@ -38,6 +38,7 @@ browsed easily in python like any `HDF5 <https://www.hdfgroup.org>`_ file using
 `h5py <https://www.h5py.org>`_.
 """
 
+from ._version import version as __version__
 from .lh5_store import LH5Iterator, LH5Store, load_dfs, load_nda, ls, show
 from .types import (
     LGDO,
@@ -72,4 +73,5 @@ __all__ = [
     "ls",
     "show",
     "copy",
+    "__version__",
 ]

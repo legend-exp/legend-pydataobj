@@ -1287,9 +1287,11 @@ def show(
         if dtype == "no datatype" and isinstance(val, h5py.Group):
             dtype = "HDF5 group"
 
-        attrs_d = dict(val.attrs)
-        attrs_d.pop("datatype", "")
-        attrs = "── " + str(attrs_d) if attrs_d else ""
+        _attrs = ""
+        if attrs:
+            attrs_d = dict(val.attrs)
+            attrs_d.pop("datatype", "")
+            _attrs = "── " + str(attrs_d) if attrs_d else ""
 
         # is this the last key?
         killme = False
@@ -1301,11 +1303,16 @@ def show(
         else:
             char = "├──"
 
-        print(f"{indent}{char} \033[1m{key}\033[0m · {dtype} {attrs}")  # noqa: T201
+        print(f"{indent}{char} \033[1m{key}\033[0m · {dtype} {_attrs}")  # noqa: T201
 
         # if it's a group, call this function recursively
         if isinstance(val, h5py.Group):
-            show(val, indent=indent + ("    " if killme else "│   "), header=False)
+            show(
+                val,
+                indent=indent + ("    " if killme else "│   "),
+                header=False,
+                attrs=attrs,
+            )
 
         # break or move to next key
         if killme:
