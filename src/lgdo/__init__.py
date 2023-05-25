@@ -72,6 +72,5 @@ __all__ = [
     "load_nda",
     "ls",
     "show",
-    "copy",
     "__version__",
 ]
