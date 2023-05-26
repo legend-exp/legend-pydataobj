@@ -55,6 +55,8 @@ intersphinx_mapping = {
     "pandas": ("https://pandas.pydata.org/docs", None),
     "h5py": ("https://docs.h5py.org/en/stable", None),
     "pint": ("https://pint.readthedocs.io/en/stable", None),
+    "dspeed": ("https://dspeed.readthedocs.io/en/stable", None),
+    "daq2lh5": ("https://legend-daq2lh5.readthedocs.io/en/stable", None),
 }  # add new intersphinx mappings here
 
 # sphinx-autodoc
