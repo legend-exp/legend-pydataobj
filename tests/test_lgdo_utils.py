@@ -3,7 +3,7 @@ import os
 import numpy as np
 import pytest
 
-import pygama.lgdo.lgdo_utils as lgdo_utils
+import lgdo.lgdo_utils as lgdo_utils
 
 
 def test_get_element_type():

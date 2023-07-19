@@ -1,7 +1,7 @@
 import numpy as np
 
-from pygama.lgdo import ArrayOfEncodedEqualSizedArrays, ArrayOfEqualSizedArrays
-from pygama.lgdo.compression import varlen
+from lgdo import ArrayOfEncodedEqualSizedArrays, ArrayOfEqualSizedArrays
+from lgdo.compression import varlen
 
 
 def _to_bin(array):

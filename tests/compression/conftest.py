@@ -1,6 +1,6 @@
 import pytest
 
-from pygama.lgdo import LH5Store
+from lgdo import LH5Store
 
 
 @pytest.fixture()

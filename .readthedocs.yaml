@@ -1,0 +1,32 @@
+version: 2
+
+sphinx:
+  configuration: docs/source/conf.py
+
+formats:
+  - epub
+  - pdf
+
+build:
+  os: "ubuntu-22.04"
+  apt_packages:
+    - pandoc
+  tools:
+    python: "3.10"
+  jobs:
+    pre_build:
+      - rm -rf docs/source/api
+      - sphinx-apidoc
+        --private
+        --module-first
+        --force
+        --output-dir docs/source/api
+        src/lgdo
+        src/lgdo/_version.py
+
+python:
+  install:
+    - method: pip
+      path: .
+      extra_requirements:
+        - all

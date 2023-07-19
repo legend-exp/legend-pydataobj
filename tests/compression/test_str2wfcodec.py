@@ -1,7 +1,7 @@
 import pytest
 
-from pygama.lgdo.compression import RadwareSigcompress
-from pygama.lgdo.compression.utils import str2wfcodec
+from lgdo.compression import RadwareSigcompress
+from lgdo.compression.utils import str2wfcodec
 
 
 def test_str2wfcodec():

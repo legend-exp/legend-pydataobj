@@ -8,7 +8,7 @@ import string
 
 import numpy as np
 
-from .. import lgdo
+from . import types as lgdo
 
 log = logging.getLogger(__name__)
 
@@ -101,7 +101,7 @@ def parse_datatype(datatype: str) -> tuple[str, tuple[int, ...], str | list[str]
         the datatype name dims if not ``None``, a tuple of dimensions for the
         LGDO. Note this is not the same as the NumPy shape of the underlying
         data object. See the LGDO specification for more information. Also see
-        :class:`.ArrayOfEqualSizedArrays` and
+        :class:`~.types.ArrayOfEqualSizedArrays` and
         :meth:`.lh5_store.LH5Store.read_object` for example code elements for
         numeric objects, the element type for struct-like  objects, the list of
         fields in the struct.

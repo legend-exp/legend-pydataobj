@@ -19,17 +19,20 @@ import numpy as np
 import pandas as pd
 
 from . import compression as compress
-from .array import Array
-from .arrayofequalsizedarrays import ArrayOfEqualSizedArrays
 from .compression import WaveformCodec
-from .encoded import ArrayOfEncodedEqualSizedArrays, VectorOfEncodedVectors
-from .fixedsizearray import FixedSizeArray
 from .lgdo_utils import expand_path, parse_datatype
-from .scalar import Scalar
-from .struct import Struct
-from .table import Table
-from .vectorofvectors import VectorOfVectors
-from .waveform_table import WaveformTable
+from .types import (
+    Array,
+    ArrayOfEncodedEqualSizedArrays,
+    ArrayOfEqualSizedArrays,
+    FixedSizeArray,
+    Scalar,
+    Struct,
+    Table,
+    VectorOfEncodedVectors,
+    VectorOfVectors,
+    WaveformTable,
+)
 
 LGDO = Union[Array, Scalar, Struct, VectorOfVectors]
 
@@ -45,11 +48,11 @@ class LH5Store:
 
     Examples
     --------
-    >>> from pygama.lgdo import LH5Store
+    >>> from lgdo import LH5Store
     >>> store = LH5Store()
     >>> obj, _ = store.read_object("/geds/waveform", "file.lh5")
     >>> type(obj)
-    pygama.lgdo.waveform_table.WaveformTable
+    lgdo.waveform_table.WaveformTable
     """
 
     def __init__(self, base_path: str = "", keep_open: bool = False) -> None:
@@ -216,7 +219,7 @@ class LH5Store:
             Start location in ``obj_buf`` for read. For concatenating data to
             array-like objects.
         decompress
-            Decompress data encoded with pygama's compression routines right
+            Decompress data encoded with LGDO's compression routines right
             after reading. The option has no effect on data encoded with HDF5
             built-in filters, which is always decompressed upstream by HDF5.
 
@@ -916,7 +919,7 @@ class LH5Store:
                     del group[key]
 
             for field in obj.keys():
-                # eventually compress waveform table values with pygama's
+                # eventually compress waveform table values with LGDO's
                 # custom codecs before writing
                 # if waveformtable.values.attrs["compression"] is a string,
                 # interpret it as an HDF5 built-in filter
@@ -1242,7 +1245,7 @@ def show(
 
     Examples
     --------
-    >>> from pygama.lgdo import show
+    >>> from lgdo import show
     >>> show("file.lh5", "/geds/raw")
     /geds/raw
     ├── channel · array<1>{real}
@@ -1284,9 +1287,11 @@ def show(
         if dtype == "no datatype" and isinstance(val, h5py.Group):
             dtype = "HDF5 group"
 
-        attrs_d = dict(val.attrs)
-        attrs_d.pop("datatype", "")
-        attrs = "── " + str(attrs_d) if attrs_d else ""
+        _attrs = ""
+        if attrs:
+            attrs_d = dict(val.attrs)
+            attrs_d.pop("datatype", "")
+            _attrs = "── " + str(attrs_d) if attrs_d else ""
 
         # is this the last key?
         killme = False
@@ -1298,11 +1303,16 @@ def show(
         else:
             char = "├──"
 
-        print(f"{indent}{char} \033[1m{key}\033[0m · {dtype} {attrs}")  # noqa: T201
+        print(f"{indent}{char} \033[1m{key}\033[0m · {dtype} {_attrs}")  # noqa: T201
 
         # if it's a group, call this function recursively
         if isinstance(val, h5py.Group):
-            show(val, indent=indent + ("    " if killme else "│   "), header=False)
+            show(
+                val,
+                indent=indent + ("    " if killme else "│   "),
+                header=False,
+                attrs=attrs,
+            )
 
         # break or move to next key
         if killme:

@@ -1,10 +1,10 @@
 """
-Pygama works with "LEGEND Data Objects" (LGDO) defined in the `LEGEND data
-format specification <https://github.com/legend-exp/legend-data-format-specs>`_.
-This subpackage serves as the Python implementation of that specification. The
-general strategy for the implementation is to dress standard Python and NumPy
-objects with an ``attr`` dictionary holding LGDO metadata, plus some convenience
-functions. The basic data object classes are:
+LEGEND Data Objects (LGDO) are defined in the `LEGEND data format specification
+<https://github.com/legend-exp/legend-data-format-specs>`_.  This package
+serves as the Python implementation of that specification. The general strategy
+for the implementation is to dress standard Python and NumPy objects with an
+``attr`` dictionary holding LGDO metadata, plus some convenience functions. The
+basic data object classes are:
 
 * :class:`.LGDO`: abstract base class for all LGDOs
 * :class:`.Scalar`: typed Python scalar. Access data via the :attr:`value`
@@ -38,24 +38,20 @@ browsed easily in python like any `HDF5 <https://www.hdfgroup.org>`_ file using
 `h5py <https://www.h5py.org>`_.
 """
 
-from pygama.lgdo.waveform_table import WaveformTable
-
-from .array import Array
-from .arrayofequalsizedarrays import ArrayOfEqualSizedArrays
-from .encoded import ArrayOfEncodedEqualSizedArrays, VectorOfEncodedVectors
-from .fixedsizearray import FixedSizeArray
-from .lgdo import LGDO
-from .lgdo_utils import copy
+from ._version import version as __version__
 from .lh5_store import LH5Iterator, LH5Store, load_dfs, load_nda, ls, show
-from .scalar import Scalar
-from .struct import Struct
-from .table import Table
-from .vectorofvectors import (
+from .types import (
+    LGDO,
+    Array,
+    ArrayOfEncodedEqualSizedArrays,
+    ArrayOfEqualSizedArrays,
+    FixedSizeArray,
+    Scalar,
+    Struct,
+    Table,
+    VectorOfEncodedVectors,
     VectorOfVectors,
-    build_cl,
-    explode,
-    explode_arrays,
-    explode_cl,
+    WaveformTable,
 )
 
 __all__ = [
@@ -76,13 +72,5 @@ __all__ = [
     "load_nda",
     "ls",
     "show",
-    "build_cl",
-    "explode",
-    "explode_arrays",
-    "explode_cl",
-    "copy",
+    "__version__",
 ]
-
-import numpy as np
-
-np.set_printoptions(threshold=10)

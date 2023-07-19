@@ -2,12 +2,8 @@ from pathlib import Path
 
 import numpy as np
 
-from pygama.lgdo import (
-    ArrayOfEncodedEqualSizedArrays,
-    ArrayOfEqualSizedArrays,
-    LH5Store,
-)
-from pygama.lgdo.compression.radware import (
+from lgdo import ArrayOfEncodedEqualSizedArrays, ArrayOfEqualSizedArrays, LH5Store
+from lgdo.compression.radware import (
     _get_hton_u16,
     _radware_sigcompress_decode,
     _radware_sigcompress_encode,

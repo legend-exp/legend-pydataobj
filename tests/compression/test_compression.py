@@ -1,6 +1,6 @@
-from pygama.lgdo import ArrayOfEncodedEqualSizedArrays, compression
-from pygama.lgdo.compression import RadwareSigcompress
-from pygama.lgdo.compression.generic import _is_codec
+from lgdo import ArrayOfEncodedEqualSizedArrays, compression
+from lgdo.compression import RadwareSigcompress
+from lgdo.compression.generic import _is_codec
 
 
 def test_encode_decode_array(wftable):

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 
-from .. import lgdo
+from .. import types as lgdo
 from . import radware, varlen
 from .base import WaveformCodec
 
