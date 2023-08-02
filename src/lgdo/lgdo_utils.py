@@ -180,7 +180,7 @@ def expand_path(
     _path = expand_vars(path, substitute)
 
     # then expand wildcards
-    paths = glob.glob(os.path.expanduser(_path))
+    paths = sorted(glob.glob(os.path.expanduser(_path)))
 
     if base_path is not None and base_path != "":
         paths = [os.path.relpath(p, base_path) for p in paths]
