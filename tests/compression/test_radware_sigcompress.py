@@ -43,15 +43,6 @@ def test_core_vs_original(wftable):
     wf = wftable.values.nda[0]  # uint16
 
     # get expected output from original C code (give shift)
-    enc_wf_c = np.empty(0, dtype=np.uint16)
-    nsig_c = None
-    shift = None
-    with open(config_dir / "LDQTA_r117_20200110T105115Z_cal_geds_raw-0.dat") as f:
-        nsig_c = int(f.readline())  # first number in the file
-        shift = int(f.readline())  # second number in the file
-        for line in f.readlines():  # then the waveform
-            enc_wf_c = np.append(enc_wf_c, np.uint16(line))
-
     (nsig_c, shift, enc_wf_c) = read_sigcompress_c_output(
         config_dir / "LDQTA_r117_20200110T105115Z_cal_geds_raw-0.dat"
     )
