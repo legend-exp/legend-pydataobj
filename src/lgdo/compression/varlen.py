@@ -41,8 +41,9 @@ def encode(
     If `sig_in` is a NumPy array, no resizing of `sig_out` is performed. Not
     even of the internally allocated one.
 
-    Because of the current implementation, providing a pre-allocated
-    :class:`.VectorOfEncodedVectors` as `sig_out` is not possible.
+    Because of the current (hardware vectorized) implementation, providing a
+    pre-allocated :class:`.VectorOfEncodedVectors` as `sig_out` is not
+    possible.
 
     Parameters
     ----------
@@ -142,8 +143,10 @@ def encode(
 
 
 def decode(
-    sig_in: (NDArray[ubyte], NDArray[uint32]) | lgdo.VectorOfEncodedVectors,
-    sig_out: NDArray | lgdo.VectorOfVectors | lgdo.ArrayOfEqualSizedArrays = None,
+    sig_in: (NDArray[ubyte], NDArray[uint32])
+    | lgdo.VectorOfEncodedVectors
+    | lgdo.ArrayOfEncodedEqualSizedArrays,
+    sig_out: NDArray | lgdo.ArrayOfEqualSizedArrays = None,
 ) -> NDArray | lgdo.VectorOfVectors | lgdo.ArrayOfEqualSizedArrays:
     """Deompress digital signal(s) with a variable-length encoding of its derivative.
 
@@ -159,8 +162,8 @@ def decode(
     :class:`.ArrayOfEqualSizedArrays` `sig_out` has instead always the correct
     size.
 
-    Because of the current implementation, providing a pre-allocated
-    :class:`.VectorOfVectors` as `sig_out` is not possible.
+    Because of the current (hardware vectorized) implementation, providing a
+    pre-allocated :class:`.VectorOfVectors` as `sig_out` is not possible.
 
     Parameters
     ----------
