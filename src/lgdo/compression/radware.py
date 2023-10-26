@@ -55,6 +55,15 @@ def encode(
 
     Note
     ----
+    If `sig_in` is a NumPy array, no resizing of `sig_out` is performed. Not
+    even of the internally allocated one.
+
+    Because of the current (hardware vectorized) implementation, providing a
+    pre-allocated :class:`.VectorOfEncodedVectors` or
+    :class:`.ArrayOfEncodedEqualSizedArrays` as `sig_out` is not possible.
+
+    Note
+    ----
     The compression algorithm internally interprets the input waveform values as
     16-bit integers. Make sure that your signal can be safely cast to such a
     numeric type. If not, you may want to apply a `shift` to the waveform.
@@ -71,9 +80,12 @@ def encode(
 
     Returns
     -------
-    sig_out
+    sig_out, nbytes | LGDO
         given pre-allocated `sig_out` structure or new structure of unsigned
-        8-bit integers.
+        8-bit integers, plus the number of bytes (length) of the encoded
+        signal. If `sig_in` is an :class:`.LGDO`, only a newly allocated
+        :class:`.VectorOfEncodedVectors` or
+        :class:`.ArrayOfEncodedEqualSizedArrays` is returned.
 
     See Also
     --------
@@ -173,10 +185,23 @@ def decode(
     Wraps :func:`._radware_sigcompress_decode` and adds support for decoding
     LGDOs. Resizes the decoded signals to their actual length.
 
+    Note
+    ----
+    If `sig_in` is a NumPy array, no resizing (along the last dimension) of
+    `sig_out` to its actual length is performed. Not even of the internally
+    allocated one. If a pre-allocated :class:`.ArrayOfEqualSizedArrays` is
+    provided, it won't be resized too. The internally allocated
+    :class:`.ArrayOfEqualSizedArrays` `sig_out` has instead always the correct
+    size.
+
+    Because of the current (hardware vectorized) implementation, providing a
+    pre-allocated :class:`.VectorOfVectors` as `sig_out` is not possible.
+
     Parameters
     ----------
     sig_in
-        array(s) holding the input, compressed signal(s).
+        array(s) holding the input, compressed signal(s). Output of
+        :func:`.encode`.
     sig_out
         pre-allocated array(s) for the decompressed signal(s).  If not
         provided, will allocate a 32-bit integer array(s) structure.
@@ -186,8 +211,9 @@ def decode(
 
     Returns
     -------
-    sig_out
-        given pre-allocated structure or new structure of 32-bit integers.
+    sig_out, nbytes | LGDO
+        given pre-allocated structure or new structure of 32-bit integers, plus
+        the number of bytes (length) of the decoded signal.
 
     See Also
     --------
@@ -364,7 +390,7 @@ def _radware_sigcompress_encode(
     - Store encoded, :class:`numpy.uint16` signal as an array of bytes
       (:class:`numpy.ubyte`), in big-endian ordering.
     - Declare mask globally to avoid extra memory allocation.
-    - Apply just-in-time compilation with Numba.
+    - Enable hardware-vectorization with Numba (:func:`numba.guvectorize`).
     - Add a couple of missing array boundary checks.
 
     .. [1] `radware-sigcompress source code
@@ -380,6 +406,10 @@ def _radware_sigcompress_encode(
     sig_out
         pre-allocated array for the unsigned 8-bit encoded signal. In the
         original C code, an array of unsigned 16-bit integers was expected.
+    shift
+        value to be added to `sig_in` before compression.
+    siglen
+        array that will hold the lengths of the compressed signals.
 
     Returns
     -------
@@ -571,6 +601,9 @@ def _radware_sigcompress_decode(
     sig_out
         pre-allocated array for the decompressed signal. In the original code,
         an array of 16-bit integers was expected.
+    shift
+        the value the original signal(s) was shifted before compression.  The
+        value is *subtracted* from samples in `sig_out` right after decoding.
 
     Returns
     -------
