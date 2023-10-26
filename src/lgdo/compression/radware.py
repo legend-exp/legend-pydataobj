@@ -166,6 +166,8 @@ def _get_hton_u16_ndim(a: NDArray[ubyte], i: int) -> uint16:
     The first two most significant bytes of the values must be stored
     contiguously in `a` with big-endian order.
     """
+    if a.ndim == 1:
+        return _get_hton_u16(a, i)
     i_1 = i * 2
     i_2 = i_1 + 1
     return a[..., i_1].astype("uint16") << 8 | a[..., i_2]
@@ -246,7 +248,9 @@ def decode(
         # convert vector of vectors to array of equal sized arrays
         # can now decode on the 2D matrix together with number of bytes to read per row
         _, siglen = decode(
-            (sig_in.encoded_data.to_aoesa(preserve_dtype=True).nda, nbytes), sig_out.nda
+            (sig_in.encoded_data.to_aoesa(preserve_dtype=True).nda, nbytes),
+            sig_out.nda,
+            shift=shift,
         )
 
         # sanity check
@@ -270,7 +274,7 @@ def decode(
         # convert vector of vectors to array of equal sized arrays
         # can now decode on the 2D matrix together with number of bytes to read per row
         sig_out, siglen = decode(
-            (sig_in.encoded_data.to_aoesa(preserve_dtype=True).nda, nbytes)
+            (sig_in.encoded_data.to_aoesa(preserve_dtype=True).nda, nbytes), shift=shift
         )
 
         # sanity check
