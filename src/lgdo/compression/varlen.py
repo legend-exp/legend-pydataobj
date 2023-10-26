@@ -30,7 +30,11 @@ class ULEB128ZigZagDiff(WaveformCodec):
 def encode(
     sig_in: NDArray | lgdo.VectorOfVectors | lgdo.ArrayOfEqualSizedArrays,
     sig_out: NDArray[ubyte] = None,
-) -> (NDArray[ubyte], NDArray[uint32]) | lgdo.VectorOfEncodedVectors:
+) -> (
+    (NDArray[ubyte], NDArray[uint32])
+    | lgdo.VectorOfEncodedVectors
+    | lgdo.ArrayOfEncodedEqualSizedArrays
+):
     """Compress digital signal(s) with a variable-length encoding of its derivative.
 
     Wraps :func:`uleb128_zigzag_diff_array_encode` and adds support for encoding
@@ -41,8 +45,9 @@ def encode(
     If `sig_in` is a NumPy array, no resizing of `sig_out` is performed. Not
     even of the internally allocated one.
 
-    Because of the current implementation, providing a pre-allocated
-    :class:`.VectorOfEncodedVectors` as `sig_out` is not possible.
+    Because of the current (hardware vectorized) implementation, providing a
+    pre-allocated :class:`.VectorOfEncodedVectors` or
+    :class:`.ArrayOfEncodedEqualSizedArrays` as `sig_out` is not possible.
 
     Parameters
     ----------
@@ -54,11 +59,12 @@ def encode(
 
     Returns
     -------
-    sig_out, nbytes
+    sig_out, nbytes | LGDO
         given pre-allocated `sig_out` structure or new structure of unsigned
         8-bit integers, plus the number of bytes (length) of the encoded
         signal. If `sig_in` is an :class:`.LGDO`, only a newly allocated
-        :class:`.VectorOfEncodedVectors` is returned.
+        :class:`.VectorOfEncodedVectors` or
+        :class:`.ArrayOfEncodedEqualSizedArrays` is returned.
 
     See Also
     --------
@@ -142,9 +148,11 @@ def encode(
 
 
 def decode(
-    sig_in: (NDArray[ubyte], NDArray[uint32]) | lgdo.VectorOfEncodedVectors,
-    sig_out: NDArray | lgdo.VectorOfVectors | lgdo.ArrayOfEqualSizedArrays = None,
-) -> NDArray | lgdo.VectorOfVectors | lgdo.ArrayOfEqualSizedArrays:
+    sig_in: (NDArray[ubyte], NDArray[uint32])
+    | lgdo.VectorOfEncodedVectors
+    | lgdo.ArrayOfEncodedEqualSizedArrays,
+    sig_out: NDArray | lgdo.ArrayOfEqualSizedArrays = None,
+) -> (NDArray, NDArray[uint32]) | lgdo.VectorOfVectors | lgdo.ArrayOfEqualSizedArrays:
     """Deompress digital signal(s) with a variable-length encoding of its derivative.
 
     Wraps :func:`uleb128_zigzag_diff_array_decode` and adds support for decoding
@@ -159,8 +167,8 @@ def decode(
     :class:`.ArrayOfEqualSizedArrays` `sig_out` has instead always the correct
     size.
 
-    Because of the current implementation, providing a pre-allocated
-    :class:`.VectorOfVectors` as `sig_out` is not possible.
+    Because of the current (hardware vectorized) implementation, providing a
+    pre-allocated :class:`.VectorOfVectors` as `sig_out` is not possible.
 
     Parameters
     ----------
@@ -173,8 +181,9 @@ def decode(
 
     Returns
     -------
-    sig_out
-        given pre-allocated structure or new structure of 32-bit integers.
+    sig_out, nbytes | LGDO
+        given pre-allocated structure or new structure of 32-bit integers, plus
+        the number of bytes (length) of the decoded signal.
 
     See Also
     --------

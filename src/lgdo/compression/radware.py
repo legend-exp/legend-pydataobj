@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 
 import numba
@@ -9,6 +10,8 @@ from numpy.typing import NDArray
 
 from .. import types as lgdo
 from .base import WaveformCodec
+
+log = logging.getLogger(__name__)
 
 # fmt: off
 _radware_sigcompress_mask = uint16([0, 1, 3, 7, 15, 31, 63, 127, 255, 511, 1023,
@@ -38,15 +41,26 @@ class RadwareSigcompress(WaveformCodec):
 
 def encode(
     sig_in: NDArray | lgdo.VectorOfVectors | lgdo.ArrayOfEqualSizedArrays,
-    sig_out: NDArray[ubyte]
-    | lgdo.VectorOfEncodedVectors
-    | lgdo.ArrayOfEncodedEqualSizedArrays = None,
+    sig_out: NDArray[ubyte] = None,
     shift: int32 = 0,
-) -> NDArray[ubyte] | lgdo.VectorOfEncodedVectors:
+) -> (
+    (NDArray[ubyte], NDArray[uint32])
+    | lgdo.VectorOfEncodedVectors
+    | lgdo.ArrayOfEncodedEqualSizedArrays
+):
     """Compress digital signal(s) with `radware-sigcompress`.
 
     Wraps :func:`._radware_sigcompress_encode` and adds support for encoding
     LGDO arrays. Resizes the encoded array to its actual length.
+
+    Note
+    ----
+    If `sig_in` is a NumPy array, no resizing of `sig_out` is performed. Not
+    even of the internally allocated one.
+
+    Because of the current (hardware vectorized) implementation, providing a
+    pre-allocated :class:`.VectorOfEncodedVectors` or
+    :class:`.ArrayOfEncodedEqualSizedArrays` as `sig_out` is not possible.
 
     Note
     ----
@@ -66,99 +80,128 @@ def encode(
 
     Returns
     -------
-    sig_out
+    sig_out, nbytes | LGDO
         given pre-allocated `sig_out` structure or new structure of unsigned
-        8-bit integers.
+        8-bit integers, plus the number of bytes (length) of the encoded
+        signal. If `sig_in` is an :class:`.LGDO`, only a newly allocated
+        :class:`.VectorOfEncodedVectors` or
+        :class:`.ArrayOfEncodedEqualSizedArrays` is returned.
 
     See Also
     --------
     ._radware_sigcompress_encode
     """
-    # the encoded signal is an array of bytes -> twice as long as a uint16
-    # array
-    max_out_len = 2 * len(sig_in)
-    if isinstance(sig_in, np.ndarray) and sig_in.ndim == 1:
+    if isinstance(sig_in, np.ndarray):
+        s = sig_in.shape
         if len(sig_in) == 0:
-            return sig_in
+            return np.empty(s[:-1] + (0,), dtype=ubyte), np.empty(0, dtype=uint32)
 
-        if not sig_out:
-            # pre-allocate ubyte (uint8) array
-            sig_out = np.empty(max_out_len, dtype=ubyte)
+        if sig_out is None:
+            # the encoded signal is an array of bytes
+            # -> twice as long as a uint16
+            # pre-allocate ubyte (uint8) array, expand last dimension
+            sig_out = np.empty(s[:-1] + (s[-1] * 2,), dtype=ubyte)
 
         if sig_out.dtype != ubyte:
             raise ValueError("sig_out must be of type ubyte")
 
-        outlen = _radware_sigcompress_encode(sig_in, sig_out, shift=shift)
+        # nbytes has one dimension less (the last one)
+        nbytes = np.empty(s[:-1], dtype=uint32)
+        # shift too, but let the user specify one value for all waveforms
+        # and give it the right shape
+        if not hasattr(shift, "__len__"):
+            shift = np.full(s[:-1], shift, dtype=int32)
 
-        # resize (down) the encoded signal to its actual length
-        # TODO: really even if user supplied? Maybe not
-        if outlen < max_out_len:
-            sig_out.resize(outlen, refcheck=True)
+        _radware_sigcompress_encode(
+            sig_in, sig_out, shift, nbytes, _radware_sigcompress_mask
+        )
 
-    elif isinstance(sig_in, lgdo.ArrayOfEqualSizedArrays):
-        if not sig_out:
-            # pre-allocate output structure
-            # use maximum length possible
-            sig_out = lgdo.ArrayOfEncodedEqualSizedArrays(
-                encoded_data=lgdo.VectorOfVectors(
-                    shape_guess=(len(sig_in), 2 * sig_in.nda.shape[1]), dtype=ubyte
-                ),
-                decoded_size=sig_in.nda.shape[1],
-            )
-        elif not isinstance(sig_out, lgdo.ArrayOfEncodedEqualSizedArrays):
-            raise ValueError("sig_out must be an ArrayOfEncodedEqualSizedArrays")
-
-        # use unsafe set_vector to fill pre-allocated memory
-        for i, wf in enumerate(sig_in):
-            sig_out.encoded_data._set_vector_unsafe(i, encode(wf, shift=shift))
-
-        # resize down flattened data array
-        # TODO: really even if user supplied? Maybe not
-        sig_out.resize(len(sig_in))
+        # return without resizing
+        return sig_out, nbytes
 
     elif isinstance(sig_in, lgdo.VectorOfVectors):
-        if not sig_out:
-            max_out_len = 2 * len(sig_in.flattened_data) / len(sig_in.cumulative_length)
-            sig_out = lgdo.VectorOfEncodedVectors(
-                encoded_data=lgdo.VectorOfVectors(
-                    shape_guess=(len(sig_in), max_out_len), dtype=ubyte
-                ),
+        if sig_out:
+            log.warning(
+                "a pre-allocated VectorOfEncodedVectors was given "
+                "to hold an encoded ArrayOfEqualSizedArrays. "
+                "This is not supported at the moment, so a new one "
+                "will be allocated to replace it"
             )
-        elif not isinstance(sig_out, lgdo.VectorOfEncodedVectors):
-            raise ValueError("sig_out must be a VectorOfEncodedVectors")
+        # convert VectorOfVectors to ArrayOfEqualSizedArrays so it can be
+        # directly passed to the low-level encoding routine
+        sig_out_nda, nbytes = encode(sig_in.to_aoesa(), shift=shift)
 
-        # use unsafe set_vector to fill pre-allocated memory
-        # should be fast enough
-        for i, wf in enumerate(sig_in):
-            sig_out.encoded_data._set_vector_unsafe(i, encode(wf, shift=shift))
-            sig_out.decoded_size[i] = len(wf)
+        # build the encoded LGDO
+        encoded_data = lgdo.ArrayOfEqualSizedArrays(nda=sig_out_nda).to_vov(
+            cumulative_length=np.cumsum(nbytes, dtype=uint32)
+        )
+        # decoded_size is an array, compute it by diff'ing the original VOV
+        decoded_size = np.diff(sig_in.cumulative_length, prepend=uint32(0))
+
+        sig_out = lgdo.VectorOfEncodedVectors(encoded_data, decoded_size)
+
+        return sig_out
+
+    elif isinstance(sig_in, lgdo.ArrayOfEqualSizedArrays):
+        if sig_out:
+            log.warning(
+                "a pre-allocated ArrayOfEncodedEqualSizedArrays was given "
+                "to hold an encoded ArrayOfEqualSizedArrays. "
+                "This is not supported at the moment, so a new one "
+                "will be allocated to replace it"
+            )
+
+        # encode the internal numpy array
+        sig_out_nda, nbytes = encode(sig_in.nda, shift=shift)
+
+        # build the encoded LGDO
+        encoded_data = lgdo.ArrayOfEqualSizedArrays(nda=sig_out_nda).to_vov(
+            cumulative_length=np.cumsum(nbytes, dtype=uint32)
+        )
+        sig_out = lgdo.ArrayOfEncodedEqualSizedArrays(
+            encoded_data, decoded_size=sig_in.nda.shape[1]
+        )
+
+        return sig_out
+
+    elif isinstance(sig_in, lgdo.Array):
+        # encode the internal numpy array
+        sig_out_nda, nbytes = encode(sig_in.nda, sig_out, shift=shift)
+        return lgdo.Array(sig_out_nda), nbytes
 
     else:
         raise ValueError(f"unsupported input signal type ({type(sig_in)})")
-
-        # resize down flattened data array
-        # TODO: really even if user supplied? Maybe not
-        sig_out.resize(len(sig_in))
-
-    return sig_out
 
 
 def decode(
     sig_in: NDArray[ubyte]
     | lgdo.VectorOfEncodedVectors
     | lgdo.ArrayOfEncodedEqualSizedArrays,
-    sig_out: NDArray | lgdo.VectorOfVectors | lgdo.ArrayOfEqualSizedArrays = None,
+    sig_out: NDArray | lgdo.ArrayOfEqualSizedArrays = None,
     shift: int32 = 0,
-) -> NDArray | lgdo.VectorOfVectors | lgdo.ArrayOfEqualSizedArrays:
+) -> (NDArray, NDArray[uint32]) | lgdo.VectorOfVectors | lgdo.ArrayOfEqualSizedArrays:
     """Decompress digital signal(s) with `radware-sigcompress`.
 
     Wraps :func:`._radware_sigcompress_decode` and adds support for decoding
     LGDOs. Resizes the decoded signals to their actual length.
 
+    Note
+    ----
+    If `sig_in` is a NumPy array, no resizing (along the last dimension) of
+    `sig_out` to its actual length is performed. Not even of the internally
+    allocated one. If a pre-allocated :class:`.ArrayOfEqualSizedArrays` is
+    provided, it won't be resized too. The internally allocated
+    :class:`.ArrayOfEqualSizedArrays` `sig_out` has instead always the correct
+    size.
+
+    Because of the current (hardware vectorized) implementation, providing a
+    pre-allocated :class:`.VectorOfVectors` as `sig_out` is not possible.
+
     Parameters
     ----------
     sig_in
-        array(s) holding the input, compressed signal(s).
+        array(s) holding the input, compressed signal(s). Output of
+        :func:`.encode`.
     sig_out
         pre-allocated array(s) for the decompressed signal(s).  If not
         provided, will allocate a 32-bit integer array(s) structure.
@@ -168,59 +211,94 @@ def decode(
 
     Returns
     -------
-    sig_out
-        given pre-allocated structure or new structure of 32-bit integers.
+    sig_out, nbytes | LGDO
+        given pre-allocated structure or new structure of 32-bit integers, plus
+        the number of bytes (length) of the decoded signal.
 
     See Also
     --------
     ._radware_sigcompress_decode
     """
-    if isinstance(sig_in, np.ndarray) and sig_in.ndim == 1 and sig_in.dtype == ubyte:
-        if len(sig_in) == 0:
-            return sig_in
+    # expect the output of encode()
+    if isinstance(sig_in, tuple):
+        s = sig_in[0].shape
+        if sig_out is None:
+            # allocate output array with lasd dim as large as the longest
+            # uncompressed wf
+            maxs = np.max(_get_hton_u16(sig_in[0], 0))
+            sig_out = np.empty(s[:-1] + (maxs,), dtype=int32)
 
-        siglen = _get_hton_u16(sig_in, 0)
-        if not sig_out:
-            # pre-allocate memory, use safe int32
-            sig_out = np.empty(siglen, dtype="int32")
-        elif len(sig_out) < siglen:
-            # TODO: really even if user supplied? Maybe not
-            sig_out.resize(siglen, refcheck=False)
+        # siglen has one dimension less (the last)
+        siglen = np.empty(s[:-1], dtype=uint32)
 
-        _radware_sigcompress_decode(sig_in, sig_out, shift=shift)
+        if len(sig_in[0]) == 0:
+            return sig_out, siglen
+
+        # call low-level routine
+        # does not need to know sig_in[1]
+        _radware_sigcompress_decode(
+            sig_in[0], sig_out, shift, siglen, _radware_sigcompress_mask
+        )
+
+        return sig_out, siglen
 
     elif isinstance(sig_in, lgdo.ArrayOfEncodedEqualSizedArrays):
         if not sig_out:
-            # pre-allocate output structure
+            # initialize output structure with decoded_size
             sig_out = lgdo.ArrayOfEqualSizedArrays(
                 dims=(1, 1),
                 shape=(len(sig_in), sig_in.decoded_size.value),
-                dtype="int32",
+                dtype=int32,
+                attrs=sig_in.getattrs(),
             )
 
-        elif not isinstance(sig_out, lgdo.ArrayOfEqualSizedArrays):
-            raise ValueError("sig_out must be an ArrayOfEqualSizedArrays")
+        siglen = np.empty(len(sig_in), dtype=uint32)
+        # save original encoded vector lengths
+        nbytes = np.diff(sig_in.encoded_data.cumulative_length.nda, prepend=uint32(0))
 
-        for i, wf in enumerate(sig_in):
-            sig_out[i] = decode(wf, shift=shift)
+        if len(sig_in) == 0:
+            return sig_out
+
+        # convert vector of vectors to array of equal sized arrays
+        # can now decode on the 2D matrix together with number of bytes to read per row
+        _, siglen = decode(
+            (sig_in.encoded_data.to_aoesa(preserve_dtype=True).nda, nbytes),
+            sig_out.nda,
+            shift=shift,
+        )
+
+        # sanity check
+        assert np.all(sig_in.decoded_size.value == siglen)
+
+        return sig_out
 
     elif isinstance(sig_in, lgdo.VectorOfEncodedVectors):
-        if not sig_out:
-            # pre-allocate output structure
-            sig_out = lgdo.VectorOfVectors(
-                cumulative_length=np.cumsum(sig_in.decoded_size), dtype="int32"
+        if sig_out:
+            log.warning(
+                "a pre-allocated VectorOfVectors was given "
+                "to hold an encoded VectorOfVectors. "
+                "This is not supported at the moment, so a new one "
+                "will be allocated to replace it"
             )
 
-        elif not isinstance(sig_out, lgdo.VectorOfVectors):
-            raise ValueError("sig_out must be a VectorOfVectors")
+        siglen = np.empty(len(sig_in), dtype=uint32)
+        # save original encoded vector lengths
+        nbytes = np.diff(sig_in.encoded_data.cumulative_length.nda, prepend=uint32(0))
 
-        for i, wf in enumerate(sig_in):
-            sig_out[i] = decode(wf[0], shift=shift)
+        # convert vector of vectors to array of equal sized arrays
+        # can now decode on the 2D matrix together with number of bytes to read per row
+        sig_out, siglen = decode(
+            (sig_in.encoded_data.to_aoesa(preserve_dtype=True).nda, nbytes), shift=shift
+        )
+
+        # sanity check
+        assert np.array_equal(sig_in.decoded_size, siglen)
+
+        # converto to VOV before returning
+        return sig_out.to_vov(np.cumsum(siglen, dtype=uint32))
 
     else:
-        raise ValueError(f"unsupported input signal type ({type(sig_in)})")
-
-    return sig_out
+        raise ValueError("unsupported input signal type")
 
 
 @numba.jit(nopython=True)
@@ -247,7 +325,10 @@ def _get_hton_u16(a: NDArray[ubyte], i: int) -> uint16:
     """
     i_1 = i * 2
     i_2 = i_1 + 1
-    return uint16(a[i_1] << 8 | a[i_2])
+    if a.ndim == 1:
+        return uint16(a[i_1] << 8 | a[i_2])
+    else:
+        return a[..., i_1].astype("uint16") << 8 | a[..., i_2]
 
 
 @numba.jit("uint16(uint32)", nopython=True)
@@ -270,13 +351,25 @@ def _set_low_u16(x: uint32, y: uint16) -> uint32:
     return uint32(x & 0xFFFF0000 | (y << 0))
 
 
-@numba.jit(nopython=True)
+@numba.guvectorize(
+    [
+        "void(uint16[:], byte[:], int32[:], uint32[:], uint16[:])",
+        "void(uint32[:], byte[:], int32[:], uint32[:], uint16[:])",
+        "void(uint64[:], byte[:], int32[:], uint32[:], uint16[:])",
+        "void( int16[:], byte[:], int32[:], uint32[:], uint16[:])",
+        "void( int32[:], byte[:], int32[:], uint32[:], uint16[:])",
+        "void( int64[:], byte[:], int32[:], uint32[:], uint16[:])",
+    ],
+    "(n),(m),(),(),(o)",
+    nopython=True,
+)
 def _radware_sigcompress_encode(
     sig_in: NDArray,
     sig_out: NDArray[ubyte],
     shift: int32,
+    siglen: uint32,
     _mask: NDArray[uint16] = _radware_sigcompress_mask,
-) -> int32:
+) -> None:
     """Compress a digital signal.
 
     Shifts the signal values by ``+shift`` and internally interprets the result
@@ -297,7 +390,7 @@ def _radware_sigcompress_encode(
     - Store encoded, :class:`numpy.uint16` signal as an array of bytes
       (:class:`numpy.ubyte`), in big-endian ordering.
     - Declare mask globally to avoid extra memory allocation.
-    - Apply just-in-time compilation with Numba.
+    - Enable hardware-vectorization with Numba (:func:`numba.guvectorize`).
     - Add a couple of missing array boundary checks.
 
     .. [1] `radware-sigcompress source code
@@ -313,6 +406,10 @@ def _radware_sigcompress_encode(
     sig_out
         pre-allocated array for the unsigned 8-bit encoded signal. In the
         original C code, an array of unsigned 16-bit integers was expected.
+    shift
+        value to be added to `sig_in` before compression.
+    siglen
+        array that will hold the lengths of the compressed signals.
 
     Returns
     -------
@@ -320,6 +417,7 @@ def _radware_sigcompress_encode(
         number of bytes in the encoded signal
     """
     mask = _mask
+    shift = shift[0]
 
     i = j = max1 = max2 = min1 = min2 = ds = int16(0)
     nb1 = nb2 = iso = nw = bp = dd1 = dd2 = int16(0)
@@ -463,16 +561,28 @@ def _radware_sigcompress_encode(
     if iso % 2 > 0:
         iso += 1
 
-    return 2 * iso  # number of bytes in compressed signal data
+    siglen[0] = 2 * iso  # number of bytes in compressed signal data
 
 
-@numba.jit(nopython=True)
+@numba.guvectorize(
+    [
+        "void(byte[:], uint16[:], int32[:], uint32[:], uint16[:])",
+        "void(byte[:], uint32[:], int32[:], uint32[:], uint16[:])",
+        "void(byte[:], uint64[:], int32[:], uint32[:], uint16[:])",
+        "void(byte[:],  int16[:], int32[:], uint32[:], uint16[:])",
+        "void(byte[:],  int32[:], int32[:], uint32[:], uint16[:])",
+        "void(byte[:],  int64[:], int32[:], uint32[:], uint16[:])",
+    ],
+    "(n),(m),(),(),(o)",
+    nopython=True,
+)
 def _radware_sigcompress_decode(
     sig_in: NDArray[ubyte],
     sig_out: NDArray,
     shift: int32,
+    siglen: uint32,
     _mask: NDArray[uint16] = _radware_sigcompress_mask,
-) -> int32:
+) -> None:
     """Deompress a digital signal.
 
     After decoding, the signal values are shifted by ``-shift`` to restore the
@@ -491,6 +601,9 @@ def _radware_sigcompress_decode(
     sig_out
         pre-allocated array for the decompressed signal. In the original code,
         an array of 16-bit integers was expected.
+    shift
+        the value the original signal(s) was shifted before compression.  The
+        value is *subtracted* from samples in `sig_out` right after decoding.
 
     Returns
     -------
@@ -498,15 +611,16 @@ def _radware_sigcompress_decode(
         length of output, decompressed signal.
     """
     mask = _mask
+    shift = shift[0]
 
     i = j = min_val = nb = isi = iso = nw = bp = int16(0)
     dd = uint32(0)
 
     sig_len_in = int(sig_in.size / 2)
-    siglen = int16(_get_hton_u16(sig_in, isi))  # signal length
+    _siglen = int16(_get_hton_u16(sig_in, isi))  # signal length
     isi += 1
 
-    while (isi < sig_len_in) and (iso < siglen):
+    while (isi < sig_len_in) and (iso < _siglen):
         if bp > 0:
             isi += 1
         bp = 0  # bit pointer
@@ -521,7 +635,7 @@ def _radware_sigcompress_decode(
             isi += 1
             dd = _set_low_u16(dd, _get_hton_u16(sig_in, isi))
             i = 0
-            while (i < nw) and (iso < siglen):
+            while (i < nw) and (iso < _siglen):
                 if (bp + nb) > 15:
                     bp -= 16
                     dd = _set_high_u16(dd, _get_hton_u16(sig_in, isi))
@@ -549,7 +663,7 @@ def _radware_sigcompress_decode(
                 dd = _set_low_u16(dd, _get_hton_u16(sig_in, isi))
 
             i = 1
-            while (i < nw) and (iso < siglen):
+            while (i < nw) and (iso < _siglen):
                 if (bp + nb) > 15:
                     bp -= 16
                     dd = _set_high_u16(dd, _get_hton_u16(sig_in, isi))
@@ -573,7 +687,7 @@ def _radware_sigcompress_decode(
                 i += 1
         j += nw
 
-    if siglen != iso:
+    if _siglen != iso:
         raise RuntimeError("failure: unexpected signal length after decompression")
 
-    return siglen  # number of shorts in decompressed signal data
+    siglen[0] = _siglen  # number of shorts in decompressed signal data
