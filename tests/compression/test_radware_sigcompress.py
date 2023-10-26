@@ -7,68 +7,83 @@ from lgdo.compression.radware import (
     _get_hton_u16,
     _radware_sigcompress_decode,
     _radware_sigcompress_encode,
-    _set_hton_u16,
-    decode,
-    encode,
 )
+from lgdo.compression.radware import _radware_sigcompress_mask as _mask
+from lgdo.compression.radware import _set_hton_u16, decode, encode
 
 config_dir = Path(__file__).parent / "sigcompress"
 
 
 def read_sigcompress_c_output(filename: str):
-    enc_wf_c = np.empty(0, dtype=np.uint16)
-    nsig_c = None
-    shift = None
+    enc_wf_c = []
+    nsig_c = np.empty(0, dtype="uint32")
+    shift = np.empty(0, dtype="int32")
     with open(filename) as f:
-        nsig_c = int(f.readline())  # first number in the file
-        shift = int(f.readline())  # second number in the file
-        for line in f.readlines():  # then the waveform
-            enc_wf_c = np.append(enc_wf_c, np.uint16(line))
+        for line in f:
+            parts = line.split()
+            nsig_c = np.append(nsig_c, np.uint32(parts[0]))
+            shift = np.append(shift, np.int32(parts[1]))
+            enc_wf_c += [np.array([np.uint16(el) for el in parts[2:]])]
 
+    enc_wf_c = np.array(enc_wf_c)
     return (nsig_c, shift, enc_wf_c)
 
 
-_get = _get_hton_u16
+def _get_idx(a, i):
+    i_1 = i * 2
+    i_2 = i_1 + 1
+    return a[..., i_1].astype("uint16") << 8 | a[..., i_2]
+
+
+def _get_wf(a):
+    i_1 = np.s_[..., 0::2]
+    i_2 = np.s_[..., 1::2]
+    return a[i_1].astype("uint16") << 8 | a[i_2]
 
 
 def _to_u16(a):
     assert len(a) % 2 == 0
-    out = np.empty(int(len(a) / 2), dtype=np.uint16)
+    out = np.empty(int(len(a) / 2), dtype="uint16")
     for i in range(int(len(a) / 2)):
         out[i] = _get_hton_u16(a, i)
     return out
 
 
-def test_core_vs_original(wftable):
-    wf = wftable.values.nda[0]  # uint16
+def test_core_vs_original(wftable, lgnd_test_data):
+    wf = wftable.values.nda
+    s = wf.shape
 
     # get expected output from original C code (give shift)
     (nsig_c, shift, enc_wf_c) = read_sigcompress_c_output(
-        config_dir / "LDQTA_r117_20200110T105115Z_cal_geds_raw-0.dat"
+        lgnd_test_data.get_path(
+            "lh5/LDQTA_r117_20200110T105115Z_cal_geds_raw-radware-sigcompressed.dat"
+        )
     )
 
     # encode
-    enc_wf = np.zeros(2 * len(wf), dtype=np.ubyte)
-    nsig = _radware_sigcompress_encode(wf, enc_wf, shift=shift)
+    enc_wf = np.zeros(s[:-1] + (2 * s[-1],), dtype="ubyte")
+    nsig = np.empty(s[0], dtype="uint32")
 
-    assert _get(enc_wf, 0) == len(wf)
+    _radware_sigcompress_encode(wf, enc_wf, shift, nsig, _mask)
+
+    assert (_get_idx(enc_wf, 0) == s[1]).all()
     assert enc_wf.dtype == np.ubyte
 
     # compare to result of original C code
-    assert 2 * nsig_c == nsig
-    assert len(enc_wf) == 2 * len(enc_wf_c)
-    assert np.array_equal(_to_u16(enc_wf), enc_wf_c)
+    assert np.array_equal(2 * nsig_c, nsig)
+    assert enc_wf.shape[1] == 2 * enc_wf_c.shape[1]
+    assert np.array_equal(_get_wf(enc_wf), enc_wf_c)
 
     # now check if decompressed is same as the original
-    dec_wf = np.empty_like(wf, dtype=np.int16)
-    _radware_sigcompress_decode(enc_wf, dec_wf, shift=shift)
+    dec_wf = np.empty_like(wf)
+    _radware_sigcompress_decode(enc_wf, dec_wf, shift, nsig, _mask)
 
     # check if encoding was lossless
     assert np.array_equal(dec_wf, wf)
 
     # what if the pre-allocated array is of a different (compatible) type?
-    dec_wf = np.empty_like(wf, dtype=np.int32)
-    _radware_sigcompress_decode(enc_wf, dec_wf, shift=shift)
+    dec_wf = np.empty_like(wf, dtype="int32")
+    _radware_sigcompress_decode(enc_wf, dec_wf, shift, nsig, _mask)
 
     # check if encoding was lossless
     assert np.array_equal(dec_wf, wf)

@@ -270,13 +270,25 @@ def _set_low_u16(x: uint32, y: uint16) -> uint32:
     return uint32(x & 0xFFFF0000 | (y << 0))
 
 
-@numba.jit(nopython=True)
+@numba.guvectorize(
+    [
+        "void(uint16[:], byte[:], int32[:], uint32[:], uint16[:])",
+        "void(uint32[:], byte[:], int32[:], uint32[:], uint16[:])",
+        "void(uint64[:], byte[:], int32[:], uint32[:], uint16[:])",
+        "void( int16[:], byte[:], int32[:], uint32[:], uint16[:])",
+        "void( int32[:], byte[:], int32[:], uint32[:], uint16[:])",
+        "void( int64[:], byte[:], int32[:], uint32[:], uint16[:])",
+    ],
+    "(n),(m),(),(),(o)",
+    nopython=True,
+)
 def _radware_sigcompress_encode(
     sig_in: NDArray,
     sig_out: NDArray[ubyte],
     shift: int32,
+    siglen: uint32,
     _mask: NDArray[uint16] = _radware_sigcompress_mask,
-) -> int32:
+) -> None:
     """Compress a digital signal.
 
     Shifts the signal values by ``+shift`` and internally interprets the result
@@ -320,6 +332,7 @@ def _radware_sigcompress_encode(
         number of bytes in the encoded signal
     """
     mask = _mask
+    shift = shift[0]
 
     i = j = max1 = max2 = min1 = min2 = ds = int16(0)
     nb1 = nb2 = iso = nw = bp = dd1 = dd2 = int16(0)
@@ -463,16 +476,28 @@ def _radware_sigcompress_encode(
     if iso % 2 > 0:
         iso += 1
 
-    return 2 * iso  # number of bytes in compressed signal data
+    siglen[0] = 2 * iso  # number of bytes in compressed signal data
 
 
-@numba.jit(nopython=True)
+@numba.guvectorize(
+    [
+        "void(byte[:], uint16[:], int32[:], uint32[:], uint16[:])",
+        "void(byte[:], uint32[:], int32[:], uint32[:], uint16[:])",
+        "void(byte[:], uint64[:], int32[:], uint32[:], uint16[:])",
+        "void(byte[:],  int16[:], int32[:], uint32[:], uint16[:])",
+        "void(byte[:],  int32[:], int32[:], uint32[:], uint16[:])",
+        "void(byte[:],  int64[:], int32[:], uint32[:], uint16[:])",
+    ],
+    "(n),(m),(),(),(o)",
+    nopython=True,
+)
 def _radware_sigcompress_decode(
     sig_in: NDArray[ubyte],
     sig_out: NDArray,
     shift: int32,
+    siglen: uint32,
     _mask: NDArray[uint16] = _radware_sigcompress_mask,
-) -> int32:
+) -> None:
     """Deompress a digital signal.
 
     After decoding, the signal values are shifted by ``-shift`` to restore the
@@ -498,15 +523,16 @@ def _radware_sigcompress_decode(
         length of output, decompressed signal.
     """
     mask = _mask
+    shift = shift[0]
 
     i = j = min_val = nb = isi = iso = nw = bp = int16(0)
     dd = uint32(0)
 
     sig_len_in = int(sig_in.size / 2)
-    siglen = int16(_get_hton_u16(sig_in, isi))  # signal length
+    _siglen = int16(_get_hton_u16(sig_in, isi))  # signal length
     isi += 1
 
-    while (isi < sig_len_in) and (iso < siglen):
+    while (isi < sig_len_in) and (iso < _siglen):
         if bp > 0:
             isi += 1
         bp = 0  # bit pointer
@@ -521,7 +547,7 @@ def _radware_sigcompress_decode(
             isi += 1
             dd = _set_low_u16(dd, _get_hton_u16(sig_in, isi))
             i = 0
-            while (i < nw) and (iso < siglen):
+            while (i < nw) and (iso < _siglen):
                 if (bp + nb) > 15:
                     bp -= 16
                     dd = _set_high_u16(dd, _get_hton_u16(sig_in, isi))
@@ -549,7 +575,7 @@ def _radware_sigcompress_decode(
                 dd = _set_low_u16(dd, _get_hton_u16(sig_in, isi))
 
             i = 1
-            while (i < nw) and (iso < siglen):
+            while (i < nw) and (iso < _siglen):
                 if (bp + nb) > 15:
                     bp -= 16
                     dd = _set_high_u16(dd, _get_hton_u16(sig_in, isi))
@@ -573,7 +599,7 @@ def _radware_sigcompress_decode(
                 i += 1
         j += nw
 
-    if siglen != iso:
+    if _siglen != iso:
         raise RuntimeError("failure: unexpected signal length after decompression")
 
-    return siglen  # number of shorts in decompressed signal data
+    siglen[0] = _siglen  # number of shorts in decompressed signal data
