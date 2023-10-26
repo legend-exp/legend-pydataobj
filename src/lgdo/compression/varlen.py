@@ -147,7 +147,7 @@ def decode(
     | lgdo.VectorOfEncodedVectors
     | lgdo.ArrayOfEncodedEqualSizedArrays,
     sig_out: NDArray | lgdo.ArrayOfEqualSizedArrays = None,
-) -> NDArray | lgdo.VectorOfVectors | lgdo.ArrayOfEqualSizedArrays:
+) -> (NDArray, NDArray[uint32]) | lgdo.VectorOfVectors | lgdo.ArrayOfEqualSizedArrays:
     """Deompress digital signal(s) with a variable-length encoding of its derivative.
 
     Wraps :func:`uleb128_zigzag_diff_array_decode` and adds support for decoding

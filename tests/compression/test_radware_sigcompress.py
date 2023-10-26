@@ -5,6 +5,7 @@ import numpy as np
 from lgdo import ArrayOfEncodedEqualSizedArrays, ArrayOfEqualSizedArrays, LH5Store
 from lgdo.compression.radware import (
     _get_hton_u16,
+    _get_hton_u16_ndim,
     _radware_sigcompress_decode,
     _radware_sigcompress_encode,
 )
@@ -29,10 +30,7 @@ def read_sigcompress_c_output(filename: str):
     return (nsig_c, shift, enc_wf_c)
 
 
-def _get_idx(a, i):
-    i_1 = i * 2
-    i_2 = i_1 + 1
-    return a[..., i_1].astype("uint16") << 8 | a[..., i_2]
+_get_idx = _get_hton_u16_ndim
 
 
 def _get_wf(a):
@@ -50,67 +48,70 @@ def _to_u16(a):
 
 
 def test_core_vs_original(wftable, lgnd_test_data):
-    wf = wftable.values.nda
-    s = wf.shape
+    wfs = wftable.values.nda
+    s = wfs.shape
 
     # get expected output from original C code (give shift)
-    (nsig_c, shift, enc_wf_c) = read_sigcompress_c_output(
+    (enclen_c, shift, enc_wfs_c) = read_sigcompress_c_output(
         lgnd_test_data.get_path(
             "lh5/LDQTA_r117_20200110T105115Z_cal_geds_raw-radware-sigcompressed.dat"
         )
     )
 
     # encode
-    enc_wf = np.zeros(s[:-1] + (2 * s[-1],), dtype="ubyte")
-    nsig = np.empty(s[0], dtype="uint32")
+    enc_wfs = np.zeros(s[:-1] + (2 * s[-1],), dtype="ubyte")
+    enclen = np.empty(s[0], dtype="uint32")
 
-    _radware_sigcompress_encode(wf, enc_wf, shift, nsig, _mask)
+    _radware_sigcompress_encode(wfs, enc_wfs, shift, enclen, _mask)
 
-    assert (_get_idx(enc_wf, 0) == s[1]).all()
-    assert enc_wf.dtype == np.ubyte
+    assert (_get_idx(enc_wfs, 0) == s[1]).all()
+    assert enc_wfs.dtype == np.ubyte
 
     # compare to result of original C code
-    assert np.array_equal(2 * nsig_c, nsig)
-    assert enc_wf.shape[1] == 2 * enc_wf_c.shape[1]
-    assert np.array_equal(_get_wf(enc_wf), enc_wf_c)
+    assert np.array_equal(2 * enclen_c, enclen)
+    assert enc_wfs.shape[1] == 2 * enc_wfs_c.shape[1]
+    assert np.array_equal(_get_wf(enc_wfs), enc_wfs_c)
 
     # now check if decompressed is same as the original
-    dec_wf = np.empty_like(wf)
-    _radware_sigcompress_decode(enc_wf, dec_wf, shift, nsig, _mask)
+    dec_wf = np.empty_like(wfs)
+    dec_len = np.empty(s[0], dtype="uint32")
+    _radware_sigcompress_decode(enc_wfs, dec_wf, shift, dec_len, _mask)
 
     # check if encoding was lossless
-    assert np.array_equal(dec_wf, wf)
+    assert np.array_equal(dec_wf, wfs)
 
     # what if the pre-allocated array is of a different (compatible) type?
-    dec_wf = np.empty_like(wf, dtype="int32")
-    _radware_sigcompress_decode(enc_wf, dec_wf, shift, nsig, _mask)
+    dec_wf = np.empty_like(wfs, dtype="int32")
+    _radware_sigcompress_decode(enc_wfs, dec_wf, shift, dec_len, _mask)
 
     # check if encoding was lossless
-    assert np.array_equal(dec_wf, wf)
+    assert np.array_equal(dec_wf, wfs)
 
 
 def test_wrapper(wftable):
-    wf = wftable.values.nda[0]  # uint16
+    wfs = wftable.values.nda
+    s = wfs.shape
+    shift = -32768
 
-    shift = 0
-    enc_wf = np.empty(2 * len(wf), dtype=np.ubyte)
-    nsig = _radware_sigcompress_encode(wf, enc_wf, shift=shift)
+    enc_wfs = np.zeros(s[:-1] + (2 * s[-1],), dtype="ubyte")
+    enclen = np.empty(s[0], dtype="uint32")
+
+    _radware_sigcompress_encode(wfs, enc_wfs, shift, enclen, _mask)
 
     # test if the wrapper gives the same result
-    comp_wf = encode(wf)
-    assert isinstance(comp_wf, np.ndarray)
-    assert comp_wf.dtype == np.ubyte
-
-    # check that the resizing works as expected
-    assert len(comp_wf) == nsig
-    assert np.array_equal(comp_wf, enc_wf[:nsig])
+    w_enc_wfs, w_enclen = encode(wfs, shift=shift)
+    assert isinstance(w_enc_wfs, np.ndarray)
+    assert w_enc_wfs.dtype == np.ubyte
+    assert np.array_equal(w_enc_wfs, enc_wfs)
+    assert np.array_equal(w_enclen, enclen)
 
     # check if encoding was lossless
-    decomp_wf = decode(comp_wf, shift=shift)
-    assert isinstance(decomp_wf, np.ndarray)
-    assert np.issubdtype(decomp_wf.dtype, np.integer)
+    w_dec_wfs, w_dec_len = decode((w_enc_wfs, w_enclen), shift=shift)
+    assert isinstance(w_dec_wfs, np.ndarray)
+    assert np.issubdtype(w_dec_wfs.dtype, np.integer)
+    assert (w_dec_len == s[-1]).all()
 
-    assert np.array_equal(decomp_wf, wf)
+    assert np.array_equal(w_dec_wfs, wfs)
 
 
 def test_must_shift_wf(wftable):
