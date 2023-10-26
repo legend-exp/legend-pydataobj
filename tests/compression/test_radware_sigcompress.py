@@ -5,7 +5,6 @@ import numpy as np
 from lgdo import ArrayOfEncodedEqualSizedArrays, ArrayOfEqualSizedArrays, LH5Store
 from lgdo.compression.radware import (
     _get_hton_u16,
-    _get_hton_u16_ndim,
     _radware_sigcompress_decode,
     _radware_sigcompress_encode,
 )
@@ -43,7 +42,7 @@ def read_sigcompress_c_output_multi(filename: str):
     return (nsig_c, shift, enc_wf_c)
 
 
-_get_idx = _get_hton_u16_ndim
+_get_idx = _get_hton_u16
 
 
 def _get_wf(a):

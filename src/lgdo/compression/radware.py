@@ -41,11 +41,13 @@ class RadwareSigcompress(WaveformCodec):
 
 def encode(
     sig_in: NDArray | lgdo.VectorOfVectors | lgdo.ArrayOfEqualSizedArrays,
-    sig_out: NDArray[ubyte]
-    | lgdo.VectorOfEncodedVectors
-    | lgdo.ArrayOfEncodedEqualSizedArrays = None,
+    sig_out: NDArray[ubyte] = None,
     shift: int32 = 0,
-) -> NDArray[ubyte] | lgdo.VectorOfEncodedVectors:
+) -> (
+    (NDArray[ubyte], NDArray[uint32])
+    | lgdo.VectorOfEncodedVectors
+    | lgdo.ArrayOfEncodedEqualSizedArrays
+):
     """Compress digital signal(s) with `radware-sigcompress`.
 
     Wraps :func:`._radware_sigcompress_encode` and adds support for encoding
@@ -131,7 +133,7 @@ def encode(
     elif isinstance(sig_in, lgdo.ArrayOfEqualSizedArrays):
         if sig_out:
             log.warning(
-                "a pre-allocated VectorOfEncodedVectors was given "
+                "a pre-allocated ArrayOfEncodedEqualSizedArrays was given "
                 "to hold an encoded ArrayOfEqualSizedArrays. "
                 "This is not supported at the moment, so a new one "
                 "will be allocated to replace it"
@@ -159,25 +161,11 @@ def encode(
         raise ValueError(f"unsupported input signal type ({type(sig_in)})")
 
 
-@numba.jit(nopython=True)
-def _get_hton_u16_ndim(a: NDArray[ubyte], i: int) -> uint16:
-    """Read unsigned 16-bit integer values from an array of unsigned 8-bit integers.
-
-    The first two most significant bytes of the values must be stored
-    contiguously in `a` with big-endian order.
-    """
-    if a.ndim == 1:
-        return _get_hton_u16(a, i)
-    i_1 = i * 2
-    i_2 = i_1 + 1
-    return a[..., i_1].astype("uint16") << 8 | a[..., i_2]
-
-
 def decode(
     sig_in: NDArray[ubyte]
     | lgdo.VectorOfEncodedVectors
     | lgdo.ArrayOfEncodedEqualSizedArrays,
-    sig_out: NDArray | lgdo.VectorOfVectors | lgdo.ArrayOfEqualSizedArrays = None,
+    sig_out: NDArray | lgdo.ArrayOfEqualSizedArrays = None,
     shift: int32 = 0,
 ) -> (NDArray, NDArray[uint32]) | lgdo.VectorOfVectors | lgdo.ArrayOfEqualSizedArrays:
     """Decompress digital signal(s) with `radware-sigcompress`.
@@ -211,7 +199,7 @@ def decode(
         if sig_out is None:
             # allocate output array with lasd dim as large as the longest
             # uncompressed wf
-            maxs = np.max(_get_hton_u16_ndim(sig_in[0], 0))
+            maxs = np.max(_get_hton_u16(sig_in[0], 0))
             sig_out = np.empty(s[:-1] + (maxs,), dtype=int32)
 
         # siglen has one dimension less (the last)
@@ -311,7 +299,10 @@ def _get_hton_u16(a: NDArray[ubyte], i: int) -> uint16:
     """
     i_1 = i * 2
     i_2 = i_1 + 1
-    return uint16(a[i_1] << 8 | a[i_2])
+    if a.ndim == 1:
+        return uint16(a[i_1] << 8 | a[i_2])
+    else:
+        return a[..., i_1].astype("uint16") << 8 | a[..., i_2]
 
 
 @numba.jit("uint16(uint32)", nopython=True)
