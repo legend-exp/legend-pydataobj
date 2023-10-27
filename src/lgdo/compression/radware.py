@@ -9,7 +9,7 @@ from numpy import int16, int32, ubyte, uint16, uint32
 from numpy.typing import NDArray
 
 from .. import types as lgdo
-from .base import WaveformCodec
+from .base import WaveformCodec, numba_defaults
 
 log = logging.getLogger(__name__)
 
@@ -301,7 +301,7 @@ def decode(
         raise ValueError("unsupported input signal type")
 
 
-@numba.jit(nopython=True)
+@numba.jit(**numba_defaults)
 def _set_hton_u16(a: NDArray[ubyte], i: int, x: int) -> int:
     """Store an unsigned 16-bit integer value in an array of unsigned 8-bit integers.
 
@@ -316,7 +316,7 @@ def _set_hton_u16(a: NDArray[ubyte], i: int, x: int) -> int:
     return x
 
 
-@numba.jit(nopython=True)
+@numba.jit(**numba_defaults)
 def _get_hton_u16(a: NDArray[ubyte], i: int) -> uint16:
     """Read unsigned 16-bit integer values from an array of unsigned 8-bit integers.
 
@@ -331,22 +331,22 @@ def _get_hton_u16(a: NDArray[ubyte], i: int) -> uint16:
         return a[..., i_1].astype("uint16") << 8 | a[..., i_2]
 
 
-@numba.jit("uint16(uint32)", nopython=True)
+@numba.jit("uint16(uint32)", **numba_defaults)
 def _get_high_u16(x: uint32) -> uint16:
     return uint16(x >> 16)
 
 
-@numba.jit("uint32(uint32, uint16)", nopython=True)
+@numba.jit("uint32(uint32, uint16)", **numba_defaults)
 def _set_high_u16(x: uint32, y: uint16) -> uint32:
     return uint32(x & 0x0000FFFF | (y << 16))
 
 
-@numba.jit("uint16(uint32)", nopython=True)
+@numba.jit("uint16(uint32)", **numba_defaults)
 def _get_low_u16(x: uint32) -> uint16:
     return uint16(x >> 0)
 
 
-@numba.jit("uint32(uint32, uint16)", nopython=True)
+@numba.jit("uint32(uint32, uint16)", **numba_defaults)
 def _set_low_u16(x: uint32, y: uint16) -> uint32:
     return uint32(x & 0xFFFF0000 | (y << 0))
 
@@ -361,7 +361,7 @@ def _set_low_u16(x: uint32, y: uint16) -> uint32:
         "void( int64[:], byte[:], int32[:], uint32[:], uint16[:])",
     ],
     "(n),(m),(),(),(o)",
-    nopython=True,
+    **numba_defaults,
 )
 def _radware_sigcompress_encode(
     sig_in: NDArray,
@@ -574,7 +574,7 @@ def _radware_sigcompress_encode(
         "void(byte[:],  int64[:], int32[:], uint32[:], uint16[:])",
     ],
     "(n),(m),(),(),(o)",
-    nopython=True,
+    **numba_defaults,
 )
 def _radware_sigcompress_decode(
     sig_in: NDArray[ubyte],
