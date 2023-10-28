@@ -251,6 +251,12 @@ def decode(
                 dtype=int32,
                 attrs=sig_in.getattrs(),
             )
+        else:
+            if not (
+                isinstance(sig_out, lgdo.ArrayOfEqualSizedArrays)
+                and sig_out.nda.shape == (len(sig_in), sig_in.decoded_size.value)
+            ):
+                raise ValueError("sig_out is of the wrong format")
 
         siglen = np.empty(len(sig_in), dtype=uint32)
         # save original encoded vector lengths

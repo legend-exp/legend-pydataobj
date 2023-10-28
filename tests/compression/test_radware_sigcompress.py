@@ -167,6 +167,13 @@ def test_aoesa(wftable):
     for wf1, wf2 in zip(dec_aoesa, wftable.values):
         assert np.array_equal(wf1, wf2)
 
+    # test using pre-allocated decoded array
+    sig_out = ArrayOfEqualSizedArrays(
+        shape=wftable.values.nda.shape, dtype=wftable.values.dtype
+    )
+    decode(enc_vov, sig_out=sig_out, shift=shift)
+    assert wftable.values == sig_out
+
 
 def test_performance(lgnd_test_data):
     store = LH5Store()
