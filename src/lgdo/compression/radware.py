@@ -120,7 +120,7 @@ def encode(
         return sig_out, nbytes
 
     elif isinstance(sig_in, lgdo.VectorOfVectors):
-        if sig_out:
+        if sig_out is not None:
             log.warning(
                 "a pre-allocated VectorOfEncodedVectors was given "
                 "to hold an encoded ArrayOfEqualSizedArrays. "
@@ -143,7 +143,7 @@ def encode(
         return sig_out
 
     elif isinstance(sig_in, lgdo.ArrayOfEqualSizedArrays):
-        if sig_out:
+        if sig_out is not None:
             log.warning(
                 "a pre-allocated ArrayOfEncodedEqualSizedArrays was given "
                 "to hold an encoded ArrayOfEqualSizedArrays. "
@@ -243,7 +243,7 @@ def decode(
         return sig_out, siglen
 
     elif isinstance(sig_in, lgdo.ArrayOfEncodedEqualSizedArrays):
-        if not sig_out:
+        if sig_out is None:
             # initialize output structure with decoded_size
             sig_out = lgdo.ArrayOfEqualSizedArrays(
                 dims=(1, 1),
