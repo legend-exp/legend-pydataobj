@@ -251,12 +251,6 @@ def decode(
                 dtype=int32,
                 attrs=sig_in.getattrs(),
             )
-        else:
-            if not (
-                isinstance(sig_out, lgdo.ArrayOfEqualSizedArrays)
-                and sig_out.nda.shape == (len(sig_in), sig_in.decoded_size.value)
-            ):
-                raise ValueError("sig_out is of the wrong format")
 
         siglen = np.empty(len(sig_in), dtype=uint32)
         # save original encoded vector lengths
@@ -269,7 +263,7 @@ def decode(
         # can now decode on the 2D matrix together with number of bytes to read per row
         _, siglen = decode(
             (sig_in.encoded_data.to_aoesa(preserve_dtype=True).nda, nbytes),
-            sig_out.nda,
+            sig_out if isinstance(sig_out, np.ndarray) else sig_out.nda,
             shift=shift,
         )
 
