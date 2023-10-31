@@ -709,8 +709,8 @@ class LH5Store:
                     )
                     n_rows_to_read = bisect_left(idx[0], ds_n_rows)
                     idx = (idx[0][:n_rows_to_read],)
-                if len(idx[0]) == 0:
-                    log.warning("idx empty after culling.")
+                    if len(idx[0]) == 0:
+                        log.warning("idx empty after culling.")
                 n_rows_to_read = len(idx[0])
             else:
                 n_rows_to_read = ds_n_rows - start_row
