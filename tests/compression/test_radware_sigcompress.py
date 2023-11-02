@@ -111,11 +111,12 @@ def test_wrapper(wftable):
     _radware_sigcompress_encode(wfs, enc_wfs, shift, enclen, _mask)
 
     # test if the wrapper gives the same result
-    w_enc_wfs, w_enclen = encode(wfs, shift=shift)
+    w_enc_wfs = np.zeros(s[:-1] + (2 * s[-1],), dtype="ubyte")
+    w_enc_wfs, w_enclen = encode(wfs, sig_out=w_enc_wfs, shift=shift)
     assert isinstance(w_enc_wfs, np.ndarray)
     assert w_enc_wfs.dtype == np.ubyte
-    assert np.array_equal(w_enc_wfs, enc_wfs)
     assert np.array_equal(w_enclen, enclen)
+    assert np.array_equal(w_enc_wfs, enc_wfs)
 
     # check if encoding was lossless
     w_dec_wfs, w_dec_len = decode((w_enc_wfs, w_enclen), shift=shift)
