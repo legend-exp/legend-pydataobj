@@ -3,6 +3,10 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any
 
+import awkward as ak
+import numpy as np
+import pandas as pd
+
 
 class LGDO(ABC):
     """Abstract base class representing a LEGEND Data Object (LGDO)."""
@@ -28,6 +32,13 @@ class LGDO(ABC):
     @abstractmethod
     def form_datatype(self) -> str:
         """Return this LGDO's datatype attribute string."""
+        pass
+
+    @abstractmethod
+    def convert(
+        self, fmt: str = "pandas.DataFrame", copy: bool = False
+    ) -> pd.DataFrame | np.NDArray | ak.Array:
+        """Convert the data of the LGDO object to a third-party format."""
         pass
 
     def getattrs(self, datatype: bool = False) -> dict:

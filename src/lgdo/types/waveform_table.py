@@ -8,7 +8,9 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+import awkward as ak
 import numpy as np
+import pandas as pd
 
 from .array import Array
 from .arrayofequalsizedarrays import ArrayOfEqualSizedArrays
@@ -262,3 +264,8 @@ class WaveformTable(Table):
 
         np.set_printoptions(**npopt)
         return string
+
+    def convert(
+        self, fmt: str = "pandas.DataFrame"
+    ) -> pd.DataFrame | np.NDArray | ak.Array:
+        raise NotImplementedError("'convert' not yet implemented for WaveformTable.")

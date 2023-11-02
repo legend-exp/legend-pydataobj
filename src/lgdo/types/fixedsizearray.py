@@ -6,7 +6,9 @@ from __future__ import annotations
 
 from typing import Any
 
-import numpy
+import awkward as ak
+import numpy as np
+import pandas as pd
 
 from .array import Array
 
@@ -24,9 +26,9 @@ class FixedSizeArray(Array):
 
     def __init__(
         self,
-        nda: numpy.ndarray = None,
+        nda: np.ndarray = None,
         shape: tuple[int, ...] = (),
-        dtype: numpy.dtype = None,
+        dtype: np.dtype = None,
         fill_val: int | float = None,
         attrs: dict[str, Any] = None,
     ) -> None:
@@ -41,3 +43,22 @@ class FixedSizeArray(Array):
 
     def datatype_name(self) -> str:
         return "fixedsize_array"
+
+    def convert(
+        self, fmt: str = "pandas.DataFrame", copy: bool = False
+    ) -> pd.DataFrame | np.NDArray | ak.Array:
+        """
+        Convert the data of the FixedSizeArray object to a third-party format.
+        Supported options are:
+            - "pandas.DataFrame"
+            - "numpy.ndarray"
+            - "awkward.Array"
+        """
+        if fmt == "pandas.DataFrame":
+            return pd.DataFrame(self.nda, copy=copy)
+        elif fmt == "numpy.ndarray":
+            return self.nda
+        elif fmt == "awkward.Array":
+            return ak.Array(self.nda)
+        else:
+            raise TypeError(f"{fmt} is not a supported third-party format.")

@@ -7,7 +7,9 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import Any
 
+import awkward as ak
 import numpy as np
+import pandas as pd
 
 from .. import lgdo_utils as utils
 from . import vectorofvectors as vov
@@ -131,3 +133,22 @@ class ArrayOfEqualSizedArrays(Array):
             cumulative_length=cumulative_length,
             attrs=attrs,
         )
+
+    def convert(
+        self, fmt: str = "pandas.DataFrame", copy: bool = False
+    ) -> pd.DataFrame | np.NDArray | ak.Array:
+        """
+        Convert the data of the ArrayOfEqualSizedArrays object to a third-party format.
+        Supported options are:
+            - "pandas.DataFrame"
+            - "numpy.ndarray"
+            - "awkward.Array"
+        """
+        if fmt == "pandas.DataFrame":
+            return pd.DataFrame(self.nda, copy=copy)
+        elif fmt == "numpy.ndarray":
+            return self.nda
+        elif fmt == "awkward.Array":
+            return ak.Array(self.nda)
+        else:
+            raise TypeError(f"{fmt} is not a supported third-party format.")

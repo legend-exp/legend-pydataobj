@@ -9,8 +9,10 @@ import logging
 from collections.abc import Iterator
 from typing import Any
 
+import awkward as ak
 import numba
 import numpy as np
+import pandas as pd
 from numpy.typing import DTypeLike, NDArray
 
 from .. import lgdo_utils as utils
@@ -418,6 +420,26 @@ class VectorOfVectors(LGDO):
             nda[i, : ind_lengths[i]] = self[i]
 
         return aoesa.ArrayOfEqualSizedArrays(nda=nda, attrs=self.getattrs())
+
+    def convert(
+        self, fmt: str = "pandas.DataFrame", copy: bool = False
+    ) -> pd.DataFrame | np.NDArray | ak.Array:
+        """
+        Convert the data of the Table object to a third-party format.
+        Supported options are:
+            - "pandas.DataFrame"
+            - "numpy.ndarray"
+            - "awkward.Array"
+        """
+        if fmt == "pandas.DataFrame":
+            return self.to_aoesa().convert("pandas.DataFrame", copy)
+        elif fmt == "numpy.ndarray":
+            return self.to_aoesa().convert("numpy.ndarray", copy)
+        elif fmt == "awkward.Array":
+            lengths_of_individual_vectors = np.diff(self.cumulative_length, prepend=[0])
+            return ak.unflatten(self.flattened_data, lengths_of_individual_vectors)
+        else:
+            raise TypeError(f"{fmt} is not a supported third-party format.")
 
 
 def build_cl(

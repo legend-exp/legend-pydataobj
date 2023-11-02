@@ -3,7 +3,9 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import Any
 
+import awkward as ak
 import numpy as np
+import pandas as pd
 from numpy.typing import NDArray
 
 from .. import lgdo_utils as utils
@@ -225,6 +227,13 @@ class VectorOfEncodedVectors(LGDO):
         np.set_printoptions(**npopt)
         return out
 
+    def convert(
+        self, fmt: str = "pandas.DataFrame"
+    ) -> pd.DataFrame | np.NDArray | ak.Array:
+        raise NotImplementedError(
+            "'convert' not yet implemented for VectorOfEncodedVectors."
+        )
+
 
 class ArrayOfEncodedEqualSizedArrays(LGDO):
     """An array of encoded arrays with equal decoded size.
@@ -388,3 +397,10 @@ class ArrayOfEncodedEqualSizedArrays(LGDO):
         )
         np.set_printoptions(**npopt)
         return out
+
+    def convert(
+        self, fmt: str = "pandas.DataFrame"
+    ) -> pd.DataFrame | np.NDArray | ak.Array:
+        raise NotImplementedError(
+            "'convert' not yet implemented for ArrayOfEncodedEqualSizedArrays."
+        )

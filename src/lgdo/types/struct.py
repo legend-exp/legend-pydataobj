@@ -7,7 +7,9 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+import awkward as ak
 import numpy as np
+import pandas as pd
 
 from .lgdo import LGDO
 
@@ -106,3 +108,29 @@ class Struct(LGDO, dict):
         )
         np.set_printoptions(**npopt)
         return " ".join(out.replace("\n", " ").split())
+
+    def convert(
+        self, fmt: str = "pandas.DataFrame", copy: bool = False
+    ) -> pd.DataFrame | np.NDArray | ak.Array:
+        """
+        Convert the data of the Struct object to a third-party format.
+        Supported options are:
+            - "pandas.DataFrame"
+            - "numpy.ndarray"
+            - "awkward.Array"
+
+        Note:
+            - conversion to ndarray only works when the values are of the equal length, returns a dict containing "keys" and "values" keys for the corresponding NDArray
+            - conversion to awkward array only works when the key is a string and values are of equal length
+        """
+        if fmt == "pandas.DataFrame":
+            return pd.DataFrame(self, copy=copy)
+        elif fmt == "numpy.ndarray":
+            return {
+                "keys": np.array(list(self.keys()), copy=copy),
+                "values": np.array(list(self.values()), copy=copy),
+            }
+        elif fmt == "awkward.Array":
+            return ak.Array(self)
+        else:
+            raise TypeError(f"{fmt} is not a supported third-party format.")

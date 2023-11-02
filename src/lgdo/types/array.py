@@ -8,7 +8,9 @@ import logging
 from collections.abc import Iterator
 from typing import Any
 
+import awkward as ak
 import numpy as np
+import pandas as pd
 
 from .. import lgdo_utils as utils
 from .lgdo import LGDO
@@ -138,3 +140,22 @@ class Array(LGDO):
             )
             + f", attrs={repr(self.attrs)})"
         )
+
+    def convert(
+        self, fmt: str = "pandas.DataFrame", copy: bool = False
+    ) -> pd.DataFrame | np.NDArray | ak.Array:
+        """
+        Convert the data of the Array object to a third-party format.
+        Supported options are:
+            - "pandas.DataFrame"
+            - "numpy.ndarray"
+            - "awkward.Array"
+        """
+        if fmt == "pandas.DataFrame":
+            return pd.DataFrame(self.nda, copy=copy)
+        elif fmt == "numpy.ndarray":
+            return self.nda
+        elif fmt == "awkward.Array":
+            return ak.Array(self.nda)
+        else:
+            raise TypeError(f"{fmt} is not a supported third-party format.")
