@@ -354,9 +354,9 @@ class Table(Struct):
     ) -> pd.DataFrame | np.NDArray | ak.Array:
         """Convert the data of the Table object to a third-party format.
         Supported options are:
-            - "pandas.DataFrame"
-            - "numpy.ndarray"
-            - "awkward.Array"
+            "pandas.DataFrame"
+            "numpy.ndarray"
+            "awkward.Array"
 
         Note:
             - conversion to ndarray only works when the values are of the equal length, returns a dict containing "keys" and "values" keys for the corresponding NDArray

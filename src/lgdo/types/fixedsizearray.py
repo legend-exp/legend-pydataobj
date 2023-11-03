@@ -49,9 +49,9 @@ class FixedSizeArray(Array):
     ) -> pd.DataFrame | np.NDArray | ak.Array:
         """Convert the data of the FixedSizeArray object to a third-party format.
         Supported options are:
-            - "pandas.DataFrame"
-            - "numpy.ndarray"
-            - "awkward.Array"
+            "pandas.DataFrame"
+            "numpy.ndarray"
+            "awkward.Array"
         """
         if fmt == "pandas.DataFrame":
             return pd.DataFrame(self.nda, copy=copy)

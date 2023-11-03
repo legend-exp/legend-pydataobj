@@ -65,9 +65,9 @@ class Scalar(LGDO):
     ) -> pd.DataFrame | np.NDArray | ak.Array:
         """Convert the data of the Scalar object to a third-party format.
         Supported options are:
-            - "pandas.DataFrame"
-            - "numpy.ndarray"
-            - "awkward.Array"
+            "pandas.DataFrame"
+            "numpy.ndarray"
+            "awkward.Array"
         Not sure why you would need it though ...
         """
         if fmt == "pandas.DataFrame":
