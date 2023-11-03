@@ -143,7 +143,8 @@ def expand_vars(expr: str, substitute: dict[str, str] = None) -> str:
 
     # expand env variables first
     # then try using provided mapping
-    return string.Template(os.path.expandvars(expr)).safe_substitute(substitute)
+    expr = string.Template(expr).safe_substitute(substitute)
+    return os.path.expandvars(expr)
 
 
 def expand_path(
