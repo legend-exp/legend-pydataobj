@@ -18,7 +18,7 @@ class Scalar(LGDO):
 
     # TODO: do scalars need proper numpy dtypes?
 
-    def __init__(self, value: int | float, attrs: dict[str, Any] = None) -> None:
+    def __init__(self, value: int | float | str, attrs: dict[str, Any] = None) -> None:
         """
         Parameters
         ----------
