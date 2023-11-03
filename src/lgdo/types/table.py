@@ -248,8 +248,8 @@ class Table(Struct):
                     "O1": {
                         "expression": "p1 + p2 * a**2",
                         "parameters": {
-                            "p1": "2",
-                            "p2": "3"
+                            "p1": 2,
+                            "p2": 3
                         }
                     },
                     "O2": {
