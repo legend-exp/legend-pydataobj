@@ -11,7 +11,7 @@ from numpy import int32, ubyte, uint32
 from numpy.typing import NDArray
 
 from .. import types as lgdo
-from .base import WaveformCodec
+from .base import WaveformCodec, numba_defaults
 
 log = logging.getLogger(__name__)
 
@@ -30,7 +30,11 @@ class ULEB128ZigZagDiff(WaveformCodec):
 def encode(
     sig_in: NDArray | lgdo.VectorOfVectors | lgdo.ArrayOfEqualSizedArrays,
     sig_out: NDArray[ubyte] = None,
-) -> (NDArray[ubyte], NDArray[uint32]) | lgdo.VectorOfEncodedVectors:
+) -> (
+    (NDArray[ubyte], NDArray[uint32])
+    | lgdo.VectorOfEncodedVectors
+    | lgdo.ArrayOfEncodedEqualSizedArrays
+):
     """Compress digital signal(s) with a variable-length encoding of its derivative.
 
     Wraps :func:`uleb128_zigzag_diff_array_encode` and adds support for encoding
@@ -41,8 +45,9 @@ def encode(
     If `sig_in` is a NumPy array, no resizing of `sig_out` is performed. Not
     even of the internally allocated one.
 
-    Because of the current implementation, providing a pre-allocated
-    :class:`.VectorOfEncodedVectors` as `sig_out` is not possible.
+    Because of the current (hardware vectorized) implementation, providing a
+    pre-allocated :class:`.VectorOfEncodedVectors` or
+    :class:`.ArrayOfEncodedEqualSizedArrays` as `sig_out` is not possible.
 
     Parameters
     ----------
@@ -54,11 +59,12 @@ def encode(
 
     Returns
     -------
-    sig_out, nbytes
+    sig_out, nbytes | LGDO
         given pre-allocated `sig_out` structure or new structure of unsigned
         8-bit integers, plus the number of bytes (length) of the encoded
         signal. If `sig_in` is an :class:`.LGDO`, only a newly allocated
-        :class:`.VectorOfEncodedVectors` is returned.
+        :class:`.VectorOfEncodedVectors` or
+        :class:`.ArrayOfEncodedEqualSizedArrays` is returned.
 
     See Also
     --------
@@ -142,9 +148,11 @@ def encode(
 
 
 def decode(
-    sig_in: (NDArray[ubyte], NDArray[uint32]) | lgdo.VectorOfEncodedVectors,
-    sig_out: NDArray | lgdo.VectorOfVectors | lgdo.ArrayOfEqualSizedArrays = None,
-) -> NDArray | lgdo.VectorOfVectors | lgdo.ArrayOfEqualSizedArrays:
+    sig_in: (NDArray[ubyte], NDArray[uint32])
+    | lgdo.VectorOfEncodedVectors
+    | lgdo.ArrayOfEncodedEqualSizedArrays,
+    sig_out: NDArray | lgdo.ArrayOfEqualSizedArrays = None,
+) -> (NDArray, NDArray[uint32]) | lgdo.VectorOfVectors | lgdo.ArrayOfEqualSizedArrays:
     """Deompress digital signal(s) with a variable-length encoding of its derivative.
 
     Wraps :func:`uleb128_zigzag_diff_array_decode` and adds support for decoding
@@ -159,8 +167,8 @@ def decode(
     :class:`.ArrayOfEqualSizedArrays` `sig_out` has instead always the correct
     size.
 
-    Because of the current implementation, providing a pre-allocated
-    :class:`.VectorOfVectors` as `sig_out` is not possible.
+    Because of the current (hardware vectorized) implementation, providing a
+    pre-allocated :class:`.VectorOfVectors` as `sig_out` is not possible.
 
     Parameters
     ----------
@@ -173,8 +181,9 @@ def decode(
 
     Returns
     -------
-    sig_out
-        given pre-allocated structure or new structure of 32-bit integers.
+    sig_out, nbytes | LGDO
+        given pre-allocated structure or new structure of 32-bit integers, plus
+        the number of bytes (length) of the decoded signal.
 
     See Also
     --------
@@ -257,7 +266,7 @@ def decode(
 
 @numba.vectorize(
     ["uint64(int64)", "uint32(int32)", "uint16(int16)"],
-    nopython=True,
+    **numba_defaults,
 )
 def zigzag_encode(x: int | NDArray[int]) -> int | NDArray[int]:
     """ZigZag-encode [#WikiZZ]_ signed integer numbers."""
@@ -266,14 +275,14 @@ def zigzag_encode(x: int | NDArray[int]) -> int | NDArray[int]:
 
 @numba.vectorize(
     ["int64(uint64)", "int32(uint32)", "int16(uint16)"],
-    nopython=True,
+    **numba_defaults,
 )
 def zigzag_decode(x: int | NDArray[int]) -> int | NDArray[int]:
     """ZigZag-decode [#WikiZZ]_ signed integer numbers."""
     return (x >> 1) ^ -(x & 1)
 
 
-@numba.jit(["uint32(int64, byte[:])"], nopython=True)
+@numba.jit(["uint32(int64, byte[:])"], **numba_defaults)
 def uleb128_encode(x: int, encx: NDArray[ubyte]) -> int:
     """Compute a variable-length representation of an unsigned integer.
 
@@ -306,7 +315,7 @@ def uleb128_encode(x: int, encx: NDArray[ubyte]) -> int:
     return i + 1
 
 
-@numba.jit(["UniTuple(uint32, 2)(byte[:])"], nopython=True)
+@numba.jit(["UniTuple(uint32, 2)(byte[:])"], **numba_defaults)
 def uleb128_decode(encx: NDArray[ubyte]) -> (int, int):
     """Decode a variable-length integer into an unsigned integer.
 
@@ -351,7 +360,7 @@ def uleb128_decode(encx: NDArray[ubyte]) -> (int, int):
         "void(int64[:], byte[:], uint32[:])",
     ],
     "(n),(m),()",
-    nopython=True,
+    **numba_defaults,
 )
 def uleb128_zigzag_diff_array_encode(
     sig_in: NDArray[int], sig_out: NDArray[ubyte], nbytes: int
@@ -401,7 +410,7 @@ def uleb128_zigzag_diff_array_encode(
         "void(byte[:], uint32[:], int64[:], uint32[:])",
     ],
     "(n),(),(m),()",
-    nopython=True,
+    **numba_defaults,
 )
 def uleb128_zigzag_diff_array_decode(
     sig_in: NDArray[ubyte],

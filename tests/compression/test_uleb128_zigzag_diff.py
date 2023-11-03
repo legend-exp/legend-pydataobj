@@ -23,7 +23,7 @@ def test_zigzag():
 
 
 def test_varint_encoding():
-    # import varint varint
+    # >>> import varint
     # >>> ["{0:08b}".format(b) for b in varint.encode(x)]
     expected = {
         1: ["00000001"],

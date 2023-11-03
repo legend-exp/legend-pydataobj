@@ -18,11 +18,11 @@ def tmptestdir():
 
 def pytest_sessionfinish(session, exitstatus):
     if exitstatus == 0:
-        shutil.rmtree(_tmptestdir)
+        shutil.rmtree(_tmptestdir, ignore_errors=True)
 
 
 @pytest.fixture(scope="session")
 def lgnd_test_data():
     ldata = LegendTestData()
-    ldata.checkout("c089a59")
+    ldata.checkout("5097863")
     return ldata

@@ -135,16 +135,15 @@ def expand_vars(expr: str, substitute: dict[str, str] = None) -> str:
         string expression, which may include (environment) variables prefixed by
         ``$``.
     substitute
-        use this dictionary to substitute variables. Environment variables take
-        precedence.
+        use this dictionary to substitute variables. Takes precedence over
+        environment variables.
     """
     if substitute is None:
         substitute = {}
 
-    # expand env variables first
-    # then try using provided mapping
-    expr = string.Template(expr).safe_substitute(substitute)
-    return os.path.expandvars(expr)
+    # use provided mapping
+    # then expand env variables
+    return os.path.expandvars(string.Template(expr).safe_substitute(substitute))
 
 
 def expand_path(
