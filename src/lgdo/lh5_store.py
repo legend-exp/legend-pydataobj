@@ -169,12 +169,22 @@ class LH5Store:
         start_row: int = 0,
         n_rows: int = sys.maxsize,
         idx: np.ndarray | list | tuple | list[np.ndarray | list | tuple] = None,
+        use_h5idx: bool = False,
         field_mask: dict[str, bool] | list[str] | tuple[str] = None,
         obj_buf: LGDO = None,
         obj_buf_start: int = 0,
-        decompress: bool = True,
+        decompress: bool = True,        
     ) -> tuple[LGDO, int]:
         """Read LH5 object data from a file.
+
+        Individual rows of data may be read by passing the ``idx`` parameter.
+        However, reading individual rows is often much slower than reading the whole
+        object and then indexing the desired rows. This behavior may be controlled with
+        the ``use_h5idx`` flag, where the default behavior is to use more memory for a
+        much faster read. Note that passing an ``obj_buf`` object will ignore the
+        ``use_h5idx`` flag and suffer a speed penalty. See 
+        [legend-pydataobj #29](https://github.com/legend-exp/legend-pydataobj/issues/29) 
+        for additional information.
 
         Parameters
         ----------
@@ -201,7 +211,17 @@ class LH5Store:
             identical read). If used in conjunction with `start_row` and `n_rows`,
             will be sliced to obey those constraints, where `n_rows` is
             interpreted as the (max) number of *selected* values (in `idx`) to be
-            read out.
+            read out. See 
+        use_h5idx
+            ``True`` will directly pass the ``idx`` parameter to the underlying 
+            ``h5py`` call such that only the selected rows are read into memory,
+            which conserves memory at the cost of speed.
+            ``False`` (default) will read the entire object into memory before
+            performing the indexing. The default is much faster (1-2 orders of
+            magnitude) but requires additional memory, though a relatively small 
+            amount in the typical use case. Note that this option is ignored if 
+            ``obj_buf`` is passed, which will read directly and therefore suffer 
+            a speed penalty.
         field_mask
             For tables and structs, determines which fields get written out.
             Only applies to immediate fields of the requested objects. If a dict
@@ -214,7 +234,9 @@ class LH5Store:
         obj_buf
             Read directly into memory provided in `obj_buf`. Note: the buffer
             will be expanded to accommodate the data requested. To maintain the
-            buffer length, send in ``n_rows = len(obj_buf)``.
+            buffer length, send in ``n_rows = len(obj_buf)``. Note that passing
+            this parameter will ignore the ``use_h5idx`` flag and suffer a speed
+            penalty if also passing ``idx``.
         obj_buf_start
             Start location in ``obj_buf`` for read. For concatenating data to
             array-like objects.
@@ -222,6 +244,7 @@ class LH5Store:
             Decompress data encoded with LGDO's compression routines right
             after reading. The option has no effect on data encoded with HDF5
             built-in filters, which is always decompressed upstream by HDF5.
+
 
         Returns
         -------
@@ -741,7 +764,10 @@ class LH5Store:
                     tmp_shape = (0,) + h5f[name].shape[1:]
                     nda = np.empty(tmp_shape, h5f[name].dtype)
                 else:
-                    nda = h5f[name][...][source_sel]
+                    if (use_h5idx):
+                        nda = h5f[name][source_sel]
+                    else:
+                        nda = h5f[name][...][source_sel]
 
             # special handling for bools
             # (c and Julia store as uint8 so cast to bool)
