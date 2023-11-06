@@ -340,23 +340,27 @@ def test_read_wftable_encoded(lh5_file):
     assert lh5_obj.values.attrs["codec"] == "radware_sigcompress"
     assert "codec_shift" in lh5_obj.values.attrs
 
+    lh5_obj, n_rows = store.read_object("/data/struct/wftable_enc/values", lh5_file)
+    assert isinstance(lh5_obj, lgdo.ArrayOfEqualSizedArrays)
+    assert n_rows == 3
+
     lh5_obj, n_rows = store.read_object("/data/struct/wftable_enc", lh5_file)
     assert isinstance(lh5_obj, lgdo.WaveformTable)
     assert isinstance(lh5_obj.values, lgdo.ArrayOfEqualSizedArrays)
     assert n_rows == 3
 
-    lh5_obj, n_rows = store.read_object("/data/struct/wftable_enc/values", lh5_file)
-    assert isinstance(lh5_obj, lgdo.ArrayOfEqualSizedArrays)
-    assert n_rows == 3
-
-    lh5_obj, n_rows = store.read_object(
+    lh5_obj_chain, n_rows = store.read_object(
         "/data/struct/wftable_enc", [lh5_file, lh5_file], decompress=False
     )
     assert n_rows == 6
+    assert isinstance(lh5_obj_chain.values, lgdo.ArrayOfEncodedEqualSizedArrays)
 
-    lh5_obj, n_rows = store.read_object(
+    lh5_obj_chain, n_rows = store.read_object(
         "/data/struct/wftable_enc", [lh5_file, lh5_file], decompress=True
     )
+    assert isinstance(lh5_obj_chain.values, lgdo.ArrayOfEqualSizedArrays)
+    assert np.array_equal(lh5_obj_chain.values[:3], lh5_obj.values)
+    assert np.array_equal(lh5_obj_chain.values[3:], lh5_obj.values)
     assert n_rows == 6
 
 

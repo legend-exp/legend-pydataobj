@@ -531,26 +531,31 @@ class LH5Store:
                 elif obj_buf is None and decompress:
                     return compress.decode(rawdata), n_rows_read
 
-                # use the (decoded object type) buffer otherwise
-                if enc_lgdo == VectorOfEncodedVectors and not isinstance(
-                    obj_buf, VectorOfVectors
-                ):
-                    raise ValueError(
-                        f"obj_buf for decoded '{name}' not a VectorOfVectors"
-                    )
-                elif enc_lgdo == ArrayOfEncodedEqualSizedArrays and not isinstance(
-                    obj_buf, ArrayOfEqualSizedArrays
-                ):
-                    raise ValueError(
-                        f"obj_buf for decoded '{name}' not an ArrayOfEqualSizedArrays"
-                    )
+                # eventually expand provided obj_buf, if too short
+                buf_size = obj_buf_start + n_rows_read
+                if len(obj_buf) < buf_size:
+                    obj_buf.resize(buf_size)
 
-                # FIXME: not a good idea. an in place decoding version
-                # of decode would be needed to avoid extra memory
-                # allocations
-                # FIXME: obj_buf_start??? Write a unit test
-                for i, wf in enumerate(compress.decode(rawdata)):
-                    obj_buf[i] = wf
+                # use the (decoded object type) buffer otherwise
+                if enc_lgdo == ArrayOfEncodedEqualSizedArrays:
+                    if not isinstance(obj_buf, ArrayOfEqualSizedArrays):
+                        raise ValueError(
+                            f"obj_buf for decoded '{name}' not an ArrayOfEqualSizedArrays"
+                        )
+
+                    compress.decode(rawdata, obj_buf[obj_buf_start:buf_size])
+
+                elif enc_lgdo == VectorOfEncodedVectors:
+                    if not isinstance(obj_buf, VectorOfVectors):
+                        raise ValueError(
+                            f"obj_buf for decoded '{name}' not a VectorOfVectors"
+                        )
+
+                    # FIXME: not a good idea. an in place decoding version
+                    # of decode would be needed to avoid extra memory
+                    # allocations
+                    for i, wf in enumerate(compress.decode(rawdata)):
+                        obj_buf[obj_buf_start + i] = wf
 
                 return obj_buf, n_rows_read
 

@@ -40,6 +40,7 @@ def encode(
 
 def decode(
     obj: lgdo.VectorOfEncodedVectors | lgdo.ArrayOfEncodedEqualSizedArrays,
+    out_buf: lgdo.ArrayOfEqualSizedArrays = None,
 ) -> lgdo.VectorOfVectors | lgdo.ArrayOfEqualsizedArrays:
     """Decode encoded LGDOs.
 
@@ -51,6 +52,9 @@ def decode(
     ----------
     obj
         LGDO array type.
+    out_buf
+        pre-allocated LGDO for the decoded signals. See documentation of
+        wrapped encoders for limitations.
     """
     if "codec" not in obj.attrs:
         raise RuntimeError(
@@ -61,9 +65,11 @@ def decode(
     log.debug(f"decoding {repr(obj)} with {codec}")
 
     if _is_codec(codec, radware.RadwareSigcompress):
-        return radware.decode(obj, shift=int(obj.attrs.get("codec_shift", 0)))
+        return radware.decode(
+            obj, sig_out=out_buf, shift=int(obj.attrs.get("codec_shift", 0))
+        )
     elif _is_codec(codec, varlen.ULEB128ZigZagDiff):
-        return varlen.decode(obj)
+        return varlen.decode(obj, sig_out=out_buf)
     else:
         raise ValueError(f"'{codec}' not supported")
 

@@ -120,7 +120,7 @@ def encode(
         return sig_out, nbytes
 
     elif isinstance(sig_in, lgdo.VectorOfVectors):
-        if sig_out:
+        if sig_out is not None:
             log.warning(
                 "a pre-allocated VectorOfEncodedVectors was given "
                 "to hold an encoded ArrayOfEqualSizedArrays. "
@@ -143,7 +143,7 @@ def encode(
         return sig_out
 
     elif isinstance(sig_in, lgdo.ArrayOfEqualSizedArrays):
-        if sig_out:
+        if sig_out is not None:
             log.warning(
                 "a pre-allocated ArrayOfEncodedEqualSizedArrays was given "
                 "to hold an encoded ArrayOfEqualSizedArrays. "
@@ -243,7 +243,7 @@ def decode(
         return sig_out, siglen
 
     elif isinstance(sig_in, lgdo.ArrayOfEncodedEqualSizedArrays):
-        if not sig_out:
+        if sig_out is None:
             # initialize output structure with decoded_size
             sig_out = lgdo.ArrayOfEqualSizedArrays(
                 dims=(1, 1),
@@ -263,7 +263,7 @@ def decode(
         # can now decode on the 2D matrix together with number of bytes to read per row
         _, siglen = decode(
             (sig_in.encoded_data.to_aoesa(preserve_dtype=True).nda, nbytes),
-            sig_out.nda,
+            sig_out if isinstance(sig_out, np.ndarray) else sig_out.nda,
             shift=shift,
         )
 
