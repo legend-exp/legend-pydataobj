@@ -741,7 +741,7 @@ class LH5Store:
                     tmp_shape = (0,) + h5f[name].shape[1:]
                     nda = np.empty(tmp_shape, h5f[name].dtype)
                 else:
-                    nda = h5f[name][source_sel]
+                    nda = h5f[name][...][source_sel]
 
             # special handling for bools
             # (c and Julia store as uint8 so cast to bool)
