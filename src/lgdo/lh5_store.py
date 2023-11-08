@@ -781,7 +781,7 @@ class LH5Store:
         n_rows: int = None,
         wo_mode: str = "append",
         write_start: int = 0,
-        hdf5_compression: str | h5py.filters.FilterRefBase = DEFAULT_HDF5_COMPRESSION,
+        **h5py_kwargs,
     ) -> None:
         """Write an LGDO into an LH5 file.
 
@@ -802,14 +802,15 @@ class LH5Store:
 
         Note
         ----
-        The `compression` attribute takes precedence over the
-        `hdf5_compression` argument and is not written to disk.
+        The `compression` LGDO attribute takes precedence over the
+        `compression` argument of :meth:`h5py.Group.create_dataset` and is not
+        written to disk.
 
         Note
         ----
         HDF5 compression is skipped for the `encoded_data` dataset of
         :class:`.VectorOfEncodedVectors` and
-        :class`.ArrayOfEncodedEqualSizedArrays`.
+        :class:`.ArrayOfEncodedEqualSizedArrays`.
 
         Parameters
         ----------
@@ -845,15 +846,17 @@ class LH5Store:
         write_start
             row in the output file (if already existing) to start overwriting
             from.
-        hdf5_compression
-            HDF5 compression filter to be applied before writing non-scalar
-            datasets. **Ignored if compression is specified as an `obj`
-            attribute.**
+        **h5py_kwargs
+            additional keyword arguments forwarded to
+            :meth:`h5py.Group.create_dataset` to specify, for example, an HDF5
+            compression filter to be applied before writing non-scalar
+            datasets. **Note: `compression` Ignored if compression is specified
+            as an `obj` attribute.**
         """
         log.debug(
             f"writing {repr(obj)}[{start_row}:{n_rows}] as "
             f"{lh5_file}:{group}/{name}[{write_start}:], "
-            f"mode = {wo_mode}, hdf5_compression = {hdf5_compression}"
+            f"mode = {wo_mode}, h5py_kwargs = {h5py_kwargs}"
         )
 
         if wo_mode == "write_safe":
@@ -953,7 +956,7 @@ class LH5Store:
                     n_rows=n_rows,
                     wo_mode=wo_mode,
                     write_start=write_start,
-                    hdf5_compression=hdf5_compression,
+                    **h5py_kwargs,
                 )
             return
 
@@ -986,7 +989,7 @@ class LH5Store:
                 n_rows=n_rows,
                 wo_mode=wo_mode,
                 write_start=write_start,
-                hdf5_compression=None,  # data is already compressed!
+                **h5py_kwargs,
             )
 
             self.write_object(
@@ -998,7 +1001,7 @@ class LH5Store:
                 n_rows=n_rows,
                 wo_mode=wo_mode,
                 write_start=write_start,
-                hdf5_compression=hdf5_compression,
+                **h5py_kwargs,
             )
 
         # vector of vectors
@@ -1034,7 +1037,7 @@ class LH5Store:
                 n_rows=fd_n_rows,
                 wo_mode=wo_mode,
                 write_start=offset,
-                hdf5_compression=hdf5_compression,
+                **h5py_kwargs,
             )
 
             # now offset is used to give appropriate in-file values for
@@ -1057,7 +1060,7 @@ class LH5Store:
                 n_rows=n_rows,
                 wo_mode=wo_mode,
                 write_start=write_start,
-                hdf5_compression=hdf5_compression,
+                **h5py_kwargs,
             )
             obj.cumulative_length.nda -= cl_dtype(offset)
 
@@ -1077,27 +1080,31 @@ class LH5Store:
             # need to create dataset from ndarray the first time for speed
             # creating an empty dataset and appending to that is super slow!
             if (wo_mode != "a" and write_start == 0) or name not in group:
+                # this is needed in order to have a resizable (in the first
+                # axis) data set, i.e. rows can be appended later
+                # NOTE: this automatically turns chunking on!
                 maxshape = (None,) + nda.shape[1:]
                 if wo_mode == "o" and name in group:
                     log.debug(f"overwriting {name} in {group}")
                     del group[name]
 
                 # create HDF5 dataset
-                # - compress using the 'compression' LGDO attribute, if
-                #   available
-                # - otherwise use "hdf5_compression"
-                # - attach HDF5 dataset attributes, but not "compression"!
-                comp_algo = obj.attrs.get("compression", hdf5_compression)
-                comp_kwargs = {}
-                if isinstance(comp_algo, str):
-                    comp_kwargs = {"compression": comp_algo}
-                elif comp_algo is not None:
-                    comp_kwargs = comp_algo
+                # compress using the 'compression' LGDO attribute, if available
+                if "compression" in obj.attrs:
+                    comp_algo = obj.attrs["compression"]
+                    if not isinstance(comp_algo, dict):
+                        h5py_kwargs["compression"] = comp_algo
+                    else:
+                        h5py_kwargs |= comp_algo
+
+                # otherwise use "compression" argument
+                h5py_kwargs.setdefault("compression", DEFAULT_HDF5_COMPRESSION)
 
                 ds = group.create_dataset(
-                    name, data=nda, maxshape=maxshape, **comp_kwargs
+                    name, data=nda, maxshape=maxshape, **h5py_kwargs
                 )
 
+                # attach HDF5 dataset attributes, but not "compression"!
                 _attrs = obj.getattrs(datatype=True)
                 _attrs.pop("compression", None)
                 ds.attrs.update(_attrs)
