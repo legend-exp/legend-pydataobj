@@ -297,6 +297,17 @@ def test_read_voev(lh5_file):
     assert isinstance(lh5_obj, lgdo.VectorOfEncodedVectors)
     assert n_rows == 6
 
+    with h5py.File(lh5_file) as h5f:
+        assert h5f["/data/struct/voev/encoded_data/flattened_data"].compression is None
+        assert (
+            h5f["/data/struct/voev/encoded_data/cumulative_length"].compression
+            is DEFAULT_HDF5_COMPRESSION
+        )
+        assert (
+            h5f["/data/struct/voev/decoded_size"].compression
+            is DEFAULT_HDF5_COMPRESSION
+        )
+
 
 def test_read_voev_fancy_idx(lh5_file):
     store = LH5Store()
@@ -396,6 +407,21 @@ def test_read_wftable_encoded(lh5_file):
     assert np.array_equal(lh5_obj_chain.values[:3], lh5_obj.values)
     assert np.array_equal(lh5_obj_chain.values[3:], lh5_obj.values)
     assert n_rows == 6
+
+    with h5py.File(lh5_file) as h5f:
+        assert (
+            h5f[
+                "/data/struct/wftable_enc/values/encoded_data/flattened_data"
+            ].compression
+            is None
+        )
+        assert h5f["/data/struct/wftable_enc/values/decoded_size"].compression is None
+        assert (
+            h5f["/data/struct/wftable_enc/t0"].compression is DEFAULT_HDF5_COMPRESSION
+        )
+        assert (
+            h5f["/data/struct/wftable_enc/dt"].compression is DEFAULT_HDF5_COMPRESSION
+        )
 
 
 def test_read_with_field_mask(lh5_file):

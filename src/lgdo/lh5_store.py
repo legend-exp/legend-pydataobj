@@ -980,6 +980,9 @@ class LH5Store:
                 name, group, grp_attrs=obj.attrs, overwrite=(wo_mode == "o")
             )
 
+            # ask not to further compress flattened_data, it is already compressed!
+            obj.encoded_data.flattened_data.attrs["compression"] = None
+
             self.write_object(
                 obj.encoded_data,
                 "encoded_data",
