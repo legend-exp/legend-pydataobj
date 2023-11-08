@@ -38,8 +38,7 @@ LGDO = Union[Array, Scalar, Struct, VectorOfVectors]
 
 log = logging.getLogger(__name__)
 
-DEFAULT_HDF5_SETTINGS: dict[str, ...] = {"compression": None}
-#: The default HDF5 compression settings.
+DEFAULT_HDF5_SETTINGS: dict[str, ...] = {"shuffle": True, "compression": "gzip"}
 
 
 class LH5Store:
