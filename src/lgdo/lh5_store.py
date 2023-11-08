@@ -284,6 +284,7 @@ class LH5Store:
                     start_row=start_row,
                     n_rows=n_rows_i,
                     idx=idx_i,
+                    use_h5idx=use_h5idx,
                     field_mask=field_mask,
                     obj_buf=obj_buf,
                     obj_buf_start=obj_buf_start,
@@ -381,6 +382,7 @@ class LH5Store:
                     start_row=start_row,
                     n_rows=n_rows,
                     idx=idx,
+                    use_h5idx=use_h5idx,
                     decompress=decompress,
                 )
             # modify datatype in attrs if a field_mask was used
@@ -427,6 +429,7 @@ class LH5Store:
                     start_row=start_row,
                     n_rows=n_rows,
                     idx=idx,
+                    use_h5idx=use_h5idx,
                     obj_buf=fld_buf,
                     obj_buf_start=obj_buf_start,
                     decompress=decompress,
@@ -596,6 +599,7 @@ class LH5Store:
                 start_row=start_row,
                 n_rows=n_rows,
                 idx=idx,
+                use_h5idx=use_h5idx,
                 obj_buf=cumulen_buf,
                 obj_buf_start=obj_buf_start,
             )
@@ -620,6 +624,7 @@ class LH5Store:
                     start_row=start_row,
                     n_rows=n_rows,
                     idx=idx2,
+                    use_h5idx=use_h5idx,
                 )
                 fd_starts = fd_starts.nda  # we just need the nda
                 if fd_start is None:
@@ -702,6 +707,7 @@ class LH5Store:
                 start_row=fd_start,
                 n_rows=fd_n_rows,
                 idx=fd_idx,
+                use_h5idx=use_h5idx,
                 obj_buf=fd_buf,
                 obj_buf_start=fd_buf_start,
             )
@@ -757,7 +763,13 @@ class LH5Store:
                 if len(obj_buf) < buf_size:
                     obj_buf.resize(buf_size)
                 dest_sel = np.s_[obj_buf_start:buf_size]
-                h5f[name].read_direct(obj_buf.nda, source_sel, dest_sel)
+                
+                # until better solution found
+                if (use_h5idx):
+                    h5f[name].read_direct(obj_buf.nda, source_sel, dest_sel)
+                else:
+                    obj_buf.nda[dest_sel] = np.copy(h5f[name][...][source_sel])
+
                 nda = obj_buf.nda
             else:
                 if n_rows == 0:
@@ -767,7 +779,7 @@ class LH5Store:
                     if (use_h5idx):
                         nda = h5f[name][source_sel]
                     else:
-                        nda = h5f[name][...][source_sel]
+                        nda = np.copy(h5f[name][...][source_sel])
 
             # special handling for bools
             # (c and Julia store as uint8 so cast to bool)
