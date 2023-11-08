@@ -1094,6 +1094,8 @@ class LH5Store:
                 # axis) data set, i.e. rows can be appended later
                 # NOTE: this automatically turns chunking on!
                 maxshape = (None,) + nda.shape[1:]
+                h5py_kwargs.setdefault("maxshape", maxshape)
+
                 if wo_mode == "o" and name in group:
                     log.debug(f"overwriting {name} in {group}")
                     del group[name]
@@ -1115,9 +1117,7 @@ class LH5Store:
                     h5py_kwargs |= obj.attrs["hdf5_settings"]
 
                 # create HDF5 dataset
-                ds = group.create_dataset(
-                    name, data=nda, maxshape=maxshape, **h5py_kwargs
-                )
+                ds = group.create_dataset(name, data=nda, **h5py_kwargs)
 
                 # attach HDF5 dataset attributes, but not "compression"!
                 _attrs = obj.getattrs(datatype=True)
