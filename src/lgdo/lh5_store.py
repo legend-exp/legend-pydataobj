@@ -38,7 +38,8 @@ LGDO = Union[Array, Scalar, Struct, VectorOfVectors]
 
 log = logging.getLogger(__name__)
 
-DEFAULT_HDF5_COMPRESSION = "gzip"
+DEFAULT_HDF5_SETTINGS: dict[str, ...] = {"compression": None}
+#: The default HDF5 compression settings.
 
 
 class LH5Store:
@@ -1092,11 +1093,8 @@ class LH5Store:
                     del group[name]
 
                 # set default compression options
-                if isinstance(DEFAULT_HDF5_COMPRESSION, dict):
-                    for k, v in DEFAULT_HDF5_COMPRESSION.items():
-                        h5py_kwargs.setdefault(k, v)
-                else:
-                    h5py_kwargs.setdefault("compression", DEFAULT_HDF5_COMPRESSION)
+                for k, v in DEFAULT_HDF5_SETTINGS.items():
+                    h5py_kwargs.setdefault(k, v)
 
                 # compress using the 'compression' LGDO attribute, if available
                 if "compression" in obj.attrs:

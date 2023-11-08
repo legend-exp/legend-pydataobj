@@ -10,7 +10,7 @@ import lgdo
 import lgdo.lh5_store as lh5
 from lgdo import compression
 from lgdo.compression import RadwareSigcompress
-from lgdo.lh5_store import DEFAULT_HDF5_COMPRESSION, LH5Store
+from lgdo.lh5_store import DEFAULT_HDF5_SETTINGS, LH5Store
 
 
 @pytest.fixture(scope="module")
@@ -229,7 +229,10 @@ def test_read_array(lh5_file):
     assert (lh5_obj.nda == np.array([2, 3, 4])).all()
     assert n_rows == 3
     with h5py.File(lh5_file) as h5f:
-        assert h5f["/data/struct/array"].compression is DEFAULT_HDF5_COMPRESSION
+        assert (
+            h5f["/data/struct/array"].compression
+            is DEFAULT_HDF5_SETTINGS["compression"]
+        )
 
 
 def test_read_array_fancy_idx(lh5_file):
@@ -258,11 +261,11 @@ def test_read_vov(lh5_file):
     with h5py.File(lh5_file) as h5f:
         assert (
             h5f["/data/struct/vov/cumulative_length"].compression
-            is DEFAULT_HDF5_COMPRESSION
+            is DEFAULT_HDF5_SETTINGS["compression"]
         )
         assert (
             h5f["/data/struct/vov/flattened_data"].compression
-            is DEFAULT_HDF5_COMPRESSION
+            is DEFAULT_HDF5_SETTINGS["compression"]
         )
 
 
@@ -301,11 +304,11 @@ def test_read_voev(lh5_file):
         assert h5f["/data/struct/voev/encoded_data/flattened_data"].compression is None
         assert (
             h5f["/data/struct/voev/encoded_data/cumulative_length"].compression
-            is DEFAULT_HDF5_COMPRESSION
+            is DEFAULT_HDF5_SETTINGS["compression"]
         )
         assert (
             h5f["/data/struct/voev/decoded_size"].compression
-            is DEFAULT_HDF5_COMPRESSION
+            is DEFAULT_HDF5_SETTINGS["compression"]
         )
 
 
@@ -349,7 +352,10 @@ def test_read_hdf5_compressed_data(lh5_file):
 
     assert "compression" not in lh5_obj["b"].attrs
     with h5py.File(lh5_file) as h5f:
-        assert h5f["/data/struct/table/a"].compression is DEFAULT_HDF5_COMPRESSION
+        assert (
+            h5f["/data/struct/table/a"].compression
+            is DEFAULT_HDF5_SETTINGS["compression"]
+        )
         assert h5f["/data/struct/table/b"].compression == "gzip"
         assert h5f["/data/struct/table/c"].compression == "gzip"
         assert h5f["/data/struct/table/c"].compression_opts == 9
@@ -368,10 +374,17 @@ def test_read_wftable(lh5_file):
 
     with h5py.File(lh5_file) as h5f:
         assert (
-            h5f["/data/struct/wftable/values"].compression is DEFAULT_HDF5_COMPRESSION
+            h5f["/data/struct/wftable/values"].compression
+            is DEFAULT_HDF5_SETTINGS["compression"]
         )
-        assert h5f["/data/struct/wftable/t0"].compression is DEFAULT_HDF5_COMPRESSION
-        assert h5f["/data/struct/wftable/dt"].compression is DEFAULT_HDF5_COMPRESSION
+        assert (
+            h5f["/data/struct/wftable/t0"].compression
+            is DEFAULT_HDF5_SETTINGS["compression"]
+        )
+        assert (
+            h5f["/data/struct/wftable/dt"].compression
+            is DEFAULT_HDF5_SETTINGS["compression"]
+        )
 
 
 def test_read_wftable_encoded(lh5_file):
@@ -417,10 +430,12 @@ def test_read_wftable_encoded(lh5_file):
         )
         assert h5f["/data/struct/wftable_enc/values/decoded_size"].compression is None
         assert (
-            h5f["/data/struct/wftable_enc/t0"].compression is DEFAULT_HDF5_COMPRESSION
+            h5f["/data/struct/wftable_enc/t0"].compression
+            is DEFAULT_HDF5_SETTINGS["compression"]
         )
         assert (
-            h5f["/data/struct/wftable_enc/dt"].compression is DEFAULT_HDF5_COMPRESSION
+            h5f["/data/struct/wftable_enc/dt"].compression
+            is DEFAULT_HDF5_SETTINGS["compression"]
         )
 
 
