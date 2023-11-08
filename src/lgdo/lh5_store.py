@@ -38,7 +38,7 @@ LGDO = Union[Array, Scalar, Struct, VectorOfVectors]
 
 log = logging.getLogger(__name__)
 
-DEFAULT_HDF5_COMPRESSION = None
+DEFAULT_HDF5_COMPRESSION = "gzip"
 
 
 class LH5Store:
@@ -1091,18 +1091,22 @@ class LH5Store:
                     log.debug(f"overwriting {name} in {group}")
                     del group[name]
 
-                # create HDF5 dataset
+                # set default compression options
+                if isinstance(DEFAULT_HDF5_COMPRESSION, dict):
+                    for k, v in DEFAULT_HDF5_COMPRESSION.items():
+                        h5py_kwargs.setdefault(k, v)
+                else:
+                    h5py_kwargs.setdefault("compression", DEFAULT_HDF5_COMPRESSION)
+
                 # compress using the 'compression' LGDO attribute, if available
                 if "compression" in obj.attrs:
                     comp_algo = obj.attrs["compression"]
-                    if not isinstance(comp_algo, dict):
-                        h5py_kwargs["compression"] = comp_algo
+                    if isinstance(comp_algo, dict):
+                        h5py_kwargs |= obj.attrs["compression"]
                     else:
-                        h5py_kwargs |= comp_algo
+                        h5py_kwargs["compression"] = obj.attrs["compression"]
 
-                # otherwise use "compression" argument
-                h5py_kwargs.setdefault("compression", DEFAULT_HDF5_COMPRESSION)
-
+                # create HDF5 dataset
                 ds = group.create_dataset(
                     name, data=nda, maxshape=maxshape, **h5py_kwargs
                 )
