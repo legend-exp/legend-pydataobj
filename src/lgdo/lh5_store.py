@@ -239,9 +239,7 @@ class LH5Store:
         obj_buf
             Read directly into memory provided in `obj_buf`. Note: the buffer
             will be expanded to accommodate the data requested. To maintain the
-            buffer length, send in ``n_rows = len(obj_buf)``. Note that passing
-            this parameter will ignore the ``use_h5idx`` flag and suffer a speed
-            penalty if also passing ``idx``.
+            buffer length, send in ``n_rows = len(obj_buf)``.
         obj_buf_start
             Start location in ``obj_buf`` for read. For concatenating data to
             array-like objects.
