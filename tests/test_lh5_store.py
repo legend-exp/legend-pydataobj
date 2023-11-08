@@ -10,7 +10,7 @@ import lgdo
 import lgdo.lh5_store as lh5
 from lgdo import compression
 from lgdo.compression import RadwareSigcompress
-from lgdo.lh5_store import LH5Store
+from lgdo.lh5_store import DEFAULT_HDF5_SETTINGS, LH5Store
 
 
 @pytest.fixture(scope="module")
@@ -132,6 +132,14 @@ def lh5_file(tmptestdir):
     col_dict = {
         "a": lgdo.Array(nda=np.array([1, 2, 3, 4]), attrs={"attr": 9}),
         "b": lgdo.Array(nda=np.array([5, 6, 7, 8]), attrs={"compression": "gzip"}),
+        "c": lgdo.Array(
+            nda=np.array([5, 6, 7, 8]),
+            attrs={"compression": {"compression": "gzip", "compression_opts": 9}},
+        ),
+        "d": lgdo.Array(
+            nda=np.array([5, 6, 7, 8]),
+            attrs={"compression": None},
+        ),
     }
 
     struct.add_field("table", lgdo.Table(col_dict=col_dict, attrs={"stuff": 5}))
@@ -176,6 +184,8 @@ def lh5_file(tmptestdir):
         wo_mode="append",
     )
 
+    assert struct["table"]["b"].attrs["compression"] == "gzip"
+
     return f"{tmptestdir}/tmp-pygama-lgdo-types.lh5"
 
 
@@ -208,6 +218,8 @@ def test_read_scalar(lh5_file):
     assert lh5_obj.value == 10
     assert n_rows == 1
     assert lh5_obj.attrs["sth"] == 1
+    with h5py.File(lh5_file) as h5f:
+        assert h5f["/data/struct/scalar"].compression is None
 
 
 def test_read_array(lh5_file):
@@ -216,6 +228,11 @@ def test_read_array(lh5_file):
     assert isinstance(lh5_obj, lgdo.Array)
     assert (lh5_obj.nda == np.array([2, 3, 4])).all()
     assert n_rows == 3
+    with h5py.File(lh5_file) as h5f:
+        assert (
+            h5f["/data/struct/array"].compression
+            is DEFAULT_HDF5_SETTINGS["compression"]
+        )
 
 
 def test_read_array_fancy_idx(lh5_file):
@@ -240,6 +257,16 @@ def test_read_vov(lh5_file):
 
     assert n_rows == 3
     assert lh5_obj.attrs["myattr"] == 2
+
+    with h5py.File(lh5_file) as h5f:
+        assert (
+            h5f["/data/struct/vov/cumulative_length"].compression
+            is DEFAULT_HDF5_SETTINGS["compression"]
+        )
+        assert (
+            h5f["/data/struct/vov/flattened_data"].compression
+            is DEFAULT_HDF5_SETTINGS["compression"]
+        )
 
 
 def test_read_vov_fancy_idx(lh5_file):
@@ -272,6 +299,17 @@ def test_read_voev(lh5_file):
     )
     assert isinstance(lh5_obj, lgdo.VectorOfEncodedVectors)
     assert n_rows == 6
+
+    with h5py.File(lh5_file) as h5f:
+        assert h5f["/data/struct/voev/encoded_data/flattened_data"].compression is None
+        assert (
+            h5f["/data/struct/voev/encoded_data/cumulative_length"].compression
+            is DEFAULT_HDF5_SETTINGS["compression"]
+        )
+        assert (
+            h5f["/data/struct/voev/decoded_size"].compression
+            is DEFAULT_HDF5_SETTINGS["compression"]
+        )
 
 
 def test_read_voev_fancy_idx(lh5_file):
@@ -314,8 +352,14 @@ def test_read_hdf5_compressed_data(lh5_file):
 
     assert "compression" not in lh5_obj["b"].attrs
     with h5py.File(lh5_file) as h5f:
+        assert (
+            h5f["/data/struct/table/a"].compression
+            is DEFAULT_HDF5_SETTINGS["compression"]
+        )
         assert h5f["/data/struct/table/b"].compression == "gzip"
-        assert h5f["/data/struct/table/a"].compression is None
+        assert h5f["/data/struct/table/c"].compression == "gzip"
+        assert h5f["/data/struct/table/c"].compression_opts == 9
+        assert h5f["/data/struct/table/d"].compression is None
 
 
 def test_read_wftable(lh5_file):
@@ -327,6 +371,20 @@ def test_read_wftable(lh5_file):
     lh5_obj, n_rows = store.read_object("/data/struct/wftable", [lh5_file, lh5_file])
     assert n_rows == 6
     assert lh5_obj.values.attrs["custom"] == 8
+
+    with h5py.File(lh5_file) as h5f:
+        assert (
+            h5f["/data/struct/wftable/values"].compression
+            is DEFAULT_HDF5_SETTINGS["compression"]
+        )
+        assert (
+            h5f["/data/struct/wftable/t0"].compression
+            is DEFAULT_HDF5_SETTINGS["compression"]
+        )
+        assert (
+            h5f["/data/struct/wftable/dt"].compression
+            is DEFAULT_HDF5_SETTINGS["compression"]
+        )
 
 
 def test_read_wftable_encoded(lh5_file):
@@ -362,6 +420,23 @@ def test_read_wftable_encoded(lh5_file):
     assert np.array_equal(lh5_obj_chain.values[:3], lh5_obj.values)
     assert np.array_equal(lh5_obj_chain.values[3:], lh5_obj.values)
     assert n_rows == 6
+
+    with h5py.File(lh5_file) as h5f:
+        assert (
+            h5f[
+                "/data/struct/wftable_enc/values/encoded_data/flattened_data"
+            ].compression
+            is None
+        )
+        assert h5f["/data/struct/wftable_enc/values/decoded_size"].compression is None
+        assert (
+            h5f["/data/struct/wftable_enc/t0"].compression
+            is DEFAULT_HDF5_SETTINGS["compression"]
+        )
+        assert (
+            h5f["/data/struct/wftable_enc/dt"].compression
+            is DEFAULT_HDF5_SETTINGS["compression"]
+        )
 
 
 def test_read_with_field_mask(lh5_file):
@@ -503,6 +578,36 @@ def test_read_compressed_lgnd_waveform_table(lgnd_file, enc_lgnd_file):
     wft, _ = store.read_object("/geds/raw/waveform", enc_lgnd_file)
     assert isinstance(wft.values, lgdo.ArrayOfEqualSizedArrays)
     assert "compression" not in wft.values.attrs
+
+
+def test_write_with_hdf5_compression(lgnd_file, tmptestdir):
+    store = LH5Store()
+    wft, n_rows = store.read_object("/geds/raw/waveform", lgnd_file)
+    store.write_object(
+        wft,
+        "/geds/raw/waveform",
+        f"{tmptestdir}/tmp-pygama-hdf5-compressed-wfs.lh5",
+        wo_mode="overwrite_file",
+        compression="gzip",
+        compression_opts=9,
+        shuffle=True,
+    )
+    with h5py.File(f"{tmptestdir}/tmp-pygama-hdf5-compressed-wfs.lh5") as h5f:
+        assert h5f["/geds/raw/waveform/values"].compression == "gzip"
+        assert h5f["/geds/raw/waveform/values"].compression_opts == 9
+        assert h5f["/geds/raw/waveform/values"].shuffle is True
+
+    store.write_object(
+        wft,
+        "/geds/raw/waveform",
+        f"{tmptestdir}/tmp-pygama-hdf5-compressed-wfs.lh5",
+        wo_mode="overwrite_file",
+        compression=None,
+        shuffle=False,
+    )
+    with h5py.File(f"{tmptestdir}/tmp-pygama-hdf5-compressed-wfs.lh5") as h5f:
+        assert h5f["/geds/raw/waveform/values"].compression is None
+        assert h5f["/geds/raw/waveform/values"].shuffle is False
 
 
 # First test that we can overwrite a table with the same name without deleting the original field
