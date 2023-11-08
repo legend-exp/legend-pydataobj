@@ -800,16 +800,23 @@ class LH5Store:
           this algorithm. More documentation about the supported waveform
           compression algorithms at :mod:`.lgdo.compression`.
 
-        Note
-        ----
-        The `compression` LGDO attribute takes precedence over the
-        `compression` argument of :meth:`h5py.Group.create_dataset` and is not
-        written to disk.
+        If the `obj` :class:`.LGDO` has a `hdf5_settings` attribute holding a
+        dictionary, it is interpreted as a list of keyword arguments to be
+        forwarded directly to :meth:`h5py.Group.create_dataset`. This is the
+        preferred way to specify HDF5 dataset options such as chunking etc. If
+        compression options are specified, they take precedence over those set
+        with the `compression` attribute.
 
         Note
         ----
-        HDF5 compression is skipped for the `encoded_data` dataset of
-        :class:`.VectorOfEncodedVectors` and
+        The `compression` LGDO attribute takes precedence over the default HDF5
+        compression settings. The `hdf5_settings` attribute takes precedence
+        over `compression`. These attributes are not written to disk
+
+        Note
+        ----
+        HDF5 compression is skipped for the `encoded_data.flattened_data`
+        dataset of :class:`.VectorOfEncodedVectors` and
         :class:`.ArrayOfEncodedEqualSizedArrays`.
 
         Parameters
@@ -1103,6 +1110,10 @@ class LH5Store:
                     else:
                         h5py_kwargs["compression"] = obj.attrs["compression"]
 
+                # and even the 'hdf5_settings' one, preferred
+                if "hdf5_settings" in obj.attrs:
+                    h5py_kwargs |= obj.attrs["hdf5_settings"]
+
                 # create HDF5 dataset
                 ds = group.create_dataset(
                     name, data=nda, maxshape=maxshape, **h5py_kwargs
@@ -1111,6 +1122,7 @@ class LH5Store:
                 # attach HDF5 dataset attributes, but not "compression"!
                 _attrs = obj.getattrs(datatype=True)
                 _attrs.pop("compression", None)
+                _attrs.pop("hdf5_settings", None)
                 ds.attrs.update(_attrs)
                 return
 

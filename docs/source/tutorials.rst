@@ -9,4 +9,4 @@ Tutorials are currently available as `Jupyter notebooks on GitHub
    :caption: Contents:
 
    notebooks/LH5Files
-   notebooks/Compression
+   notebooks/DataCompression
