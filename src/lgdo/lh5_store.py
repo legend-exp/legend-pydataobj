@@ -764,7 +764,8 @@ class LH5Store:
                     obj_buf.resize(buf_size)
                 dest_sel = np.s_[obj_buf_start:buf_size]
                 
-                # until better solution found
+                # this is required to make the read of multiple files faster
+                # until better solution found.
                 if (use_h5idx):
                     h5f[name].read_direct(obj_buf.nda, source_sel, dest_sel)
                 else:
@@ -779,6 +780,10 @@ class LH5Store:
                     if (use_h5idx):
                         nda = h5f[name][source_sel]
                     else:
+                        # a copy is made in case this is given to an obj_buf that
+                        # then needs to be resized. A view is returned by the
+                        # source_sel indexing, which cannot be resized by ndarray.resize().
+                        # This occurs in particular when multiple files are being read.
                         nda = np.copy(h5f[name][...][source_sel])
 
             # special handling for bools
