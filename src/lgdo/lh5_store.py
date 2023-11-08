@@ -181,7 +181,7 @@ class LH5Store:
         controls whether *only* those rows are read from disk or if the rows are indexed after reading 
         the entire object. Reading individual rows can be orders of magnitude slower than reading 
         the whole object and then indexing the desired rows. The default behavior (``use_h5idx=False``)
-        is to use slightly more memory for a much faster read. Note that there is approximately a 2x 
+        is to use slightly more memory for a much faster read. Note that there is approximately a x2 
         penalty to speed if ``idx`` contains all of the rows of the object, as opposed to just reading
         the whole object in without the ``idx`` parameter. See 
         [legend-pydataobj #29](https://github.com/legend-exp/legend-pydataobj/issues/29) 
@@ -214,7 +214,7 @@ class LH5Store:
             interpreted as the (max) number of *selected* values (in `idx`) to be
             read out. Note that the ``use_h5idx`` parameter controls some behaviour of the
             read and that the default behavior (``use_h5idx=False``) prioritizes speed over
-            a small memory penalty. Note also that there is approximately a 2x 
+            a small memory penalty. Note also that there is approximately a x2 
             penalty to speed if ``idx`` contains all of the rows of the object, as opposed to just reading
             the whole object in without the ``idx`` parameter.
         use_h5idx
