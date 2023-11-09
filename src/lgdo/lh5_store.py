@@ -183,7 +183,7 @@ class LH5Store:
         the whole object and then indexing the desired rows. The default behavior (``use_h5idx=False``)
         is to use slightly more memory for a much faster read. Note that there is approximately a x2
         penalty to speed if ``idx`` contains all of the rows of the object, as opposed to just reading
-        the whole object in without the ``idx`` parameter. See 
+        the whole object in without the ``idx`` parameter. See
         `legend-pydataobj #29 <https://github.com/legend-exp/legend-pydataobj/issues/29>`_
         for additional information.
 
