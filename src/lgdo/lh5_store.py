@@ -803,16 +803,17 @@ class LH5Store:
 
         If the `obj` :class:`.LGDO` has a `hdf5_settings` attribute holding a
         dictionary, it is interpreted as a list of keyword arguments to be
-        forwarded directly to :meth:`h5py.Group.create_dataset`. This is the
-        preferred way to specify HDF5 dataset options such as chunking etc. If
-        compression options are specified, they take precedence over those set
-        with the `compression` attribute.
+        forwarded directly to :meth:`h5py.Group.create_dataset` (exactly like
+        the first format of `compression` above). This is the preferred way to
+        specify HDF5 dataset options such as chunking etc. If compression
+        options are specified, they take precedence over those set with the
+        `compression` attribute.
 
         Note
         ----
         The `compression` LGDO attribute takes precedence over the default HDF5
         compression settings. The `hdf5_settings` attribute takes precedence
-        over `compression`. These attributes are not written to disk
+        over `compression`. These attributes are not written to disk.
 
         Note
         ----
@@ -937,8 +938,8 @@ class LH5Store:
             for field in obj.keys():
                 # eventually compress waveform table values with LGDO's
                 # custom codecs before writing
-                # if waveformtable.values.attrs["compression"] is a string,
-                # interpret it as an HDF5 built-in filter
+                # if waveformtable.values.attrs["compression"] is NOT a
+                # WaveformCodec, just leave it there
                 obj_fld = None
                 if (
                     isinstance(obj, WaveformTable)
