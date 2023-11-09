@@ -219,8 +219,8 @@ class LH5Store:
             which conserves memory at the cost of speed. There can be a significant penalty
             to speed for larger files (1 - 2 orders of magnitude longer time).
             ``False`` (default) will read the entire object into memory before
-            performing the indexing. The default is much faster but requires additional memory, 
-            though a relatively small amount in the typical use case. It is recommended to 
+            performing the indexing. The default is much faster but requires additional memory,
+            though a relatively small amount in the typical use case. It is recommended to
             leave this parameter as its default.
         field_mask
             For tables and structs, determines which fields get written out.
@@ -775,7 +775,7 @@ class LH5Store:
             if idx is not None:
                 # check if idx is empty and convert to slice instead
                 if len(idx[0]) == 0:
-                    source_sel = np.s_[0 : 0]
+                    source_sel = np.s_[0:0]
                     change_idx_to_slice = True
                 # check if idx is contiguous and increasing
                 # if so, convert it to a slice instead (faster)
@@ -786,7 +786,7 @@ class LH5Store:
                     source_sel = idx
             else:
                 source_sel = np.s_[start_row : start_row + n_rows_to_read]
-                
+
             # Now read the array
             if obj_buf is not None and n_rows_to_read > 0:
                 buf_size = obj_buf_start + n_rows_to_read
