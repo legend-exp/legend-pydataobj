@@ -796,9 +796,10 @@ class LH5Store:
           passed directly to :meth:`h5py.Group.create_dataset`.
 
         :class:`.WaveformCodec` object
-          If `obj` is a :class:`.WaveformTable`, compress its `values` using
-          this algorithm. More documentation about the supported waveform
-          compression algorithms at :mod:`.lgdo.compression`.
+          If `obj` is a :class:`.WaveformTable` and ``obj.values`` holds the
+          attribute, compress ``values`` using this algorithm. More
+          documentation about the supported waveform compression algorithms at
+          :mod:`.lgdo.compression`.
 
         If the `obj` :class:`.LGDO` has a `hdf5_settings` attribute holding a
         dictionary, it is interpreted as a list of keyword arguments to be
