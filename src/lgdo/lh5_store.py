@@ -177,14 +177,14 @@ class LH5Store:
     ) -> tuple[LGDO, int]:
         """Read LH5 object data from a file.
 
-        Use the``idx`` parameter to read out particular rows of the data. The ``use_h5idx`` flag
+        Use the ``idx`` parameter to read out particular rows of the data. The ``use_h5idx`` flag
         controls whether *only* those rows are read from disk or if the rows are indexed after reading
         the entire object. Reading individual rows can be orders of magnitude slower than reading
         the whole object and then indexing the desired rows. The default behavior (``use_h5idx=False``)
         is to use slightly more memory for a much faster read. Note that there is approximately a x2
         penalty to speed if ``idx`` contains all of the rows of the object, as opposed to just reading
-        the whole object in without the ``idx`` parameter. See
-        [legend-pydataobj #29](https://github.com/legend-exp/legend-pydataobj/issues/29)
+        the whole object in without the ``idx`` parameter. See 
+        `legend-pydataobj #29 <https://github.com/legend-exp/legend-pydataobj/issues/29>`_
         for additional information.
 
         Parameters
