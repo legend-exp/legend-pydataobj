@@ -181,9 +181,7 @@ class LH5Store:
         controls whether *only* those rows are read from disk or if the rows are indexed after reading
         the entire object. Reading individual rows can be orders of magnitude slower than reading
         the whole object and then indexing the desired rows. The default behavior (``use_h5idx=False``)
-        is to use slightly more memory for a much faster read. Note that there is approximately a x2
-        penalty to speed if ``idx`` contains all of the rows of the object, as opposed to just reading
-        the whole object in without the ``idx`` parameter. See
+        is to use slightly more memory for a much faster read. See
         `legend-pydataobj #29 <https://github.com/legend-exp/legend-pydataobj/issues/29>`_
         for additional information.
 
@@ -214,19 +212,16 @@ class LH5Store:
             interpreted as the (max) number of *selected* values (in `idx`) to be
             read out. Note that the ``use_h5idx`` parameter controls some behaviour of the
             read and that the default behavior (``use_h5idx=False``) prioritizes speed over
-            a small memory penalty. Note also that there is approximately a x2
-            penalty to speed if ``idx`` contains all of the rows of the object, as opposed to just reading
-            the whole object in without the ``idx`` parameter.
+            a small memory penalty.
         use_h5idx
             ``True`` will directly pass the ``idx`` parameter to the underlying
             ``h5py`` call such that only the selected rows are read directly into memory,
             which conserves memory at the cost of speed. There can be a significant penalty
             to speed for larger files (1 - 2 orders of magnitude longer time).
             ``False`` (default) will read the entire object into memory before
-            performing the indexing. The default is much faster (1-2 orders of
-            magnitude) but requires additional memory, though a relatively small
-            amount in the typical use case. It is recommended to leave this parameter as
-            its default.
+            performing the indexing. The default is much faster but requires additional memory, 
+            though a relatively small amount in the typical use case. It is recommended to 
+            leave this parameter as its default.
         field_mask
             For tables and structs, determines which fields get written out.
             Only applies to immediate fields of the requested objects. If a dict
@@ -773,12 +768,25 @@ class LH5Store:
             if n_rows_to_read > n_rows:
                 n_rows_to_read = n_rows
 
+            # if idx is passed, check if we can make it a slice instead (faster)
+            change_idx_to_slice = False
+
             # prepare the selection for the read. Use idx if available
             if idx is not None:
-                source_sel = idx
+                # check if idx is empty and convert to slice instead
+                if len(idx[0]) == 0:
+                    source_sel = np.s_[0 : 0]
+                    change_idx_to_slice = True
+                # check if idx is contiguous and increasing
+                # if so, convert it to a slice instead (faster)
+                elif np.all(np.diff(idx[0]) == 1):
+                    source_sel = np.s_[idx[0][0] : idx[0][-1] + 1]
+                    change_idx_to_slice = True
+                else:
+                    source_sel = idx
             else:
                 source_sel = np.s_[start_row : start_row + n_rows_to_read]
-
+                
             # Now read the array
             if obj_buf is not None and n_rows_to_read > 0:
                 buf_size = obj_buf_start + n_rows_to_read
@@ -788,7 +796,7 @@ class LH5Store:
 
                 # this is required to make the read of multiple files faster
                 # until a better solution found.
-                if idx is None or use_h5idx:
+                if change_idx_to_slice or idx is None or use_h5idx:
                     h5f[name].read_direct(obj_buf.nda, source_sel, dest_sel)
                 else:
                     # it is faster to read the whole object and then do fancy indexing
@@ -800,7 +808,7 @@ class LH5Store:
                     tmp_shape = (0,) + h5f[name].shape[1:]
                     nda = np.empty(tmp_shape, h5f[name].dtype)
                 else:
-                    if idx is None or use_h5idx:
+                    if change_idx_to_slice or idx is None or use_h5idx:
                         nda = h5f[name][source_sel]
                     else:
                         # it is faster to read the whole object and then do fancy indexing
