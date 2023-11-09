@@ -173,18 +173,18 @@ class LH5Store:
         field_mask: dict[str, bool] | list[str] | tuple[str] = None,
         obj_buf: LGDO = None,
         obj_buf_start: int = 0,
-        decompress: bool = True,        
+        decompress: bool = True,
     ) -> tuple[LGDO, int]:
         """Read LH5 object data from a file.
 
         Use the``idx`` parameter to read out particular rows of the data. The ``use_h5idx`` flag
-        controls whether *only* those rows are read from disk or if the rows are indexed after reading 
-        the entire object. Reading individual rows can be orders of magnitude slower than reading 
+        controls whether *only* those rows are read from disk or if the rows are indexed after reading
+        the entire object. Reading individual rows can be orders of magnitude slower than reading
         the whole object and then indexing the desired rows. The default behavior (``use_h5idx=False``)
-        is to use slightly more memory for a much faster read. Note that there is approximately a x2 
+        is to use slightly more memory for a much faster read. Note that there is approximately a x2
         penalty to speed if ``idx`` contains all of the rows of the object, as opposed to just reading
-        the whole object in without the ``idx`` parameter. See 
-        [legend-pydataobj #29](https://github.com/legend-exp/legend-pydataobj/issues/29) 
+        the whole object in without the ``idx`` parameter. See
+        [legend-pydataobj #29](https://github.com/legend-exp/legend-pydataobj/issues/29)
         for additional information.
 
         Parameters
@@ -204,27 +204,27 @@ class LH5Store:
             values (see below).
         idx
             For NumPy-style "fancying indexing" for the read to select only some
-            rows, e.g. after applying some cuts to particular columns. 
-            Only selection along the first axis is supported, so tuple arguments 
-            must be one-tuples.  If `n_rows` is not false, `idx` will be truncated to 
-            `n_rows` before reading. To use with a list of files, can pass in a list of 
+            rows, e.g. after applying some cuts to particular columns.
+            Only selection along the first axis is supported, so tuple arguments
+            must be one-tuples.  If `n_rows` is not false, `idx` will be truncated to
+            `n_rows` before reading. To use with a list of files, can pass in a list of
             `idx`'s (one for each file) or use a long contiguous list (e.g. built from a previous
             identical read). If used in conjunction with `start_row` and `n_rows`,
             will be sliced to obey those constraints, where `n_rows` is
             interpreted as the (max) number of *selected* values (in `idx`) to be
             read out. Note that the ``use_h5idx`` parameter controls some behaviour of the
             read and that the default behavior (``use_h5idx=False``) prioritizes speed over
-            a small memory penalty. Note also that there is approximately a x2 
+            a small memory penalty. Note also that there is approximately a x2
             penalty to speed if ``idx`` contains all of the rows of the object, as opposed to just reading
             the whole object in without the ``idx`` parameter.
         use_h5idx
-            ``True`` will directly pass the ``idx`` parameter to the underlying 
+            ``True`` will directly pass the ``idx`` parameter to the underlying
             ``h5py`` call such that only the selected rows are read directly into memory,
             which conserves memory at the cost of speed. There can be a significant penalty
             to speed for larger files (1 - 2 orders of magnitude longer time).
             ``False`` (default) will read the entire object into memory before
             performing the indexing. The default is much faster (1-2 orders of
-            magnitude) but requires additional memory, though a relatively small 
+            magnitude) but requires additional memory, though a relatively small
             amount in the typical use case. It is recommended to leave this parameter as
             its default.
         field_mask
@@ -266,7 +266,7 @@ class LH5Store:
             # to know whether we are reading in a list of files.
             # this is part of the fix for reading data by idx
             # (see https://github.com/legend-exp/legend-pydataobj/issues/29)
-            # so that we only make a copy of the data if absolutely necessary 
+            # so that we only make a copy of the data if absolutely necessary
             # or if we can read the data from file without having to make a copy
             self.in_file_loop = True
 
@@ -289,7 +289,7 @@ class LH5Store:
                 else:
                     idx_i = None
                 n_rows_i = n_rows - n_rows_read
-                
+
                 # maybe someone passed in a list of len==1?
                 if i == (len(lh5_file) - 1):
                     self.in_file_loop = False
@@ -785,7 +785,7 @@ class LH5Store:
                 if len(obj_buf) < buf_size:
                     obj_buf.resize(buf_size)
                 dest_sel = np.s_[obj_buf_start:buf_size]
-                
+
                 # this is required to make the read of multiple files faster
                 # until a better solution found.
                 if idx is None or use_h5idx:
@@ -807,12 +807,12 @@ class LH5Store:
                         nda = h5f[name][...][source_sel]
 
                         # if reading a list of files recursively, this is given to obj_buf on
-                        # the first file read. obj_buf needs to be resized and therefore 
-                        # it needs to hold the data itself (not a view of the data). 
-                        # a view is returned by the source_sel indexing, which cannot be resized 
+                        # the first file read. obj_buf needs to be resized and therefore
+                        # it needs to hold the data itself (not a view of the data).
+                        # a view is returned by the source_sel indexing, which cannot be resized
                         # by ndarray.resize().
-                        if hasattr(self, 'in_file_loop') and self.in_file_loop:
-                            nda = np.copy(nda)  
+                        if hasattr(self, "in_file_loop") and self.in_file_loop:
+                            nda = np.copy(nda)
 
             # special handling for bools
             # (c and Julia store as uint8 so cast to bool)
