@@ -131,5 +131,5 @@ def test_iterate(more_lgnd_files):
 
     for lh5_out, entry, n_rows in lh5_it:
         assert set(lh5_out.keys()) == {"is_valid_0vbb", "timestamp", "zacEmax_ctc_cal"}
-        assert entry%5==0
-        assert n_rows==5
+        assert entry % 5 == 0
+        assert n_rows == 5
