@@ -1698,12 +1698,11 @@ class LH5Iterator(Iterator):
                 n = fcl
             else:
                 file_entries = self.get_file_entrylist(i_file)
+                n = len(file_entries)
                 # check that file entries fall inside of file
-                if file_entries[-1] >= fcl:
+                if n > 0 and file_entries[-1] >= fcl:
                     logging.warning(f"Found entries out of range for file {i_file}")
                     n = np.searchsorted(file_entries, fcl, "right")
-                else:
-                    n = len(file_entries)
                 n += self._get_file_cumentries(i_file - 1)
             self.entry_map[i_file] = n
         return n
@@ -1759,6 +1758,11 @@ class LH5Iterator(Iterator):
         while self.n_rows < self.buffer_len and i_file < len(self.file_map):
             # Loop through files
             local_idx = self.get_file_entrylist(i_file)
+            if local_idx is not None and len(local_idx) == 0:
+                i_file += 1
+                local_entry = 0
+                continue
+
             i_local = local_idx[local_entry] if local_idx is not None else local_entry
             self.lh5_buffer, n_rows = self.lh5_st.read_object(
                 self.groups[i_file],
