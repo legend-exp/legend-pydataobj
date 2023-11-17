@@ -116,3 +116,17 @@ def test_friend(more_lgnd_files):
     assert n_rows == 5
     assert isinstance(lh5_obj, lgdo.Table)
     assert set(lh5_obj.keys()) == {"waveform", "baseline", "is_valid_0vbb"}
+
+def test_iterate(more_lgnd_files):
+    # iterate through all hit groups in all files; there are 10 entries in
+    # each group/file
+    lh5_it = LH5Iterator(
+        more_lgnd_files[1]*3,
+        ["ch1084803/hit"]*2 + ["ch1084804/hit"]*2 + ["ch1121600/hit"]*2,
+        field_mask=["is_valid_0vbb", "timestamp", "zacEmax_ctc_cal"],
+        entry_list=[0, 1, 2, 3, 5, 8, 13, 21, 34, 55],
+        buffer_len=5
+    )
+
+    for lh5_out, entry, n_rows in lh5_it:
+        pass
