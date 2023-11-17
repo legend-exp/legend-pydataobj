@@ -1700,7 +1700,7 @@ class LH5Iterator(Iterator):
                 file_entries = self.get_file_entrylist(i_file)
                 n = len(file_entries)
                 # check that file entries fall inside of file
-                if n>0 and file_entries[-1] >= fcl:
+                if n > 0 and file_entries[-1] >= fcl:
                     logging.warning(f"Found entries out of range for file {i_file}")
                     n = np.searchsorted(file_entries, fcl, "right")
                 n += self._get_file_cumentries(i_file - 1)
