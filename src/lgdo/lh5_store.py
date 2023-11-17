@@ -1758,6 +1758,11 @@ class LH5Iterator(Iterator):
         while self.n_rows < self.buffer_len and i_file < len(self.file_map):
             # Loop through files
             local_idx = self.get_file_entrylist(i_file)
+            if local_idx is not None and len(local_idx)==0:
+                i_file += 1
+                local_entry = 0
+                continue
+            
             i_local = local_idx[local_entry] if local_idx is not None else local_entry
             self.lh5_buffer, n_rows = self.lh5_st.read_object(
                 self.groups[i_file],
