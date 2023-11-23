@@ -118,7 +118,7 @@ class VectorOfVectors(LGDO):
 
     @property
     def cumulative_length(self) -> Array:
-        return Array(self.nda.layout.offsets.data)
+        return Array(self.nda.layout.offsets.data[1:])
 
     @property
     def flattened_data(self) -> Array:
