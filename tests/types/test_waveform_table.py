@@ -38,7 +38,9 @@ def test_init():
     assert (wft.values.nda == np.full(shape=(10, 1000), fill_value=69)).all()
 
     wft = WaveformTable(
-        values=lgdo.VectorOfVectors(shape_guess=(10, 1000), dtype=np.float32)
+        values=lgdo.VectorOfVectors(
+            cumulative_length=1000 * (np.arange(10) + 1), dtype=np.float32
+        )
     )
     assert (wft.t0.nda == np.zeros(10)).all()
     assert (wft.dt.nda == np.full(10, fill_value=1)).all()
@@ -47,7 +49,9 @@ def test_init():
 
     wft = WaveformTable(
         values=lgdo.VectorOfEncodedVectors(
-            encoded_data=lgdo.VectorOfVectors(shape_guess=(10, 1000), dtype=np.ubyte),
+            encoded_data=lgdo.VectorOfVectors(
+                cumulative_length=1000 * (np.arange(10) + 1), dtype=np.ubyte
+            ),
             decoded_size=lgdo.Array(shape=10, fill_val=6),
         )
     )
@@ -66,7 +70,9 @@ def test_init():
 
     wft = WaveformTable(
         values=lgdo.ArrayOfEncodedEqualSizedArrays(
-            encoded_data=lgdo.VectorOfVectors(shape_guess=(10, 1000), dtype=np.ubyte),
+            encoded_data=lgdo.VectorOfVectors(
+                cumulative_length=1000 * (np.arange(10) + 1), dtype=np.ubyte
+            ),
             decoded_size=10,
         )
     )

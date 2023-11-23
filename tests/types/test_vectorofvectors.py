@@ -66,6 +66,7 @@ def test_values(lgdo_vov):
 
 def test_resize(lgdo_vov):
     lgdo_vov.resize(3)
+    assert len(lgdo_vov) == 3
     assert len(lgdo_vov.cumulative_length) == 3
     assert len(lgdo_vov.flattened_data) == lgdo_vov.cumulative_length[-1]
 
