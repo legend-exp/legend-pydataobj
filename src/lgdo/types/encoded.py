@@ -115,6 +115,7 @@ class VectorOfEncodedVectors(LGDO):
         string = ""
         pos = 0
         for vec, size in self:
+            vec = vec.to_numpy()
             if pos != 0:
                 string += " "
 
@@ -251,6 +252,7 @@ class ArrayOfEncodedEqualSizedArrays(LGDO):
         string = ""
         pos = 0
         for vec in self:
+            vec = vec.to_numpy()
             if pos != 0:
                 string += " "
 
