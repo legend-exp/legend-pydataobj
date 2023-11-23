@@ -150,9 +150,11 @@ class VectorOfVectors(LGDO):
     def resize(self, new_size: int) -> None:
         """Resize **down** vector along the first axis."""
         if new_size > len(self):
-            raise ValueError("cannot resize with new_size > len(vov)")
+            raise ValueError(
+                f"cannot resize with new_size > len(vov) ({new_size} > {len(self)})"
+            )
 
-        self.nda = self.nda[: new_size - 1]
+        self.nda = self.nda[:new_size]
 
     def __iter__(self) -> Iterator[ak.Array]:
         return self.nda.__iter__()
@@ -401,7 +403,9 @@ def explode_arrays(
     return arrays_out
 
 
-def _ak_from_buffers(flattened_data: NDArray, cumulative_length: NDArray):
+def _ak_from_buffers(
+    flattened_data: Array | NDArray, cumulative_length: Array | NDArray
+):
     if isinstance(flattened_data, Array):
         flattened_data = flattened_data.nda
     if isinstance(cumulative_length, Array):
