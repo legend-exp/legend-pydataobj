@@ -98,68 +98,6 @@ class VectorOfEncodedVectors(LGDO):
         self.encoded_data.resize(new_size)
         self.decoded_size.resize(new_size)
 
-    def append(self, value: tuple[NDArray, int]) -> None:
-        """Append a 1D encoded vector at the end.
-
-        Parameters
-        ----------
-        value
-            a tuple holding the encoded array and its decoded size.
-
-        See Also
-        --------
-        .VectorOfVectors.append
-        """
-        self.encoded_data.append(value[0])
-        self.decoded_size.append(value[1])
-
-    def insert(self, i: int, value: tuple[NDArray, int]) -> None:
-        """Insert an encoded vector at index `i`.
-
-        Parameters
-        ----------
-        i
-            the new vector will be inserted before this index.
-        value
-            a tuple holding the encoded array and its decoded size.
-
-        See Also
-        --------
-        .VectorOfVectors.insert
-        """
-        self.encoded_data.insert(i, value[0])
-        self.decoded_size.insert(i, value[1])
-
-    def replace(self, i: int, value: tuple[NDArray, int]) -> None:
-        """Replace the encoded vector (and decoded size) at index `i` with a new one.
-
-        Parameters
-        ----------
-        i
-            index of the vector to be replaced.
-        value
-            a tuple holding the encoded array and its decoded size.
-
-        See Also
-        --------
-        .VectorOfVectors.replace
-        """
-        self.encoded_data.replace(i, value[0])
-        self.decoded_size[i] = value[1]
-
-    def __setitem__(self, i: int, value: tuple[NDArray, int]) -> None:
-        """Set an encoded vector at index `i`.
-
-        Parameters
-        ----------
-        i
-            the new vector will be set at this index.
-        value
-            a tuple holding the encoded array and its decoded size.
-        """
-        self.encoded_data[i] = value[0]
-        self.decoded_size[i] = value[1]
-
     def __getitem__(self, i: int) -> tuple[NDArray, int]:
         """Return vector at index `i`.
 
@@ -301,37 +239,6 @@ class ArrayOfEncodedEqualSizedArrays(LGDO):
         .VectorOfVectors.resize
         """
         self.encoded_data.resize(new_size)
-
-    def append(self, value: NDArray) -> None:
-        """Append a 1D encoded array at the end.
-
-        See Also
-        --------
-        .VectorOfVectors.append
-        """
-        self.encoded_data.append(value)
-
-    def insert(self, i: int, value: NDArray) -> None:
-        """Insert an encoded array at index `i`.
-
-        See Also
-        --------
-        .VectorOfVectors.insert
-        """
-        self.encoded_data.insert(i, value)
-
-    def replace(self, i: int, value: NDArray) -> None:
-        """Replace the encoded array at index `i` with a new one.
-
-        See Also
-        --------
-        .VectorOfVectors.replace
-        """
-        self.encoded_data.replace(i, value)
-
-    def __setitem__(self, i: int, value: NDArray) -> None:
-        """Set an encoded array at index `i`."""
-        self.encoded_data[i] = value
 
     def __getitem__(self, i: int) -> NDArray:
         """Return encoded array at index `i`."""
