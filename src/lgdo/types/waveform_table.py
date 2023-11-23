@@ -146,11 +146,11 @@ class WaveformTable(Table):
                 except Exception:
                     wf_len = None
             if wf_len is None:  # make a VectorOfVectors
-                shape_guess = (size, 100)
+                cumlen = 100 * (np.arange(size) + 1)
                 if dtype is None:
                     dtype = np.dtype(np.float64)
                 if values is None:
-                    values = VectorOfVectors(shape_guess=shape_guess, dtype=dtype)
+                    values = VectorOfVectors(cumulative_length=cumlen, dtype=dtype)
                 else:
                     flattened_data = np.concatenate(values)
                     length = 0
