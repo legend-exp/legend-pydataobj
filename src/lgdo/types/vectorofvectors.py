@@ -4,11 +4,11 @@ variable-length arrays and corresponding utilities.
 """
 from __future__ import annotations
 
-import itertools
 import logging
 from collections.abc import Iterator
 from typing import Any
 
+import awkward as ak
 import numba
 import numpy as np
 from numpy.typing import DTypeLike, NDArray
@@ -25,16 +25,14 @@ class VectorOfVectors(LGDO):
     """A variable-length array of variable-length arrays.
 
     For now only a 1D vector of 1D vectors is supported. Internal representation
-    is as two NumPy arrays, one to store the flattened data contiguosly and one
-    to store the cumulative sum of lengths of each vector.
+    is as :class:`awkward.Array`.
     """
 
     def __init__(
         self,
-        listoflists: list[list[int | float]] = None,
+        data: Any = None,
         flattened_data: Array | NDArray = None,
         cumulative_length: Array | NDArray = None,
-        shape_guess: tuple[int, int] = None,
         dtype: DTypeLike = None,
         fill_val: int | float = None,
         attrs: dict[str, Any] = None,
@@ -42,99 +40,72 @@ class VectorOfVectors(LGDO):
         """
         Parameters
         ----------
-        listoflists
-            create a VectorOfVectors out of a Python list of lists. Takes
+        data
+            any data container type accepted by the :class:`awkward.Array`
+            constructor, interpretable as a 2D jagged vector. Takes
             priority over `flattened_data` and `cumulative_length`.
         flattened_data
-            if not ``None``, used as the internal array for
-            `self.flattened_data`.  Otherwise, an internal `flattened_data` is
-            allocated based on `cumulative_length` (or `shape_guess`) and `dtype`.
+            if not ``None``, interpret this 1D sequence as a flattened vector
+            of vectors and use it together with `cumulative_length` to
+            initialize (zero-copy) the internal :class:`awkward.Array`.  If
+            ``None``, a dummy `flattened_data` is allocated internally based on
+            `cumulative_length`, `dtype` and `fill_val`.
         cumulative_length
-            if not ``None``, used as the internal array for
-            `self.cumulative_length`. Should be `dtype` :any:`numpy.uint32`. If
-            `cumulative_length` is ``None``, an internal `cumulative_length` is
-            allocated based on the first element of `shape_guess`.
-        shape_guess
-            a NumPy-format shape specification, required if either of
-            `flattened_data` or `cumulative_length` are not supplied.  The
-            first element should not be a guess and sets the number of vectors
-            to be stored. The second element is a guess or approximation of the
-            typical length of a stored vector, used to set the initial length
-            of `flattened_data` if it was not supplied.
+            if not ``None``, interpret as an array of (integer) offsets of the
+            2D vector (see above).
         dtype
-            sets the type of data stored in `flattened_data`. Required if
-            `flattened_data` and `listoflists` are ``None``.
+            sets the type of data stored in the vector. Required if `data` and
+            `flattened_data` are ``None``.
         fill_val
-            fill all of `self.flattened_data` with this value.
+            fill the vector with this value.
         attrs
             a set of user attributes to be carried along with this LGDO.
         """
-        if listoflists is not None:
-            cl_nda = np.cumsum([len(ll) for ll in listoflists])
-            if dtype is None:
-                if len(cl_nda) == 0 or cl_nda[-1] == 0:
-                    raise ValueError("listoflists can't be empty with dtype=None!")
-                else:
-                    # Set dtype from the first element in the list
-                    # Find it efficiently, allowing for zero-length lists as some of the entries
-                    first_element = next(itertools.chain.from_iterable(listoflists))
-                    dtype = type(first_element)
+        # TODO: what to do with the LGDO attributes carried by flattened_data
+        # and cumulative_length?
 
-            self.dtype = np.dtype(dtype)
-            self.cumulative_length = Array(cl_nda)
-            self.flattened_data = Array(
-                np.fromiter(
-                    itertools.chain.from_iterable(listoflists), dtype=self.dtype
+        # let's give priority to the "data" argument. this will make a copy
+        if data is not None:
+            self.nda = ak.Array(data)
+            if self.nda.ndim != 2:
+                raise ValueError("only two-dimensional data structures are supported")
+
+            try:
+                # ...is this OK?
+                self.dtype = ak.types.numpytype.primitive_to_dtype(
+                    self.nda.type.content.content.primitive
                 )
+            except AttributeError:
+                raise ValueError("input data does not look like a 2D jagged vector")
+
+        # otherwise see if we can use flattened_data and cumulative_length as
+        # buffers (aka zero-copy)
+        elif flattened_data is not None and cumulative_length is not None:
+            self.nda = _ak_from_buffers(flattened_data, cumulative_length)
+            self.dtype = flattened_data.dtype
+        elif flattened_data is not None and cumulative_length is None:
+            raise ValueError(
+                "cumulative_length must be always specified, when flattened_data is"
             )
+        elif flattened_data is None and cumulative_length is not None:
+            if dtype is None:
+                raise ValueError("flattened_data and dtype cannot both be None!")
 
-        else:
-            if cumulative_length is None:
-                if shape_guess is None:
-                    # just make an empty vector
-                    self.cumulative_length = Array(np.empty((0,), dtype="uint32"))
-                else:
-                    # initialize based on shape_guess
-                    if shape_guess[1] <= 0:
-                        self.cumulative_length = Array(
-                            shape=(shape_guess[0],), dtype="uint32", fill_val=0
-                        )
-                    else:
-                        self.cumulative_length = Array(
-                            np.arange(
-                                shape_guess[1],
-                                np.prod(shape_guess) + 1,
-                                shape_guess[1],
-                                dtype="uint32",
-                            )
-                        )
-            else:
-                self.cumulative_length = Array(cumulative_length)
-
-            if flattened_data is None:
-                if dtype is None:
-                    raise ValueError("flattened_data and dtype cannot both be None!")
-
-                length = 0
-                if cumulative_length is None:
-                    if shape_guess is None:
-                        # just make an empty vector
-                        length = 0
-                    else:
-                        # use shape_guess
-                        length = np.prod(shape_guess)
-                else:
-                    # use cumulative_length
-                    length = cumulative_length[-1]
-
-                self.flattened_data = Array(
-                    shape=(length,), dtype=dtype, fill_val=fill_val
+            if fill_val is not None:
+                flattened_data = np.full(
+                    shape=(cumulative_length[-1],), dtype=dtype, fill_value=fill_val
                 )
             else:
-                self.flattened_data = Array(flattened_data)
+                flattened_data = np.empty(shape=(cumulative_length[-1],), dtype=dtype)
+
+            # finally build awkward array
+            self.nda = _ak_from_buffers(flattened_data, cumulative_length)
 
             # finally set dtype
-            self.dtype = self.flattened_data.dtype
+            self.dtype = flattened_data.dtype
+        else:
+            self.nda = ak.Array(np.array([], dtype=dtype))
+            self.dtype = np.dtype(dtype)
 
         super().__init__(attrs)
 
@@ -145,236 +116,49 @@ class VectorOfVectors(LGDO):
         et = utils.get_element_type(self)
         return "array<1>{array<1>{" + et + "}}"
 
+    @property
+    def cumulative_length(self) -> Array:
+        return Array(self.nda.layout.offsets.data)
+
+    @property
+    def flattened_data(self) -> Array:
+        # HACK: seems like resizing the Awkward array down does not result in a
+        # resized flattened_data, so this is a precaution
+        return Array(self.nda.layout.content.data[: self.cumulative_length[-1]])
+
     def __len__(self) -> int:
         """Return the number of stored vectors."""
-        return len(self.cumulative_length)
+        return len(self.nda)
 
     def __eq__(self, other: VectorOfVectors) -> bool:
         if isinstance(other, VectorOfVectors):
-            return (
-                self.flattened_data == other.flattened_data
-                and self.cumulative_length == other.cumulative_length
-                and self.dtype == other.dtype
-                and self.attrs == other.attrs
-            )
+            els_equal = False
+            try:
+                els_equal = ak.all(self.nda == other.nda)
+            except ValueError:
+                pass
+
+            return els_equal and self.dtype == other.dtype and self.attrs == other.attrs
 
         else:
             return False
 
-    def __getitem__(self, i: int) -> list:
+    def __getitem__(self, i: int) -> ak.Array:
         """Return vector at index `i`."""
-        stop = self.cumulative_length[i]
-        if i == 0 or i == -len(self):
-            return self.flattened_data[0:stop]
-        else:
-            return self.flattened_data[self.cumulative_length[i - 1] : stop]
-
-    def __setitem__(self, i: int, new: NDArray) -> None:
-        self.__getitem__(i)[:] = new
+        return self.nda.__getitem__(i)
 
     def resize(self, new_size: int) -> None:
-        """Resize vector along the first axis.
+        """Resize **down** vector along the first axis."""
+        if new_size > len(self):
+            raise ValueError("cannot resize with new_size > len(vov)")
 
-        `self.flattened_data` is resized only if `new_size` is smaller than the
-        current vector length.
+        self.nda = self.nda[: new_size - 1]
 
-        If `new_size` is larger than the current vector length,
-        `self.cumulative_length` is padded with its last element.  This
-        corresponds to appending empty vectors.
-
-        Examples
-        --------
-        >>> vov = VectorOfVectors([[1, 2, 3], [4, 5]])
-        >>> vov.resize(3)
-        >>> print(vov)
-        [[1 2 3],
-         [4 5],
-         [],
-        ]
-
-        >>> vov = VectorOfVectors([[1, 2], [3], [4, 5]])
-        >>> vov.resize(2)
-        >>> print(vov)
-        [[1 2],
-         [3],
-        ]
-        """
-
-        vidx = self.cumulative_length
-        old_s = len(self)
-        dlen = new_size - old_s
-        csum = vidx[-1] if len(self) > 0 else 0
-
-        # first resize the cumulative length
-        self.cumulative_length.resize(new_size)
-
-        # if new_size > size, new elements are filled with zeros, let's fix
-        # that
-        if dlen > 0:
-            self.cumulative_length[old_s:] = csum
-
-        # then resize the data array
-        # if dlen > 0 this has no effect
-        if len(self.cumulative_length) > 0:
-            self.flattened_data.resize(self.cumulative_length[-1])
-
-    def append(self, new: NDArray) -> None:
-        """Append a 1D vector `new` at the end.
-
-        Examples
-        --------
-        >>> vov = VectorOfVectors([[1, 2, 3], [4, 5]])
-        >>> vov.append([8, 9])
-        >>> print(vov)
-        [[1 2 3],
-         [4 5],
-         [8 9],
-        ]
-        """
-        # first extend cumulative_length by +1
-        self.cumulative_length.resize(len(self) + 1)
-        # set it at the right value
-        newlen = self.cumulative_length[-2] + len(new) if len(self) > 1 else len(new)
-        self.cumulative_length[-1] = newlen
-        # then resize flattened_data to accommodate the new vector
-        self.flattened_data.resize(len(self.flattened_data) + len(new))
-        # finally set it
-        self[-1] = new
-
-    def insert(self, i: int, new: NDArray) -> None:
-        """Insert a vector at index `i`.
-
-        `self.flattened_data` (and therefore `self.cumulative_length`) is
-        resized in order to accommodate the new element.
-
-        Examples
-        --------
-        >>> vov = VectorOfVectors([[1, 2, 3], [4, 5]])
-        >>> vov.insert(1, [8, 9])
-        >>> print(vov)
-        [[1 2 3],
-         [8 9],
-         [4 5],
-        ]
-
-        Warning
-        -------
-        This method involves a significant amount of memory re-allocation and
-        is expected to perform poorly on large vectors.
-        """
-        if i >= len(self):
-            raise IndexError(
-                f"index {i} is out of bounds for vector owith size {len(self)}"
-            )
-
-        self.flattened_data = Array(
-            np.insert(self.flattened_data, self.cumulative_length[i - 1], new)
-        )
-        self.cumulative_length = Array(
-            np.insert(self.cumulative_length, i, self.cumulative_length[i - 1])
-        )
-        self.cumulative_length[i:] += np.uint32(len(new))
-
-    def replace(self, i: int, new: NDArray) -> None:
-        """Replace the vector at index `i` with `new`.
-
-        `self.flattened_data` (and therefore `self.cumulative_length`) is
-        resized, if the length of `new` is different from the vector currently
-        at index `i`.
-
-        Examples
-        --------
-        >>> vov = VectorOfVectors([[1, 2, 3], [4, 5]])
-        >>> vov.replace(0, [8, 9])
-        >>> print(vov)
-        [[8 9],
-         [4 5],
-        ]
-
-        Warning
-        -------
-        This method involves a significant amount of memory re-allocation and
-        is expected to perform poorly on large vectors.
-        """
-        if i >= len(self):
-            raise IndexError(
-                f"index {i} is out of bounds for vector with size {len(self)}"
-            )
-
-        vidx = self.cumulative_length
-        dlen = len(new) - len(self[i])
-
-        if dlen == 0:
-            # don't waste resources
-            self[i] = new
-        elif dlen < 0:
-            start = vidx[i - 1]
-            stop = start + len(new)
-            # set the already allocated indices
-            self.flattened_data[start:stop] = new
-            # then delete the extra indices
-            self.flattened_data = Array(
-                np.delete(self.flattened_data, np.s_[stop : vidx[i]])
-            )
-        else:
-            # set the already allocated indices
-            self.flattened_data[vidx[i - 1] : vidx[i]] = new[: len(self[i])]
-            # then insert the remaining
-            self.flattened_data = Array(
-                np.insert(self.flattened_data, vidx[i], new[len(self[i]) :])
-            )
-
-        vidx[i:] = vidx[i:] + dlen
-
-    def _set_vector_unsafe(self, i: int, vec: NDArray) -> None:
-        r"""Insert vector `vec` at position `i`.
-
-        Assumes that ``j = self.cumulative_length[i-1]`` is the index (in
-        `self.flattened_data`) of the end of the `(i-1)`\ th vector and copies
-        `vec` in ``self.flattened_data[j:len(vec)]``. Finally updates
-        ``self.cumulative_length[i]`` with the new flattened data array length.
-
-        Vectors stored after index `i` can be overridden, producing unintended
-        behavior. This method is typically used for fast sequential fill of a
-        pre-allocated vector of vectors.
-
-        Danger
-        ------
-        This method can lead to undefined behavior or vector invalidation if
-        used improperly. Use it only if you know what you are doing.
-
-        See Also
-        --------
-        append, replace, insert
-        """
-        start = 0 if i == 0 else self.cumulative_length[i - 1]
-        end = start + len(vec)
-        self.flattened_data[start:end] = vec
-        self.cumulative_length[i] = end
-
-    def __iter__(self) -> Iterator[NDArray]:
-        for j, stop in enumerate(self.cumulative_length):
-            if j == 0:
-                yield self.flattened_data[0:stop]
-            else:
-                yield self.flattened_data[self.cumulative_length[j - 1] : stop]
+    def __iter__(self) -> Iterator[ak.Array]:
+        return self.nda.__iter__()
 
     def __str__(self) -> str:
-        string = ""
-        pos = 0
-        for vec in self:
-            if pos != 0:
-                string += " "
-
-            string += np.array2string(vec, prefix=" ")
-
-            if pos < len(self.cumulative_length):
-                string += ",\n"
-
-            pos += 1
-
-        string = f"[{string}]"
-
+        string = self.nda.show(stream=None)
         tmp_attrs = self.attrs.copy()
         tmp_attrs.pop("datatype")
         if len(tmp_attrs) > 0:
@@ -385,37 +169,27 @@ class VectorOfVectors(LGDO):
     def __repr__(self) -> str:
         npopt = np.get_printoptions()
         np.set_printoptions(threshold=5, edgeitems=2, linewidth=100)
-        out = (
-            "VectorOfVectors(flattened_data="
-            + repr(self.flattened_data)
-            + ", cumulative_length="
-            + repr(self.cumulative_length)
-            + ", attrs="
-            + repr(self.attrs)
-            + ")"
-        )
+        out = f"VectorOfVectors({self.nda}, attrs=" + repr(self.attrs) + ")"
         np.set_printoptions(**npopt)
         return out
 
     def to_aoesa(self, preserve_dtype: bool = False) -> aoesa.ArrayOfEqualSizedArrays:
         """Convert to :class:`ArrayOfEqualSizedArrays`.
 
-        If `preserve_dtype` is False, the output array will have dtype
-        :class:`numpy.float64` and is padded with :class:`numpy.nan`.
-        Otherwise, the dtype of the original :class:`VectorOfVectors` is
-        preserved.
+        If `preserve_dtype` is ``False``, the output array will have dtype
+        subtype of :class:`numpy.floating` and is padded with
+        :class:`numpy.nan`.  Otherwise, the dtype of the original
+        :class:`VectorOfVectors` is preserved and the padded values are left
+        uninitialized (unless the dtype is already floating-point).
         """
-        ind_lengths = np.diff(self.cumulative_length.nda, prepend=0)
-        arr_len = np.max(ind_lengths)
+        max_len = int(ak.max(ak.count(self.nda, axis=-1)))
+        nda_pad = ak.pad_none(self.nda, max_len, clip=True).to_numpy()
 
-        if not preserve_dtype:
-            nda = np.empty((len(self.cumulative_length), arr_len))
-            nda.fill(np.nan)
-        else:
-            nda = np.empty((len(self.cumulative_length), arr_len), dtype=self.dtype)
+        if not preserve_dtype and not np.issubdtype(nda_pad.dtype, np.floating):
+            nda_pad = nda_pad.astype(float)
+            nda_pad.set_fill_value(np.nan)
 
-        for i in range(len(self.cumulative_length)):
-            nda[i, : ind_lengths[i]] = self[i]
+        nda = nda_pad.filled()
 
         return aoesa.ArrayOfEqualSizedArrays(nda=nda, attrs=self.getattrs())
 
@@ -625,3 +399,19 @@ def explode_arrays(
     for ii in range(len(arrays)):
         explode(cumulative_length, arrays[ii], arrays_out[ii])
     return arrays_out
+
+
+def _ak_from_buffers(flattened_data: NDArray, cumulative_length: NDArray):
+    if isinstance(flattened_data, Array):
+        flattened_data = flattened_data.nda
+    if isinstance(cumulative_length, Array):
+        cumulative_length = cumulative_length.nda
+
+    offsets = np.empty(len(cumulative_length) + 1, dtype=cumulative_length.dtype)
+    offsets[1:] = cumulative_length
+    offsets[0] = 0
+
+    layout = ak.contents.ListOffsetArray(
+        offsets=ak.index.Index(offsets), content=ak.contents.NumpyArray(flattened_data)
+    )
+    return ak.Array(layout)
