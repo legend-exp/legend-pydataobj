@@ -425,17 +425,17 @@ class VectorOfVectors(LGDO):
     def view_as(
         self, library: str, with_units: bool = False, preserve_dtype: bool = False
     ) -> pd.DataFrame | np.NDArray | ak.Array:
-        """View the data as third-party format structure.
+        r"""View the data as third-party format structure.
 
         Note
         ----
         Awkward array views partially involve memory re-allocation (the
-        `cumulative_length`s).
+        `cumulative_length`\ s).
 
         Parameters
         ----------
         library
-            either ``pd``, ``np`` or `ak`.
+            either ``pd``, ``np`` or ``ak``.
         with_units
             forward physical units to the output data.
         """

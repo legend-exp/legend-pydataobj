@@ -268,19 +268,5 @@ class WaveformTable(Table):
     def view_as(
         self, fmt: str, with_units: bool = False
     ) -> pd.DataFrame | np.NDArray | ak.Array:
-        """Convert the data of the WaveformTable object to a third-party format.
-
-        Supported options are ...
-
-        Supported options are ...
-        - ``pd``: :mod:`pandas`
-        - ``ak``: :mod:`awkward`
-
-        Note
-        ----
-        - The implementation of `view_as' for WaveformTable is just a wrapper
-          for the implementation in Table.
-        """
+        """View WaveformTable object as a third-party format data structure."""
         return super().view_as(fmt, with_units)
-
-        # raise NotImplementedError("'convert' not yet implemented for WaveformTable.")
