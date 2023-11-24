@@ -361,7 +361,7 @@ class Table(Struct):
 
         Note
         ----
-        - conversion to ndarray is not supported at the moment as there is 
+        - conversion to ndarray is not supported at the moment as there is
           no clear way how to wrap the column names and the data into one array.
         - conversion to awkward array only works when the key is a string
           and values are of equal length
