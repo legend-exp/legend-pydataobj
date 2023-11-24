@@ -15,7 +15,7 @@ import numpy as np
 import pandas as pd
 from numpy.typing import DTypeLike, NDArray
 
-from .. import lgdo_utils as utils
+from .. import utils as utils
 from . import arrayofequalsizedarrays as aoesa
 from .array import Array
 from .lgdo import LGDO

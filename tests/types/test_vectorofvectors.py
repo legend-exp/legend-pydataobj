@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 import lgdo
-import lgdo.lgdo_utils as utils
+import lgdo.utils as utils
 from lgdo import VectorOfVectors
 from lgdo.types import vectorofvectors as vov
 

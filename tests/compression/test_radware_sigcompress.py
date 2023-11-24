@@ -2,7 +2,8 @@ from pathlib import Path
 
 import numpy as np
 
-from lgdo import ArrayOfEncodedEqualSizedArrays, ArrayOfEqualSizedArrays, LH5Store
+import lgdo.lh5 as lh5
+from lgdo import ArrayOfEncodedEqualSizedArrays, ArrayOfEqualSizedArrays
 from lgdo.compression.radware import (
     _get_hton_u16,
     _radware_sigcompress_decode,
@@ -107,8 +108,9 @@ def test_wrapper(wftable):
 
     enc_wfs = np.zeros(s[:-1] + (2 * s[-1],), dtype="ubyte")
     enclen = np.empty(s[0], dtype="uint32")
+    _shift = np.full(s[0], shift, dtype="int32")
 
-    _radware_sigcompress_encode(wfs, enc_wfs, shift, enclen, _mask)
+    _radware_sigcompress_encode(wfs, enc_wfs, _shift, enclen, _mask)
 
     # test if the wrapper gives the same result
     w_enc_wfs = np.zeros(s[:-1] + (2 * s[-1],), dtype="ubyte")
@@ -167,10 +169,17 @@ def test_aoesa(wftable):
     for wf1, wf2 in zip(dec_aoesa, wftable.values):
         assert np.array_equal(wf1, wf2)
 
+    # test using pre-allocated decoded array
+    sig_out = ArrayOfEqualSizedArrays(
+        shape=wftable.values.nda.shape, dtype=wftable.values.dtype
+    )
+    decode(enc_vov, sig_out=sig_out, shift=shift)
+    assert wftable.values == sig_out
+
 
 def test_performance(lgnd_test_data):
-    store = LH5Store()
-    obj, _ = store.read_object(
+    store = lh5.LH5Store()
+    obj, _ = store.read(
         "/geds/raw/waveform",
         lgnd_test_data.get_path("lh5/LDQTA_r117_20200110T105115Z_cal_geds_raw.lh5"),
     )

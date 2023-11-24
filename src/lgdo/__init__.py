@@ -66,11 +66,11 @@ __all__ = [
     "VectorOfVectors",
     "VectorOfEncodedVectors",
     "WaveformTable",
-    "LH5Iterator",
-    "LH5Store",
     "load_dfs",
     "load_nda",
     "ls",
     "show",
+    "LH5Iterator",
+    "LH5Store",
     "__version__",
 ]

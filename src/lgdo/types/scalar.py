@@ -9,7 +9,7 @@ import awkward as ak
 import numpy as np
 import pandas as pd
 
-from .. import lgdo_utils as utils
+from .. import utils as utils
 from .lgdo import LGDO
 
 log = logging.getLogger(__name__)
@@ -20,7 +20,7 @@ class Scalar(LGDO):
 
     # TODO: do scalars need proper numpy dtypes?
 
-    def __init__(self, value: int | float, attrs: dict[str, Any] = None) -> None:
+    def __init__(self, value: int | float | str, attrs: dict[str, Any] = None) -> None:
         """
         Parameters
         ----------

@@ -226,7 +226,10 @@ class Table(Struct):
                 if not hasattr(column, "nda"):
                     raise ValueError(f"column {col} does not have an nda")
                 else:
-                    df[prefix + str(col)] = column.nda.tolist()
+                    if len(column.nda.shape) == 1:
+                        df[prefix + str(col)] = column.nda
+                    else:
+                        df[prefix + str(col)] = column.nda.tolist()
 
         return df
 
@@ -249,8 +252,8 @@ class Table(Struct):
                     "O1": {
                         "expression": "p1 + p2 * a**2",
                         "parameters": {
-                            "p1": "2",
-                            "p2": "3"
+                            "p1": 2,
+                            "p2": 3
                         }
                     },
                     "O2": {

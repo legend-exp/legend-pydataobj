@@ -12,7 +12,7 @@ import awkward as ak
 import numpy as np
 import pandas as pd
 
-from .. import lgdo_utils as utils
+from .. import utils as utils
 from .lgdo import LGDO
 
 log = logging.getLogger(__name__)
