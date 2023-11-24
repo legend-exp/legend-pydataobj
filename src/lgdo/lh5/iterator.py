@@ -7,13 +7,13 @@ import numpy as np
 import pandas as pd
 
 from ..types import Array, Scalar, Struct, VectorOfVectors
-from .store import Store
+from .store import LH5Store
 from .utils import expand_path
 
 LGDO = typing.Union[Array, Scalar, Struct, VectorOfVectors]
 
 
-class Iterator(typing.Iterator):
+class LH5Iterator(typing.Iterator):
     """
     A class for iterating through one or more LH5 files, one block of entries
     at a time. This also accepts an entry list/mask to enable event selection,
@@ -29,7 +29,7 @@ class Iterator(typing.Iterator):
 
     This can also be used as an iterator:
 
-    >>> for lh5_obj, entry, n_rows in Iterator(...):
+    >>> for lh5_obj, entry, n_rows in LH5Iterator(...):
     >>>    # do the thing!
 
     This is intended for if you are reading a large quantity of data but
@@ -68,16 +68,16 @@ class Iterator(typing.Iterator):
             mask of entries to read. If a list of arrays is provided, expect
             one for each file. Ignore if a selection list is provided.
         field_mask
-            mask of which fields to read. See :meth:`Store.read` for
+            mask of which fields to read. See :meth:`LH5Store.read` for
             more details.
         buffer_len
             number of entries to read at a time while iterating through files.
         friend
-            a ''friend'' Iterator that will be read in parallel with this.
+            a ''friend'' LH5Iterator that will be read in parallel with this.
             The friend should have the same length and entry list. A single
             LH5 table containing columns from both iterators will be returned.
         """
-        self.lh5_st = Store(base_path=base_path, keep_open=True)
+        self.lh5_st = LH5Store(base_path=base_path, keep_open=True)
 
         # List of files, with wildcards and env vars expanded
         if isinstance(lh5_files, str):

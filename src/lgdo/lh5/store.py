@@ -42,15 +42,15 @@ DEFAULT_HDF5_SETTINGS: dict[str, ...] = {"shuffle": True, "compression": "gzip"}
 DEFAULT_HDF5_COMPRESSION = None
 
 
-class Store:
+class LH5Store:
     """
     Class to represent a store of LEGEND HDF5 files. The two main methods
     implemented by the class are :meth:`read` and :meth:`write`.
 
     Examples
     --------
-    >>> from lgdo import Store
-    >>> store = Store()
+    >>> from lgdo import LH5Store
+    >>> store = LH5Store()
     >>> obj, _ = store.read("/geds/waveform", "file.lh5")
     >>> type(obj)
     lgdo.waveform_table.WaveformTable
@@ -1309,7 +1309,7 @@ def ls(lh5_file: str | h5py.Group, lh5_group: str = "") -> list[str]:
         + ("" if lh5_group == "" else f" (and group {lh5_group})")
     )
 
-    lh5_st = Store()
+    lh5_st = LH5Store()
     # To use recursively, make lh5_file a h5group instead of a string
     if isinstance(lh5_file, str):
         lh5_file = lh5_st.gimme_file(lh5_file, "r")
@@ -1473,7 +1473,7 @@ def load_nda(
     # Expand wildcards
     f_list = [f for f_wc in f_list for f in sorted(glob.glob(os.path.expandvars(f_wc)))]
 
-    sto = Store()
+    sto = LH5Store()
     par_data = {par: [] for par in par_list}
     for ii, f in enumerate(f_list):
         f = sto.gimme_file(f, "r")

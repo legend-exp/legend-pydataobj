@@ -20,11 +20,11 @@ def lgnd_file(lgnd_test_data):
 
 
 def test_init():
-    lh5.Store()
+    lh5.LH5Store()
 
 
 def test_gimme_file(lgnd_file):
-    store = lh5.Store(keep_open=True)
+    store = lh5.LH5Store(keep_open=True)
 
     f = store.gimme_file(lgnd_file)
     assert isinstance(f, h5py.File)
@@ -36,7 +36,7 @@ def test_gimme_file(lgnd_file):
 
 def test_gimme_group(lgnd_file, tmptestdir):
     f = h5py.File(lgnd_file)
-    store = lh5.Store()
+    store = lh5.LH5Store()
     g = store.gimme_group("/geds", f)
     assert isinstance(g, h5py.Group)
 
@@ -86,7 +86,7 @@ def test_load_nda(lgnd_file):
 
 @pytest.fixture(scope="module")
 def lh5_file(tmptestdir):
-    store = lh5.Store()
+    store = lh5.LH5Store()
 
     struct = lgdo.Struct()
     struct.add_field("scalar", lgdo.Scalar(value=10, attrs={"sth": 1}))
@@ -184,7 +184,7 @@ def test_write_objects(lh5_file):
 
 
 def test_read_n_rows(lh5_file):
-    store = lh5.Store()
+    store = lh5.LH5Store()
     assert store.read_n_rows("/data/struct_full/aoesa", lh5_file) == 5
     assert store.read_n_rows("/data/struct_full/array", lh5_file) == 5
     assert store.read_n_rows("/data/struct_full/scalar", lh5_file) is None
@@ -196,13 +196,13 @@ def test_read_n_rows(lh5_file):
 
 
 def test_get_buffer(lh5_file):
-    store = lh5.Store()
+    store = lh5.LH5Store()
     buf = store.get_buffer("/data/struct_full/wftable_enc", lh5_file)
     assert isinstance(buf.values, types.ArrayOfEqualSizedArrays)
 
 
 def test_read_scalar(lh5_file):
-    store = lh5.Store()
+    store = lh5.LH5Store()
     lh5_obj, n_rows = store.read("/data/struct/scalar", lh5_file)
     assert isinstance(lh5_obj, lgdo.Scalar)
     assert lh5_obj.value == 10
@@ -213,7 +213,7 @@ def test_read_scalar(lh5_file):
 
 
 def test_read_array(lh5_file):
-    store = lh5.Store()
+    store = lh5.LH5Store()
     lh5_obj, n_rows = store.read("/data/struct/array", lh5_file)
     assert isinstance(lh5_obj, types.Array)
     assert (lh5_obj.nda == np.array([2, 3, 4])).all()
@@ -226,7 +226,7 @@ def test_read_array(lh5_file):
 
 
 def test_read_array_fancy_idx(lh5_file):
-    store = lh5.Store()
+    store = lh5.LH5Store()
     lh5_obj, n_rows = store.read("/data/struct_full/array", lh5_file, idx=[0, 3, 4])
     assert isinstance(lh5_obj, types.Array)
     assert (lh5_obj.nda == np.array([1, 4, 5])).all()
@@ -234,7 +234,7 @@ def test_read_array_fancy_idx(lh5_file):
 
 
 def test_read_vov(lh5_file):
-    store = lh5.Store()
+    store = lh5.LH5Store()
     lh5_obj, n_rows = store.read("/data/struct/vov", lh5_file)
     assert isinstance(lh5_obj, types.VectorOfVectors)
 
@@ -258,7 +258,7 @@ def test_read_vov(lh5_file):
 
 
 def test_read_vov_fancy_idx(lh5_file):
-    store = lh5.Store()
+    store = lh5.LH5Store()
     lh5_obj, n_rows = store.read("/data/struct_full/vov", lh5_file, idx=[0, 2])
     assert isinstance(lh5_obj, types.VectorOfVectors)
 
@@ -271,7 +271,7 @@ def test_read_vov_fancy_idx(lh5_file):
 
 
 def test_read_voev(lh5_file):
-    store = lh5.Store()
+    store = lh5.LH5Store()
     lh5_obj, n_rows = store.read("/data/struct/voev", lh5_file, decompress=False)
     assert isinstance(lh5_obj, types.VectorOfEncodedVectors)
 
@@ -301,7 +301,7 @@ def test_read_voev(lh5_file):
 
 
 def test_read_voev_fancy_idx(lh5_file):
-    store = lh5.Store()
+    store = lh5.LH5Store()
     lh5_obj, n_rows = store.read(
         "/data/struct_full/voev", lh5_file, idx=[0, 2], decompress=False
     )
@@ -316,14 +316,14 @@ def test_read_voev_fancy_idx(lh5_file):
 
 
 def test_read_aoesa(lh5_file):
-    store = lh5.Store()
+    store = lh5.LH5Store()
     lh5_obj, n_rows = store.read("/data/struct/aoesa", lh5_file)
     assert isinstance(lh5_obj, types.ArrayOfEqualSizedArrays)
     assert (lh5_obj.nda == np.full((3, 5), fill_value=42)).all()
 
 
 def test_read_table(lh5_file):
-    store = lh5.Store()
+    store = lh5.LH5Store()
     lh5_obj, n_rows = store.read("/data/struct/table", lh5_file)
     assert isinstance(lh5_obj, types.Table)
     assert n_rows == 3
@@ -335,7 +335,7 @@ def test_read_table(lh5_file):
 
 
 def test_read_hdf5_compressed_data(lh5_file):
-    store = lh5.Store()
+    store = lh5.LH5Store()
     lh5_obj, n_rows = store.read("/data/struct/table", lh5_file)
 
     assert "compression" not in lh5_obj["b"].attrs
@@ -351,7 +351,7 @@ def test_read_hdf5_compressed_data(lh5_file):
 
 
 def test_read_wftable(lh5_file):
-    store = lh5.Store()
+    store = lh5.LH5Store()
     lh5_obj, n_rows = store.read("/data/struct/wftable", lh5_file)
     assert isinstance(lh5_obj, types.WaveformTable)
     assert n_rows == 3
@@ -376,7 +376,7 @@ def test_read_wftable(lh5_file):
 
 
 def test_read_wftable_encoded(lh5_file):
-    store = lh5.Store()
+    store = lh5.LH5Store()
     lh5_obj, n_rows = store.read("/data/struct/wftable_enc", lh5_file, decompress=False)
     assert isinstance(lh5_obj, types.WaveformTable)
     assert isinstance(lh5_obj.values, types.ArrayOfEncodedEqualSizedArrays)
@@ -426,7 +426,7 @@ def test_read_wftable_encoded(lh5_file):
 
 
 def test_read_with_field_mask(lh5_file):
-    store = lh5.Store()
+    store = lh5.LH5Store()
 
     lh5_obj, n_rows = store.read("/data/struct_full", lh5_file, field_mask=["array"])
     assert list(lh5_obj.keys()) == ["array"]
@@ -455,7 +455,7 @@ def test_read_with_field_mask(lh5_file):
 
 
 def test_read_lgnd_array(lgnd_file):
-    store = lh5.Store()
+    store = lh5.LH5Store()
 
     lh5_obj, n_rows = store.read("/geds/raw/baseline", lgnd_file)
     assert isinstance(lh5_obj, types.Array)
@@ -467,7 +467,7 @@ def test_read_lgnd_array(lgnd_file):
 
 
 def test_read_lgnd_array_fancy_idx(lgnd_file):
-    store = lh5.Store()
+    store = lh5.LH5Store()
 
     lh5_obj, n_rows = store.read(
         "/geds/raw/baseline", lgnd_file, idx=[2, 4, 6, 9, 11, 16, 68]
@@ -479,7 +479,7 @@ def test_read_lgnd_array_fancy_idx(lgnd_file):
 
 
 def test_read_lgnd_vov(lgnd_file):
-    store = lh5.Store()
+    store = lh5.LH5Store()
 
     lh5_obj, n_rows = store.read("/geds/raw/tracelist", lgnd_file)
     assert isinstance(lh5_obj, types.VectorOfVectors)
@@ -488,7 +488,7 @@ def test_read_lgnd_vov(lgnd_file):
 
 
 def test_read_lgnd_vov_fancy_idx(lgnd_file):
-    store = lh5.Store()
+    store = lh5.LH5Store()
 
     lh5_obj, n_rows = store.read(
         "/geds/raw/tracelist", lgnd_file, idx=[2, 4, 6, 9, 11, 16, 68]
@@ -501,7 +501,7 @@ def test_read_lgnd_vov_fancy_idx(lgnd_file):
 
 
 def test_read_array_concatenation(lgnd_file):
-    store = lh5.Store()
+    store = lh5.LH5Store()
     lh5_obj, n_rows = store.read("/geds/raw/baseline", [lgnd_file, lgnd_file])
     assert isinstance(lh5_obj, types.Array)
     assert n_rows == 200
@@ -509,7 +509,7 @@ def test_read_array_concatenation(lgnd_file):
 
 
 def test_read_lgnd_waveform_table(lgnd_file):
-    store = lh5.Store()
+    store = lh5.LH5Store()
 
     lh5_obj, n_rows = store.read("/geds/raw/waveform", lgnd_file)
     assert isinstance(lh5_obj, types.WaveformTable)
@@ -528,7 +528,7 @@ def test_read_lgnd_waveform_table(lgnd_file):
 
 
 def test_read_lgnd_waveform_table_fancy_idx(lgnd_file):
-    store = lh5.Store()
+    store = lh5.LH5Store()
 
     lh5_obj, n_rows = store.read(
         "/geds/raw/waveform",
@@ -541,7 +541,7 @@ def test_read_lgnd_waveform_table_fancy_idx(lgnd_file):
 
 @pytest.fixture(scope="module")
 def enc_lgnd_file(lgnd_file, tmptestdir):
-    store = lh5.Store()
+    store = lh5.LH5Store()
     wft, n_rows = store.read("/geds/raw/waveform", lgnd_file)
     wft.values.attrs["compression"] = RadwareSigcompress(codec_shift=-32768)
     store.write(
@@ -558,14 +558,14 @@ def test_write_compressed_lgnd_waveform_table(enc_lgnd_file):
 
 
 def test_read_compressed_lgnd_waveform_table(lgnd_file, enc_lgnd_file):
-    store = lh5.Store()
+    store = lh5.LH5Store()
     wft, _ = store.read("/geds/raw/waveform", enc_lgnd_file)
     assert isinstance(wft.values, types.ArrayOfEqualSizedArrays)
     assert "compression" not in wft.values.attrs
 
 
 def test_write_with_hdf5_compression(lgnd_file, tmptestdir):
-    store = lh5.Store()
+    store = lh5.LH5Store()
     wft, n_rows = store.read("/geds/raw/waveform", lgnd_file)
     store.write(
         wft,
@@ -606,7 +606,7 @@ def test_write_object_overwrite_table_no_deletion(caplog, tmptestdir):
     tb2 = types.Table(
         col_dict={"dset1": types.Array(np.ones(10))}
     )  # Same field name, different values
-    store = lh5.Store()
+    store = lh5.LH5Store()
     store.write(tb1, "my_group", f"{tmptestdir}/write_object_overwrite_test.lh5")
     store.write(
         tb2,
@@ -637,7 +637,7 @@ def test_write_object_overwrite_table_with_deletion(caplog, tmptestdir):
     tb2 = types.Table(
         col_dict={"dset2": types.Array(np.ones(10))}
     )  # Same field name, different values
-    store = lh5.Store()
+    store = lh5.LH5Store()
     store.write(tb1, "my_group", f"{tmptestdir}/write_object_overwrite_test.lh5")
     store.write(
         tb2,
@@ -662,7 +662,7 @@ def test_write_object_overwrite_table_with_deletion(caplog, tmptestdir):
     tb2 = types.Table(
         col_dict={"dset2": types.Array(np.ones(10))}
     )  # Same field name, different values
-    store = lh5.Store()
+    store = lh5.LH5Store()
     store.write(
         tb1,
         "my_table",
@@ -713,7 +713,7 @@ def test_write_object_overwrite_lgdo(caplog, tmptestdir):
         values=np.ones((10, 10)),
         values_units="ADC",
     )  # Same field name, different values
-    store = lh5.Store()
+    store = lh5.LH5Store()
     store.write(
         tb1,
         "my_table",
@@ -742,7 +742,7 @@ def test_write_object_overwrite_lgdo(caplog, tmptestdir):
     # Now try overwriting an array, and test the write_start argument
     array1 = types.Array(nda=np.zeros(10))
     array2 = types.Array(nda=np.ones(20))
-    store = lh5.Store()
+    store = lh5.LH5Store()
     store.write(array1, "my_array", f"{tmptestdir}/write_object_overwrite_test.lh5")
     store.write(
         array2,
@@ -763,7 +763,7 @@ def test_write_object_overwrite_lgdo(caplog, tmptestdir):
     # Now try overwriting a scalar
     scalar1 = types.Scalar(0)
     scalar2 = types.Scalar(1)
-    store = lh5.Store()
+    store = lh5.LH5Store()
     store.write(scalar1, "my_scalar", f"{tmptestdir}/write_object_overwrite_test.lh5")
     store.write(
         scalar2,
@@ -782,7 +782,7 @@ def test_write_object_overwrite_lgdo(caplog, tmptestdir):
     # Finally, try overwriting a vector of vectors
     vov1 = types.VectorOfVectors(listoflists=[np.zeros(1), np.ones(2), np.zeros(3)])
     vov2 = types.VectorOfVectors(listoflists=[np.ones(1), np.zeros(2), np.ones(3)])
-    store = lh5.Store()
+    store = lh5.LH5Store()
     store.write(vov1, "my_vector", f"{tmptestdir}/write_object_overwrite_test.lh5")
     store.write(
         vov2,
@@ -808,7 +808,7 @@ def test_write_object_append_column(tmptestdir):
 
     array1 = types.Array(np.zeros(10))
     tb1 = types.Table(col_dict={"dset1`": types.Array(np.ones(10))})
-    store = lh5.Store()
+    store = lh5.LH5Store()
     store.write(array1, "my_table", f"{tmptestdir}/write_object_append_column_test.lh5")
     with pytest.raises(RuntimeError) as exc_info:
         store.write(
@@ -836,7 +836,7 @@ def test_write_object_append_column(tmptestdir):
     tb2 = types.Table(
         col_dict={"dset2": types.Array(np.ones(10))}
     )  # Same field name, different values
-    store = lh5.Store()
+    store = lh5.LH5Store()
     store.write(tb1, "my_table", f"{tmptestdir}/write_object_append_column_test.lh5")
     with pytest.raises(ValueError) as exc_info:
         store.write(
@@ -860,7 +860,7 @@ def test_write_object_append_column(tmptestdir):
     tb2 = types.Table(
         col_dict={"dset2": types.Array(np.ones(20))}
     )  # different field name, different size
-    store = lh5.Store()
+    store = lh5.LH5Store()
     store.write(tb1, "my_table", f"{tmptestdir}/write_object_append_column_test.lh5")
     with pytest.raises(ValueError) as exc_info:
         store.write(
@@ -884,7 +884,7 @@ def test_write_object_append_column(tmptestdir):
     tb2 = types.Table(
         col_dict={"dset2": types.Array(np.ones(10))}
     )  # different field name, different size
-    store = lh5.Store()
+    store = lh5.LH5Store()
     store.write(
         tb1,
         "my_table",

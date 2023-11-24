@@ -25,7 +25,7 @@ LGDO = Union[Array, Scalar, Struct, VectorOfVectors]
 DEFAULT_HDF5_SETTINGS: dict[str, ...] = {"shuffle": True, "compression": "gzip"}
 
 
-class LH5Iterator(lh5.Iterator):
+class LH5Iterator(lh5.LH5Iterator):
     def __init__(
         self,
         lh5_files: str | list[str],
@@ -38,8 +38,8 @@ class LH5Iterator(lh5.Iterator):
         friend: Iterator = None,
     ) -> None:
         warn(
-            "lgdo.lh5_store has moved to a subfolder lgdo.lh5 containing Store and Iterator. "
-            "Please replace 'import lgdo.lh5_store' with 'import lgdo.lh5'. "
+            "lgdo.lh5_store has moved to a subfolder lgdo.lh5 containing LH5Store andLH5Iterator."
+            "We recommend using 'import lgdo.lh5 as lh5' and then creating anLH5Iterator instance via 'lh5.LH5Iterator()'."
             "lgdo.lh5_store will be removed in a future release.",
             DeprecationWarning,
             stacklevel=2,
@@ -68,9 +68,9 @@ class LH5Iterator(lh5.Iterator):
         **h5py_kwargs,
     ) -> None:
         warn(
-            "lgdo.lh5_store has moved to a subfolder lgdo.lh5 containing Store and Iterator. "
-            "Please replace 'import lgdo.lh5_store' with 'import lgdo.lh5'. "
-            "lgdo.lh5_store will be removed in a future release.",
+            "lgdo.lh5_store has moved to a subfolder lgdo.lh5 containing LH5Store andLH5Iterator. "
+            "The object you are calling this function from uses the old LH5Iterator class."
+            "We recommend using 'import lgdo.lh5 as lh5' and then creating an instance via 'lh5.LH5Iterator()'.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -99,9 +99,9 @@ class LH5Iterator(lh5.Iterator):
         decompress: bool = True,
     ) -> tuple[LGDO, int]:
         warn(
-            "lgdo.lh5_store has moved to a subfolder lgdo.lh5 containing Store and Iterator. "
-            "Please replace 'import lgdo.lh5_store' with 'import lgdo.lh5'. "
-            "lgdo.lh5_store will be removed in a future release.",
+            "lgdo.lh5_store has moved to a subfolder lgdo.lh5 containing LH5Store andLH5Iterator. "
+            "The object you are calling this function from uses the old LH5Iterator class."
+            "We recommend using 'import lgdo.lh5 as lh5' and then creating a LH5Store instance via 'lh5.LH5Store()'.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -118,11 +118,11 @@ class LH5Iterator(lh5.Iterator):
         )
 
 
-class LH5Store(lh5.Store):
+class LH5Store(lh5.LH5Store):
     def __init__(self, base_path: str = "", keep_open: bool = False):
         warn(
-            "lgdo.lh5_store has moved to a subfolder lgdo.lh5 containing Store and Iterator. "
-            "Please replace 'import lgdo.lh5_store' with 'import lgdo.lh5'. "
+            "lgdo.lh5_store has moved to a subfolder lgdo.lh5 containing LH5Store andLH5Iterator. "
+            "We recommend using 'import lgdo.lh5 as lh5' and then creating an instance via 'lh5.LH5Iterator()'.",
             "lgdo.lh5_store will be removed in a future release.",
             DeprecationWarning,
             stacklevel=2,
@@ -137,7 +137,7 @@ def load_dfs(
     idx_list: list[np.ndarray | list | tuple] = None,
 ) -> pd.DataFrame:
     warn(
-        "lgdo.lh5_store has moved to a subfolder lgdo.lh5 containing Store and Iterator. "
+        "lgdo.lh5_store has moved to a subfolder lgdo.lh5 containing LH5Store andLH5Iterator. "
         "Please replace 'import lgdo.lh5_store' with 'import lgdo.lh5'. "
         "lgdo.lh5_store will be removed in a future release.",
         DeprecationWarning,
@@ -153,7 +153,7 @@ def load_nda(
     idx_list: list[np.ndarray | list | tuple] = None,
 ) -> dict[str, np.ndarray]:
     warn(
-        "lgdo.lh5_store has moved to a subfolder lgdo.lh5 containing Store and Iterator. "
+        "lgdo.lh5_store has moved to a subfolder lgdo.lh5 containing LH5Store andLH5Iterator. "
         "Please replace 'import lgdo.lh5_store' with 'import lgdo.lh5'. "
         "lgdo.lh5_store will be removed in a future release.",
         DeprecationWarning,
@@ -164,7 +164,7 @@ def load_nda(
 
 def ls(lh5_file: str | h5py.Group, lh5_group: str = "") -> list[str]:
     warn(
-        "lgdo.lh5_store has moved to a subfolder lgdo.lh5 containing Store and Iterator. "
+        "lgdo.lh5_store has moved to a subfolder lgdo.lh5 containing LH5Store andLH5Iterator. "
         "Please replace 'import lgdo.lh5_store' with 'import lgdo.lh5'. "
         "lgdo.lh5_store will be removed in a future release.",
         DeprecationWarning,
@@ -181,7 +181,7 @@ def show(
     header: bool = True,
 ) -> None:
     warn(
-        "lgdo.lh5_store has moved to a subfolder lgdo.lh5 containing Store and Iterator. "
+        "lgdo.lh5_store has moved to a subfolder lgdo.lh5 containing LH5Store andLH5Iterator. "
         "Please replace 'import lgdo.lh5_store' with 'import lgdo.lh5'. "
         "lgdo.lh5_store will be removed in a future release.",
         DeprecationWarning,

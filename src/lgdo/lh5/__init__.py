@@ -5,12 +5,12 @@ browsed easily in python like any `HDF5 <https://www.hdfgroup.org>`_ file using
 `h5py <https://www.h5py.org>`_.
 """
 
-from .iterator import Iterator
-from .store import Store, load_dfs, load_nda, ls, show
+from .iterator import LH5Iterator
+from .store import LH5Store, load_dfs, load_nda, ls, show
 
 __all__ = [
-    "Iterator",
-    "Store",
+    "LH5Iterator",
+    "LH5Store",
     "load_dfs",
     "load_nda",
     "ls",

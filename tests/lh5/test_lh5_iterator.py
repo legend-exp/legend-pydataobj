@@ -11,7 +11,7 @@ def lgnd_file(lgnd_test_data):
 
 
 def test_basics(lgnd_file):
-    lh5_it = lh5.Iterator(
+    lh5_it = lh5.LH5Iterator(
         lgnd_file,
         "/geds/raw",
         entry_list=range(100),
@@ -35,14 +35,14 @@ def test_basics(lgnd_file):
 
 def test_errors(lgnd_file):
     with pytest.raises(RuntimeError):
-        lh5.Iterator("non-existent-file.lh5", "random-group")
+        lh5.LH5Iterator("non-existent-file.lh5", "random-group")
 
     with pytest.raises(ValueError):
-        lh5.Iterator(1, 2)
+        lh5.LH5Iterator(1, 2)
 
 
 def test_lgnd_waveform_table_fancy_idx(lgnd_file):
-    lh5_it = lh5.Iterator(
+    lh5_it = lh5.LH5Iterator(
         lgnd_file,
         "geds/raw/waveform",
         entry_list=[
@@ -97,13 +97,13 @@ def more_lgnd_files(lgnd_test_data):
 
 
 def test_friend(more_lgnd_files):
-    lh5_raw_it = lh5.Iterator(
+    lh5_raw_it = lh5.LH5Iterator(
         more_lgnd_files[0],
         "ch1084803/raw",
         field_mask=["waveform", "baseline"],
         buffer_len=5,
     )
-    lh5_it = lh5.Iterator(
+    lh5_it = lh5.LH5Iterator(
         more_lgnd_files[1],
         "ch1084803/hit",
         field_mask=["is_valid_0vbb"],
@@ -121,7 +121,7 @@ def test_friend(more_lgnd_files):
 def test_iterate(more_lgnd_files):
     # iterate through all hit groups in all files; there are 10 entries in
     # each group/file
-    lh5_it = lh5.Iterator(
+    lh5_it = lh5.LH5Iterator(
         more_lgnd_files[1] * 3,
         ["ch1084803/hit"] * 2 + ["ch1084804/hit"] * 2 + ["ch1121600/hit"] * 2,
         field_mask=["is_valid_0vbb", "timestamp", "zacEmax_ctc_cal"],
