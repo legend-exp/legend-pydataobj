@@ -387,7 +387,7 @@ def _radware_sigcompress_encode(
     changes:
 
     - Shift the input signal by `shift` before encoding.
-    - LH5Store encoded, :class:`numpy.uint16` signal as an array of bytes
+    - Store encoded, :class:`numpy.uint16` signal as an array of bytes
       (:class:`numpy.ubyte`), in big-endian ordering.
     - Declare mask globally to avoid extra memory allocation.
     - Enable hardware-vectorization with Numba (:func:`numba.guvectorize`).
