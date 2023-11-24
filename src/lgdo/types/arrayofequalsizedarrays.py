@@ -135,6 +135,6 @@ class ArrayOfEqualSizedArrays(Array):
         )
 
     def view_as(
-        self, fmt: str, with_units: bool = True
+        self, library: str, with_units: bool = True
     ) -> pd.DataFrame | np.NDArray | ak.Array:
-        return super().view_as(fmt, with_units)
+        return super().view_as(library, with_units=with_units)

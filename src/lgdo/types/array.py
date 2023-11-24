@@ -11,8 +11,10 @@ from typing import Any
 import awkward as ak
 import numpy as np
 import pandas as pd
+import pint_pandas  # noqa: F401
 
 from .. import utils as utils
+from ..units import default_units_registry as u
 from .lgdo import LGDO
 
 log = logging.getLogger(__name__)
@@ -142,13 +144,36 @@ class Array(LGDO):
         )
 
     def view_as(
-        self, fmt: str, with_units: bool = True
+        self, library: str, with_units: bool = True
     ) -> pd.DataFrame | np.NDArray | ak.Array:
-        if fmt == "pd":
-            return pd.DataFrame(self.nda, copy=False)
-        elif fmt == "np":
-            return self.nda
-        elif fmt == "ak":
-            return ak.Array(self.nda)
+        """View the Array data as a third-party format data structure.
+
+        Parameters
+        ----------
+        library
+            format of the returned data view.
+        """
+        # TODO: does attaching units imply a copy?
+        attach_units = with_units and "units" in self.attrs
+
+        if library == "pd":
+            if attach_units:
+                return pd.Series(
+                    self.nda, dtype=f"pint[{self.attrs['units']}]", copy=False
+                )
+            else:
+                return pd.Series(self.nda, copy=False)
+        elif library == "np":
+            if attach_units:
+                return self.nda * u(self.attrs["units"])
+            else:
+                return self.nda
+        elif library == "ak":
+            if attach_units:
+                raise ValueError(
+                    "Pint does not support Awkward yet, you must view the data with_units=False"
+                )
+            else:
+                return ak.Array(self.nda)
         else:
-            raise TypeError(f"{fmt} is not a supported third-party format.")
+            raise ValueError(f"{library} is not a supported third-party format.")
