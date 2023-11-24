@@ -19,9 +19,10 @@ def copy(obj: lgdo.LGDO, dtype: np.dtype = None) -> None:
 
 def get_element_type(obj: object) -> str:
     warn(
-        "lgdo.lh5_store has moved to a subfolder lgdo.lh5 containing LH5Store and LH5Iterator. "
-        "Please replace 'import lgdo.lh5_store' with 'import lgdo.lh5'. "
-        "lgdo.lh5_store will be removed in a future release.",
+        "'lgdo.lgdo_utils' has been renamed to 'lgdo.utils'. "
+        "Please replace either 'import lgdo.lgdo_utils as utils' with 'import lgdo.utils as utils' "
+        "or 'from lgdo.lgdo_utils import get_element_type' with 'from lgdo.utils import get_element_type'."
+        "'lgdo.lgdo_utils' will be removed in a future release.",
         DeprecationWarning,
         stacklevel=2,
     )
@@ -30,9 +31,10 @@ def get_element_type(obj: object) -> str:
 
 def parse_datatype(datatype: str) -> tuple[str, tuple[int, ...], str | list[str]]:
     warn(
-        "lgdo.lh5_store has moved to a subfolder lgdo.lh5 containing LH5Store and LH5Iterator. "
-        "Please replace 'import lgdo.lh5_store' with 'import lgdo.lh5'. "
-        "lgdo.lh5_store will be removed in a future release.",
+        "'lgdo.lgdo_utils' has been renamed to 'lgdo.utils'. "
+        "Please replace either 'import lgdo.lgdo_utils as utils' with 'import lgdo.utils as utils' "
+        "or 'from lgdo.lgdo_utils import parse_datatype' with 'from lgdo.utils import parse_datatype'."
+        "'lgdo.lgdo_utils' will be removed in a future release.",
         DeprecationWarning,
         stacklevel=2,
     )
@@ -41,9 +43,10 @@ def parse_datatype(datatype: str) -> tuple[str, tuple[int, ...], str | list[str]
 
 def expand_vars(expr: str, substitute: dict[str, str] = None) -> str:
     warn(
-        "lgdo.lh5_store has moved to a subfolder lgdo.lh5 containing LH5Store and LH5Iterator. "
-        "Please replace 'import lgdo.lh5_store' with 'import lgdo.lh5'. "
-        "lgdo.lh5_store will be removed in a future release.",
+        "'lgdo.lgdo_utils' has been renamed to 'lgdo.utils'. "
+        "Please replace either 'import lgdo.lgdo_utils as utils' with 'import lgdo.utils as utils' "
+        "or 'from lgdo.lgdo_utils import expand_vars' with 'from lgdo.utils import expand_vars'."
+        "'lgdo.lgdo_utils' will be removed in a future release.",
         DeprecationWarning,
         stacklevel=2,
     )
@@ -57,9 +60,10 @@ def expand_path(
     base_path: str = None,
 ) -> str | list:
     warn(
-        "lgdo.lh5_store has moved to a subfolder lgdo.lh5 containing LH5Store and LH5Iterator. "
-        "Please replace 'import lgdo.lh5_store' with 'import lgdo.lh5'. "
-        "lgdo.lh5_store will be removed in a future release.",
+        "'lgdo.lgdo_utils' has been renamed to 'lgdo.utils'. "
+        "Please replace either 'import lgdo.lgdo_utils as utils' with 'import lgdo.utils as utils' "
+        "or 'from lgdo.lgdo_utils import expand_path' with 'from lgdo.utils import expand_path'."
+        "'lgdo.lgdo_utils' will be removed in a future release.",
         DeprecationWarning,
         stacklevel=2,
     )
