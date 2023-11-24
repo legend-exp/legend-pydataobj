@@ -63,7 +63,7 @@ def expand_path(
         "'lgdo.lgdo_utils' has been renamed to 'lgdo.utils'. "
         "Please replace either 'import lgdo.lgdo_utils as utils' with 'import lgdo.utils as utils' "
         "or 'from lgdo.lgdo_utils import expand_path' with 'from lgdo.utils import expand_path'."
-        "'lgdo.lgdo_utils' will be removed in a future release.",
+        "'lgdo.lgdo_utils' will be removed in a future release. ",
         DeprecationWarning,
         stacklevel=2,
     )
