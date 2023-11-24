@@ -61,7 +61,7 @@ class Scalar(LGDO):
         )
 
     def convert(
-        self, fmt: str = "pandas.DataFrame", copy: bool = False
+        self, fmt: str = "pandas.DataFrame", with_units: bool = True
     ) -> pd.DataFrame | np.NDArray | ak.Array:
         """Convert the data of the Scalar object to a third-party format.
         Supported options are:
@@ -71,9 +71,9 @@ class Scalar(LGDO):
         Not sure why you would need it though ...
         """
         if fmt == "pandas.DataFrame":
-            return pd.DataFrame([self.value], copy=copy)
+            return pd.DataFrame([self.value])
         elif fmt == "numpy.ndarray":
-            return np.array([self.value], copy=copy)
+            return np.array([self.value])
         elif fmt == "awkward.Array":
             return ak.Array([self.value])
         else:

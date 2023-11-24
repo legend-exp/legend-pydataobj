@@ -228,7 +228,7 @@ class VectorOfEncodedVectors(LGDO):
         return out
 
     def convert(
-        self, fmt: str = "pandas.DataFrame"
+        self, fmt: str = "pandas.DataFrame", with_units: bool = True
     ) -> pd.DataFrame | np.NDArray | ak.Array:
         raise NotImplementedError(
             "'convert' not yet implemented for VectorOfEncodedVectors."
@@ -399,7 +399,7 @@ class ArrayOfEncodedEqualSizedArrays(LGDO):
         return out
 
     def convert(
-        self, fmt: str = "pandas.DataFrame"
+        self, fmt: str = "pandas.DataFrame", with_units: bool = True
     ) -> pd.DataFrame | np.NDArray | ak.Array:
         raise NotImplementedError(
             "'convert' not yet implemented for ArrayOfEncodedEqualSizedArrays."

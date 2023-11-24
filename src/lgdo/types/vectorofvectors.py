@@ -422,7 +422,7 @@ class VectorOfVectors(LGDO):
         return aoesa.ArrayOfEqualSizedArrays(nda=nda, attrs=self.getattrs())
 
     def convert(
-        self, fmt: str = "pandas.DataFrame", copy: bool = False
+        self, fmt: str = "pandas.DataFrame", with_units: bool = True
     ) -> pd.DataFrame | np.NDArray | ak.Array:
         """Convert the data of the Table object to a third-party format.
         Supported options are:
@@ -431,9 +431,9 @@ class VectorOfVectors(LGDO):
             "awkward.Array"
         """
         if fmt == "pandas.DataFrame":
-            return self.to_aoesa().convert("pandas.DataFrame", copy)
+            return self.to_aoesa().convert("pandas.DataFrame")
         elif fmt == "numpy.ndarray":
-            return self.to_aoesa().convert("numpy.ndarray", copy)
+            return self.to_aoesa().convert("numpy.ndarray")
         elif fmt == "awkward.Array":
             lengths_of_individual_vectors = np.diff(self.cumulative_length, prepend=[0])
             return ak.unflatten(self.flattened_data, lengths_of_individual_vectors)

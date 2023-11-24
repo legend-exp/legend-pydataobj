@@ -36,7 +36,7 @@ class LGDO(ABC):
 
     @abstractmethod
     def convert(
-        self, fmt: str = "pandas.DataFrame", copy: bool = False
+        self, fmt: str = "pandas.DataFrame", with_units: bool = True
     ) -> pd.DataFrame | np.NDArray | ak.Array:
         """Convert the data of the LGDO object to a third-party format."""
         pass

@@ -110,7 +110,7 @@ class Struct(LGDO, dict):
         return " ".join(out.replace("\n", " ").split())
 
     def convert(
-        self, fmt: str = "pandas.DataFrame", copy: bool = False
+        self, fmt: str = "pandas.DataFrame", with_units: bool = True
     ) -> pd.DataFrame | np.NDArray | ak.Array:
         """Convert the data of the Struct object to a third-party format.
         Supported options are:
@@ -123,11 +123,11 @@ class Struct(LGDO, dict):
             - conversion to awkward array only works when the key is a string and values are of equal length
         """
         if fmt == "pandas.DataFrame":
-            return pd.DataFrame(self, copy=copy)
+            return pd.DataFrame(self)
         elif fmt == "numpy.ndarray":
             return {
-                "keys": np.array(list(self.keys()), copy=copy),
-                "values": np.array(list(self.values()), copy=copy),
+                "keys": np.array(list(self.keys())),
+                "values": np.array(list(self.values())),
             }
         elif fmt == "awkward.Array":
             return ak.Array(self)

@@ -135,7 +135,7 @@ class ArrayOfEqualSizedArrays(Array):
         )
 
     def convert(
-        self, fmt: str = "pandas.DataFrame", copy: bool = False
+        self, fmt: str = "pandas.DataFrame", with_units: bool = True
     ) -> pd.DataFrame | np.NDArray | ak.Array:
         """Convert the data of the ArrayOfEqualSizedArrays object to a third-party format.
         Supported options are:
@@ -144,7 +144,7 @@ class ArrayOfEqualSizedArrays(Array):
             "awkward.Array"
         """
         if fmt == "pandas.DataFrame":
-            return pd.DataFrame(self.nda, copy=copy)
+            return pd.DataFrame(self.nda)
         elif fmt == "numpy.ndarray":
             return self.nda
         elif fmt == "awkward.Array":
