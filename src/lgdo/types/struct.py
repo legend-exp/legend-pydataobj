@@ -115,6 +115,8 @@ class Struct(LGDO, dict):
         """Convert the data of the Struct object to a third-party format.
 
         Supported options are ...
+        - ``pd``: :mod:`pandas`
+        - ``ak``: :mod:`awkward`
 
         Note
         ----
@@ -123,11 +125,11 @@ class Struct(LGDO, dict):
         - conversion to awkward array only works when the key is a string
           and values are of equal length
         """
-        if fmt == "pandas.DataFrame":
+        if fmt == "pd":
             return pd.DataFrame(self, copy=False)
-        elif fmt == "numpy.ndarray":
+        elif fmt == "np":
             raise TypeError(f"Format {fmt} is not a supported for Structs.")
-        elif fmt == "awkward.Array":
+        elif fmt == "ak":
             return ak.Array(self)
         else:
             raise TypeError(f"{fmt} is not a supported third-party format.")

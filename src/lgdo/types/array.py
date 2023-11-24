@@ -144,11 +144,11 @@ class Array(LGDO):
     def view_as(
         self, fmt: str, with_units: bool = True
     ) -> pd.DataFrame | np.NDArray | ak.Array:
-        if fmt == "pandas.DataFrame":
-            return pd.DataFrame(self.nda)
-        elif fmt == "numpy.ndarray":
+        if fmt == "pd":
+            return pd.DataFrame(self.nda, copy=False)
+        elif fmt == "np":
             return self.nda
-        elif fmt == "awkward.Array":
+        elif fmt == "ak":
             return ak.Array(self.nda)
         else:
             raise TypeError(f"{fmt} is not a supported third-party format.")

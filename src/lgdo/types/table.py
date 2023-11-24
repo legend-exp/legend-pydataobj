@@ -359,6 +359,10 @@ class Table(Struct):
 
         Supported options are ...
 
+        Supported options are ...
+        - ``pd``: :mod:`pandas`
+        - ``ak``: :mod:`awkward`
+
         Note
         ----
         - conversion to ndarray is not supported at the moment as there is
@@ -366,11 +370,11 @@ class Table(Struct):
         - conversion to awkward array only works when the key is a string
           and values are of equal length
         """
-        if fmt == "pandas.DataFrame":
-            return pd.DataFrame(self)
-        elif fmt == "numpy.ndarray":
+        if fmt == "pd":
+            return pd.DataFrame(self, copy=False)
+        elif fmt == "np":
             raise TypeError(f"Format {fmt} is not a supported for Tables.")
-        elif fmt == "awkward.Array":
+        elif fmt == "ak":
             return ak.Array(self)
         else:
             raise TypeError(f"{fmt} is not a supported third-party format.")
