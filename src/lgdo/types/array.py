@@ -144,7 +144,7 @@ class Array(LGDO):
         )
 
     def view_as(
-        self, library: str, with_units: bool = True
+        self, library: str, with_units: bool = False
     ) -> pd.DataFrame | np.NDArray | ak.Array:
         """View the Array data as a third-party format data structure.
 

@@ -36,7 +36,7 @@ class LGDO(ABC):
 
     @abstractmethod
     def view_as(
-        self, library: str, with_units: bool = True
+        self, library: str, with_units: bool = False
     ) -> pd.DataFrame | np.NDArray | ak.Array:
         """View the LGDO data object as a third-party format data structure.
 

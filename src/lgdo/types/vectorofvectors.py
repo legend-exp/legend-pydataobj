@@ -423,7 +423,7 @@ class VectorOfVectors(LGDO):
         return aoesa.ArrayOfEqualSizedArrays(nda=nda, attrs=self.getattrs())
 
     def view_as(
-        self, library: str, with_units: bool = True, preserve_dtype: bool = False
+        self, library: str, with_units: bool = False, preserve_dtype: bool = False
     ) -> pd.DataFrame | np.NDArray | ak.Array:
         """View the data as third-party format structure.
 

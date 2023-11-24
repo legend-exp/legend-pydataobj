@@ -110,7 +110,7 @@ class Struct(LGDO, dict):
         return " ".join(out.replace("\n", " ").split())
 
     def view_as(
-        self, fmt: str, with_units: bool = True
+        self, fmt: str, with_units: bool = False
     ) -> pd.DataFrame | np.NDArray | ak.Array:
         """Convert the data of the Struct object to a third-party format.
 

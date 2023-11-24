@@ -42,5 +42,5 @@ class FixedSizeArray(Array):
     def datatype_name(self) -> str:
         return "fixedsize_array"
 
-    def view_as(self, library: str, with_units: bool = True):
+    def view_as(self, library: str, with_units: bool = False):
         return super.view_as(library, with_units=with_units)

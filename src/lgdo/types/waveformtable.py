@@ -266,7 +266,7 @@ class WaveformTable(Table):
         return string
 
     def view_as(
-        self, fmt: str, with_units: bool = True
+        self, fmt: str, with_units: bool = False
     ) -> pd.DataFrame | np.NDArray | ak.Array:
         """Convert the data of the WaveformTable object to a third-party format.
 
