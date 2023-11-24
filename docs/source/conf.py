@@ -51,6 +51,7 @@ napoleon_use_rtype = False
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "numpy": ("https://numpy.org/doc/stable", None),
+    "awkward": ("https://awkward-array.org/doc/stable", None),
     "numba": ("https://numba.readthedocs.io/en/stable", None),
     "pandas": ("https://pandas.pydata.org/docs", None),
     "h5py": ("https://docs.h5py.org/en/stable", None),

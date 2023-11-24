@@ -5,9 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-import awkward as ak
 import numpy as np
-import pandas as pd
 
 from .. import utils as utils
 from .lgdo import LGDO
@@ -44,6 +42,9 @@ class Scalar(LGDO):
     def form_datatype(self) -> str:
         return self.datatype_name()
 
+    def view_as(self, fmt: str, with_units: bool = True):
+        return self.value
+
     def __eq__(self, other: Scalar) -> bool:
         if isinstance(other, Scalar):
             return self.value == other.value and self.attrs == self.attrs
@@ -59,22 +60,3 @@ class Scalar(LGDO):
             self.__class__.__name__
             + f"(value={repr(self.value)}, attrs={repr(self.attrs)})"
         )
-
-    def convert(
-        self, fmt: str = "pandas.DataFrame", with_units: bool = True
-    ) -> pd.DataFrame | np.NDArray | ak.Array:
-        """Convert the data of the Scalar object to a third-party format.
-        Supported options are:
-            "pandas.DataFrame"
-            "numpy.ndarray"
-            "awkward.Array"
-        Not sure why you would need it though ...
-        """
-        if fmt == "pandas.DataFrame":
-            return pd.DataFrame([self.value])
-        elif fmt == "numpy.ndarray":
-            return np.array([self.value])
-        elif fmt == "awkward.Array":
-            return ak.Array([self.value])
-        else:
-            raise TypeError(f"{fmt} is not a supported third-party format.")

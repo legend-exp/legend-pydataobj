@@ -227,11 +227,11 @@ class VectorOfEncodedVectors(LGDO):
         np.set_printoptions(**npopt)
         return out
 
-    def convert(
-        self, fmt: str = "pandas.DataFrame", with_units: bool = True
+    def view_as(
+        self, fmt: str, with_units: bool = True
     ) -> pd.DataFrame | np.NDArray | ak.Array:
         raise NotImplementedError(
-            "'convert' not yet implemented for VectorOfEncodedVectors."
+            "'view_as' not yet implemented for VectorOfEncodedVectors."
         )
 
 
@@ -398,9 +398,9 @@ class ArrayOfEncodedEqualSizedArrays(LGDO):
         np.set_printoptions(**npopt)
         return out
 
-    def convert(
-        self, fmt: str = "pandas.DataFrame", with_units: bool = True
+    def view_as(
+        self, fmt: str, with_units: bool = True
     ) -> pd.DataFrame | np.NDArray | ak.Array:
         raise NotImplementedError(
-            "'convert' not yet implemented for ArrayOfEncodedEqualSizedArrays."
+            "'view_as' not yet implemented for ArrayOfEncodedEqualSizedArrays."
         )

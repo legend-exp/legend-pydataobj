@@ -134,20 +134,7 @@ class ArrayOfEqualSizedArrays(Array):
             attrs=attrs,
         )
 
-    def convert(
-        self, fmt: str = "pandas.DataFrame", with_units: bool = True
+    def view_as(
+        self, fmt: str, with_units: bool = True
     ) -> pd.DataFrame | np.NDArray | ak.Array:
-        """Convert the data of the ArrayOfEqualSizedArrays object to a third-party format.
-        Supported options are:
-            "pandas.DataFrame"
-            "numpy.ndarray"
-            "awkward.Array"
-        """
-        if fmt == "pandas.DataFrame":
-            return pd.DataFrame(self.nda)
-        elif fmt == "numpy.ndarray":
-            return self.nda
-        elif fmt == "awkward.Array":
-            return ak.Array(self.nda)
-        else:
-            raise TypeError(f"{fmt} is not a supported third-party format.")
+        return super().view_as(fmt, with_units)

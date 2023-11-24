@@ -35,10 +35,28 @@ class LGDO(ABC):
         pass
 
     @abstractmethod
-    def convert(
-        self, fmt: str = "pandas.DataFrame", with_units: bool = True
+    def view_as(
+        self, library: str, with_units: bool = True
     ) -> pd.DataFrame | np.NDArray | ak.Array:
-        """Convert the data of the LGDO object to a third-party format."""
+        """View the LGDO data object as a third-party format data structure.
+
+        This is typically a zero-copy or nearly zero-copy operation unless
+        explicitly stated in the concrete LGDO documentation.
+
+        Typical supported third-party formats are:
+
+        - ``pd``: :mod:`pandas`
+        - ``np``: :mod:`numpy`
+        - ``ak``: :mod:`awkward`
+
+        But the actual supported formats may vary depending on the concrete
+        LGDO class.
+
+        Parameters
+        ----------
+        library
+            format of the returned data view.
+        """
         pass
 
     def getattrs(self, datatype: bool = False) -> dict:
