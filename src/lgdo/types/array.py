@@ -141,15 +141,9 @@ class Array(LGDO):
             + f", attrs={repr(self.attrs)})"
         )
 
-    def convert(
-        self, fmt: str = "pandas.DataFrame", with_units: bool = True
+    def view_as(
+        self, fmt: str, with_units: bool = True
     ) -> pd.DataFrame | np.NDArray | ak.Array:
-        """Convert the data of the Array object to a third-party format.
-        Supported options are:
-            "pandas.DataFrame"
-            "numpy.ndarray"
-            "awkward.Array"
-        """
         if fmt == "pandas.DataFrame":
             return pd.DataFrame(self.nda)
         elif fmt == "numpy.ndarray":

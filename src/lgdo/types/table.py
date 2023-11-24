@@ -352,19 +352,19 @@ class Table(Struct):
 
         return string
 
-    def convert(
-        self, fmt: str = "pandas.DataFrame", with_units: bool = True
+    def view_as(
+        self, fmt: str, with_units: bool = True
     ) -> pd.DataFrame | np.NDArray | ak.Array:
         """Convert the data of the Table object to a third-party format.
-        Supported options are:
-            "pandas.DataFrame"
-            "numpy.ndarray"
-            "awkward.Array"
+        Supported options are ...
 
-        Note:
-            - conversion to ndarray only works when the values are of the equal length, returns a dict containing "keys" and "values" keys for the corresponding NDArray
-            - conversion to awkward array only works when the key is a string and values are of equal length
-
+        Note
+        ----
+        - conversion to ndarray only works when the values are of the equal
+          length, returns a dict containing "keys" and "values" keys for
+          the corresponding NDArray
+        - conversion to awkward array only works when the key is a string
+          and values are of equal length
         """
         if fmt == "pandas.DataFrame":
             return pd.DataFrame(self)

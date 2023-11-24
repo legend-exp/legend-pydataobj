@@ -265,7 +265,7 @@ class WaveformTable(Table):
         np.set_printoptions(**npopt)
         return string
 
-    def convert(
-        self, fmt: str = "pandas.DataFrame"
+    def view_as(
+        self, fmt: str, with_units: bool = True
     ) -> pd.DataFrame | np.NDArray | ak.Array:
         raise NotImplementedError("'convert' not yet implemented for WaveformTable.")
