@@ -53,7 +53,7 @@ class LH5Store:
     >>> store = LH5Store()
     >>> obj, _ = store.read("/geds/waveform", "file.lh5")
     >>> type(obj)
-    lgdo.waveform_table.WaveformTable
+    lgdo.waveformtable.WaveformTable
     """
 
     def __init__(self, base_path: str = "", keep_open: bool = False) -> None:
