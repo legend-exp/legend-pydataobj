@@ -1,5 +1,7 @@
 import awkward as ak
+import awkward_pandas as akpd
 import numpy as np
+import pandas as pd
 import pint
 import pytest
 
@@ -271,7 +273,7 @@ def test_copy(lgdo_vov):
 def test_view(lgdo_vov):
     lgdo_vov.attrs["units"] = "s"
     with pytest.raises(ValueError):
-        lgdo_vov.view_as("ak")
+        lgdo_vov.view_as("ak", with_units=True)
 
     ak_arr = lgdo_vov.view_as("ak", with_units=False)
 
@@ -291,5 +293,6 @@ def test_view(lgdo_vov):
     np_arr = lgdo_vov.view_as("np", with_units=False, preserve_dtype=True)
     assert np.issubdtype(np_arr.dtype, np.integer)
 
-    np_arr = lgdo_vov.view_as("pd", with_units=True)
-    assert isinstance(np_arr, pint.Quantity)
+    np_arr = lgdo_vov.view_as("pd", with_units=False)
+    assert isinstance(np_arr, pd.Series)
+    assert isinstance(np_arr.ak, akpd.accessor.AwkwardAccessor)
