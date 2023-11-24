@@ -6,7 +6,7 @@ from typing import Any
 import numpy as np
 from numpy.typing import NDArray
 
-from .. import lgdo_utils as utils
+from .. import utils as utils
 from .array import Array
 from .lgdo import LGDO
 from .scalar import Scalar

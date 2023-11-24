@@ -27,7 +27,7 @@ class NumbaFunctionDocumenter(FunctionDocumenter):
         """
         success = super().import_object()
         if success:
-            # Store away numba wrapper
+            # store away numba wrapper
             self.jitobj = self.object
             # And bend references to underlying python function
             if hasattr(self.object, "py_func"):

@@ -1,6 +1,6 @@
 import numpy as np
 
-import lgdo.lgdo_utils as utils
+import lgdo.utils as utils
 from lgdo import Array
 
 
