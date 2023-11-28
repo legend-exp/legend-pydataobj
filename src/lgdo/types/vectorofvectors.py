@@ -152,8 +152,8 @@ class VectorOfVectors(LGDO):
     def __eq__(self, other: VectorOfVectors) -> bool:
         if isinstance(other, VectorOfVectors):
             return (
-                self.flattened_data == other.flattened_data
-                and self.cumulative_length == other.cumulative_length
+                self.cumulative_length == other.cumulative_length
+                and np.all(self.flattened_data[:self.cumulative_length[-1]] == other.flattened_data[:other.cumulative_length[-1]])
                 and self.dtype == other.dtype
                 and self.attrs == other.attrs
             )
