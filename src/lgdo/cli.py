@@ -9,7 +9,7 @@ from lgdo import show
 
 
 def lh5ls():
-    """:func:`.show` command line interface."""
+    """:func:`.lh5.show` command line interface."""
     parser = argparse.ArgumentParser(
         prog="lh5ls", description="Inspect LEGEND HDF5 (LH5) file contents"
     )

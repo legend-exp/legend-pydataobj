@@ -9,7 +9,7 @@ from typing import Any
 
 import numpy as np
 
-from .. import lgdo_utils as utils
+from .. import utils as utils
 from . import vectorofvectors as vov
 from .array import Array
 
