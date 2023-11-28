@@ -153,10 +153,13 @@ class VectorOfVectors(LGDO):
         if isinstance(other, VectorOfVectors):
             return (
                 self.cumulative_length == other.cumulative_length
-                and (len(self.cumulative_length) == 0 or np.all(
-                    self.flattened_data[: self.cumulative_length[-1]]
-                    == other.flattened_data[: other.cumulative_length[-1]]
-                ) )
+                and (
+                    len(self.cumulative_length) == 0
+                    or np.all(
+                        self.flattened_data[: self.cumulative_length[-1]]
+                        == other.flattened_data[: other.cumulative_length[-1]]
+                    )
+                )
                 and self.dtype == other.dtype
                 and self.attrs == other.attrs
             )
