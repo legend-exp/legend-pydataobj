@@ -1,3 +1,4 @@
+import awkward as ak
 import numpy as np
 import pandas as pd
 import pytest
@@ -84,9 +85,9 @@ def test_join():
     assert list(tbl2.keys()) == ["c", "d", "a"]
 
 
-def test_view_as_pd():
+def test_view_as():
     tbl = Table(4)
-    tbl.add_column("a", lgdo.Array(np.array([1, 2, 3])))
+    tbl.add_column("a", lgdo.Array(np.array([1, 2, 3]), attrs={"units": "m"}))
     tbl.add_column("b", lgdo.Array(np.array([[0, 1, 2], [3, 4, 5], [6, 7, 8]])))
     tbl.add_column(
         "c",
@@ -99,14 +100,43 @@ def test_view_as_pd():
         "d",
         lgdo.Table(
             col_dict={
-                "a": lgdo.Array(np.array([2, 4, 6, 8])),
+                "a": lgdo.Array(np.array([2, 4, 6, 8]), attrs={"units": "m"}),
                 "b": lgdo.Array(np.array([[1, 1], [2, 4], [3, 9], [4, 16]])),
             }
         ),
     )
-    df = tbl.view_as("pd")
+
+    df = tbl.view_as("pd", with_units=False)
     assert isinstance(df, pd.DataFrame)
     assert list(df.keys()) == ["a", "b", "c", "d_a", "d_b"]
+
+    df = tbl.view_as("pd", with_units=True)
+    assert isinstance(df, pd.DataFrame)
+    assert list(df.keys()) == ["a", "b", "c", "d_a", "d_b"]
+    assert df["a"].dtype == "meter"
+    assert df["d_a"].dtype == "meter"
+
+    ak_arr = tbl.view_as("ak", with_units=False)
+    assert isinstance(ak_arr, ak.Array)
+    assert list(ak_arr.fields) == ["a", "b", "c", "d"]
+
+    with pytest.raises(ValueError):
+        tbl.view_as("ak", with_units=True)
+
+    with pytest.raises(TypeError):
+        tbl.view_as("np")
+
+    tbl.add_column(
+        "e",
+        lgdo.VectorOfVectors(
+            flattened_data=lgdo.Array(np.array([0, 1, 2, 3, 4, 5, 6])),
+            cumulative_length=lgdo.Array(np.array([3, 4, 7])),
+            attrs={"units": "m"},
+        ),
+    )
+
+    with pytest.raises(ValueError):
+        tbl.view_as("pd", with_units=True)
 
 
 def test_remove_column():
