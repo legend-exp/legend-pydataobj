@@ -253,23 +253,8 @@ class VectorOfEncodedVectors(LGDO):
                     "Pint does not support Awkward yet, you must view the data with_units=False"
                 )
 
-            # cannot avoid making a copy here. we should add the leading 0 to
-            # cumulative_length inside VectorOfVectors at some point in the
-            # future
-            offsets = np.empty(
-                len(self.encoded_data.cumulative_length) + 1,
-                dtype=self.encoded_data.cumulative_length.dtype,
-            )
-            offsets[1:] = self.encoded_data.cumulative_length
-            offsets[0] = 0
-
-            layout = ak.contents.ListOffsetArray(
-                offsets=ak.index.Index(offsets),
-                content=ak.contents.NumpyArray(self.encoded_data.flattened_data),
-            )
-
             records_list = {
-                "encoded_data": ak.Array(layout),
+                "encoded_data": self.encoded_data.view_as("ak"),
                 "decoded_size": np.array(self.decoded_size),
             }
             return ak.Array(records_list)
@@ -285,7 +270,7 @@ class VectorOfEncodedVectors(LGDO):
                 return pd.DataFrame(
                     {
                         "encoded_data": akpd.from_awkward(
-                            self.view_as("ak")["encoded_data"]
+                            self.encoded_data.view_as("ak")
                         ),
                         "decoded_size": self.decoded_size,
                     }
@@ -482,23 +467,8 @@ class ArrayOfEncodedEqualSizedArrays(LGDO):
                     "Pint does not support Awkward yet, you must view the data with_units=False"
                 )
 
-            # cannot avoid making a copy here. we should add the leading 0 to
-            # cumulative_length inside VectorOfVectors at some point in the
-            # future
-            offsets = np.empty(
-                len(self.encoded_data.cumulative_length) + 1,
-                dtype=self.encoded_data.cumulative_length.dtype,
-            )
-            offsets[1:] = self.encoded_data.cumulative_length
-            offsets[0] = 0
-
-            layout = ak.contents.ListOffsetArray(
-                offsets=ak.index.Index(offsets),
-                content=ak.contents.NumpyArray(self.encoded_data.flattened_data),
-            )
-
             records_list = {
-                "encoded_data": ak.Array(layout),
+                "encoded_data": self.encoded_data.view_as("ak"),
                 "decoded_size": np.full(
                     len(self.encoded_data.cumulative_length), self.decoded_size.value
                 ),
@@ -516,7 +486,7 @@ class ArrayOfEncodedEqualSizedArrays(LGDO):
                 return pd.DataFrame(
                     {
                         "encoded_data": akpd.from_awkward(
-                            self.view_as("ak")["encoded_data"]
+                            self.encoded_data.view_as("ak")
                         ),
                         "decoded_size": np.full(
                             len(self.encoded_data.cumulative_length),
