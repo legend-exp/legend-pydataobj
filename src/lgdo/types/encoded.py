@@ -506,7 +506,7 @@ class ArrayOfEncodedEqualSizedArrays(LGDO):
             return ak.Array(records_list)
 
         if library == "np":
-            raise TypeError(f"Format {library} is not a supported for voev.")
+            raise TypeError(f"Format {library} is not a supported for aoeesa.")
         if library == "pd":
             if attach_units:
                 raise ValueError(
