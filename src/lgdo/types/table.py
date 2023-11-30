@@ -404,7 +404,7 @@ def _view_table_as_pd(
         cols = table.keys()
     for col in cols:
         column = table[col]
-        if isinstance(column, Array | VectorOfVectors):
+        if isinstance(column, Array) or isinstance(column, VectorOfVectors):
             tmp_ser = column.view_as("pd", with_units=with_units).rename(
                 prefix + str(col)
             )
