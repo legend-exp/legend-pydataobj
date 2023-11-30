@@ -320,7 +320,7 @@ class Table(Struct):
         opts["index"] = False
 
         try:
-            string = self.get_dataframe().to_string(**opts)
+            string = self.view_as("pd").to_string(**opts)
         except ValueError:
             string = "Cannot print Table with VectorOfVectors yet!"
 
