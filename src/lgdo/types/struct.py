@@ -110,7 +110,7 @@ class Struct(LGDO, dict):
         return " ".join(out.replace("\n", " ").split())
 
     def view_as(
-        self, fmt: str, with_units: bool = True
+        self, library: str, with_units: bool = False
     ) -> pd.DataFrame | np.NDArray | ak.Array:
         """Convert the data of the Struct object to a third-party format.
 
@@ -125,11 +125,11 @@ class Struct(LGDO, dict):
         - conversion to awkward array only works when the key is a string
           and values are of equal length
         """
-        if fmt == "pd":
+        if library == "pd":
             return pd.DataFrame(self, copy=False)
-        elif fmt == "np":
-            raise TypeError(f"Format {fmt} is not a supported for Structs.")
-        elif fmt == "ak":
+        elif library == "np":
+            raise TypeError(f"Format {library} is not a supported for Structs.")
+        elif library == "ak":
             return ak.Array(self)
         else:
-            raise TypeError(f"{fmt} is not a supported third-party format.")
+            raise TypeError(f"{library} is not a supported third-party format.")

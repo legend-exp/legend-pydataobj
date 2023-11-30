@@ -228,7 +228,7 @@ class VectorOfEncodedVectors(LGDO):
         return out
 
     def view_as(
-        self, fmt: str, with_units: bool = True
+        self, fmt: str, with_units: bool = False
     ) -> pd.DataFrame | np.NDArray | ak.Array:
         raise NotImplementedError(
             "'view_as' not yet implemented for VectorOfEncodedVectors."
@@ -399,7 +399,7 @@ class ArrayOfEncodedEqualSizedArrays(LGDO):
         return out
 
     def view_as(
-        self, fmt: str, with_units: bool = True
+        self, fmt: str, with_units: bool = False
     ) -> pd.DataFrame | np.NDArray | ak.Array:
         raise NotImplementedError(
             "'view_as' not yet implemented for ArrayOfEncodedEqualSizedArrays."

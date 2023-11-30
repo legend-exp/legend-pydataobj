@@ -10,6 +10,7 @@ from collections.abc import Iterator
 from typing import Any
 
 import awkward as ak
+import awkward_pandas as akpd
 import numba
 import numpy as np
 import pandas as pd
@@ -422,20 +423,58 @@ class VectorOfVectors(LGDO):
         return aoesa.ArrayOfEqualSizedArrays(nda=nda, attrs=self.getattrs())
 
     def view_as(
-        self, fmt: str, with_units: bool = True
+        self, library: str, with_units: bool = False, preserve_dtype: bool = False
     ) -> pd.DataFrame | np.NDArray | ak.Array:
-        """Convert the data of the Table object to a third-party format.
-        Supported options are ...
+        r"""View the data as third-party format structure.
+
+        Note
+        ----
+        Awkward array views partially involve memory re-allocation (the
+        `cumulative_length`\ s).
+
+        Parameters
+        ----------
+        library
+            either ``pd``, ``np`` or ``ak``.
+        with_units
+            forward physical units to the output data.
         """
-        if fmt == "pandas.DataFrame":
-            return self.to_aoesa().view_as("pandas.DataFrame")
-        elif fmt == "numpy.ndarray":
-            return self.to_aoesa().view_as("numpy.ndarray")
-        elif fmt == "awkward.Array":
-            lengths_of_individual_vectors = np.diff(self.cumulative_length, prepend=[0])
-            return ak.unflatten(self.flattened_data, lengths_of_individual_vectors)
+        attach_units = with_units and "units" in self.attrs
+
+        if library == "ak":
+            if attach_units:
+                raise ValueError(
+                    "Pint does not support Awkward yet, you must view the data with_units=False"
+                )
+
+            # cannot avoid making a copy here. we should add the leading 0 to
+            # cumulative_length inside VectorOfVectors at some point in the
+            # future
+            offsets = np.empty(
+                len(self.cumulative_length) + 1, dtype=self.cumulative_length.dtype
+            )
+            offsets[1:] = self.cumulative_length
+            offsets[0] = 0
+
+            layout = ak.contents.ListOffsetArray(
+                offsets=ak.index.Index(offsets),
+                content=ak.contents.NumpyArray(self.flattened_data),
+            )
+            return ak.Array(layout)
+
+        if library == "np":
+            return self.to_aoesa(preserve_dtype=preserve_dtype).view_as(
+                "np", with_units=with_units
+            )
+        if library == "pd":
+            if attach_units:
+                raise ValueError(
+                    "Pint does not support Awkward yet, you must view the data with_units=False"
+                )
+            else:
+                return akpd.from_awkward(self.view_as("ak"))
         else:
-            raise TypeError(f"{fmt} is not a supported third-party format.")
+            raise ValueError(f"{library} is not a supported third-party format.")
 
 
 def build_cl(

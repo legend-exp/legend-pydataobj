@@ -215,7 +215,7 @@ class Table(Struct):
             DeprecationWarning,
             stacklevel=2,
         )
-        return self.view_as(fmt="pd", cols=cols, prefix=prefix)
+        return self.view_as(library="pd", cols=cols, prefix=prefix)
 
     def eval(self, expr_config: dict) -> Table:
         """Apply column operations to the table and return a new table holding
@@ -338,8 +338,8 @@ class Table(Struct):
 
     def view_as(
         self,
-        fmt: str,
-        with_units: bool = True,
+        library: str,
+        with_units: bool = False,
         cols: list[str] = None,
         prefix: str = "",
     ) -> pd.DataFrame | np.NDArray | ak.Array:
@@ -358,14 +358,14 @@ class Table(Struct):
         - conversion to awkward array only works when the key is a string
           and values are of equal length
         """
-        if fmt == "pd":
+        if library == "pd":
             return _view_table_as_pd(self, cols=cols, prefix=prefix)
-        elif fmt == "np":
-            raise TypeError(f"Format {fmt} is not a supported for Tables.")
-        elif fmt == "ak":
+        elif library == "np":
+            raise TypeError(f"Format {library} is not a supported for Tables.")
+        elif library == "ak":
             return ak.Array(self)
         else:
-            raise TypeError(f"{fmt} is not a supported third-party format.")
+            raise TypeError(f"{library} is not a supported third-party format.")
 
 
 def _view_table_as_pd(
@@ -389,27 +389,24 @@ def _view_table_as_pd(
         The prefix to be added to the column names. Used when recursively getting the
         dataframe of a Table inside this Table
     """
-    df = pd.DataFrame(copy=copy)
+    df = pd.DataFrame()
     if cols is None:
         cols = table.keys()
     for col in cols:
-        if isinstance(table[col], Table):
-            sub_df = _view_table_as_pd(table[col], prefix=f"{prefix}{col}_")
+        column = table[col]
+        if isinstance(column, Array) or isinstance(column, VectorOfVectors):
             if df.empty:
-                df = sub_df
+                df = pd.DataFrame(column.view_as("pd").rename(prefix + str(col)))
             else:
-                df = df.join(sub_df)
+                df = df.join(column.view_as("pd").rename(prefix + str(col)))
+        elif isinstance(column, Table):
+            if df.empty:
+                df = column.view_as("pd", prefix=f"{prefix}{col}_")
+            else:
+                df = df.join(column.view_as("pd", prefix=f"{prefix}{col}_"))
         else:
-            column = table[col]
-
-            if not isinstance(column, VectorOfVectors) and not hasattr(column, "nda"):
-                raise ValueError(f"column {col} does not have an nda")
-            elif isinstance(column, VectorOfVectors):
-                df = df.join(ak.to_dataframe(column.view_as("ak")))
+            if df.empty:
+                df[prefix + str(col)] = column.view_as("pd")
             else:
-                if len(column.nda.shape) == 1:
-                    df[prefix + str(col)] = column.nda
-                else:
-                    df[prefix + str(col)] = column.nda.tolist()
-
+                df[prefix + str(col)] = df.join(column.view_as("pd"))
     return df

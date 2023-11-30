@@ -42,7 +42,7 @@ class Scalar(LGDO):
     def form_datatype(self) -> str:
         return self.datatype_name()
 
-    def view_as(self, fmt: str, with_units: bool = True):
+    def view_as(self, fmt: str, with_units: bool = False):
         return self.value
 
     def __eq__(self, other: Scalar) -> bool:

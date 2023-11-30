@@ -1,4 +1,8 @@
+import awkward as ak
+import awkward_pandas as akpd
 import numpy as np
+import pandas as pd
+import pint
 import pytest
 
 import lgdo
@@ -219,17 +223,11 @@ def test_replace(lgdo_vov):
 
 
 def test_iter(lgdo_vov):
-    desired = [
-        np.array([1, 2]),
-        np.array([3, 4, 5]),
-        np.array([2]),
-        np.array([4, 8, 9, 7]),
-        np.array([5, 3, 1]),
-    ]
+    desired = [[1, 2], [3, 4, 5], [2], [4, 8, 9, 7], [5, 3, 1]]
 
     c = 0
     for v in lgdo_vov:
-        assert (v == desired[c]).all()
+        assert np.array_equal(v, desired[c])
         c += 1
 
 
@@ -270,3 +268,31 @@ def test_build_cl_and_explodes():
 
 def test_copy(lgdo_vov):
     assert lgdo_vov == utils.copy(lgdo_vov)
+
+
+def test_view(lgdo_vov):
+    lgdo_vov.attrs["units"] = "s"
+    with pytest.raises(ValueError):
+        lgdo_vov.view_as("ak", with_units=True)
+
+    ak_arr = lgdo_vov.view_as("ak", with_units=False)
+
+    assert isinstance(ak_arr, ak.Array)
+    assert len(ak_arr) == len(lgdo_vov)
+    assert ak.all(ak_arr == [[1, 2], [3, 4, 5], [2], [4, 8, 9, 7], [5, 3, 1]])
+
+    np_arr = lgdo_vov.view_as("np", with_units=True)
+    assert isinstance(np_arr, pint.Quantity)
+    assert np_arr.u == "second"
+    assert isinstance(np_arr.m, np.ndarray)
+
+    np_arr = lgdo_vov.view_as("np", with_units=False)
+    assert isinstance(np_arr, np.ndarray)
+    assert np.issubdtype(np_arr.dtype, np.floating)
+
+    np_arr = lgdo_vov.view_as("np", with_units=False, preserve_dtype=True)
+    assert np.issubdtype(np_arr.dtype, np.integer)
+
+    np_arr = lgdo_vov.view_as("pd", with_units=False)
+    assert isinstance(np_arr, pd.Series)
+    assert isinstance(np_arr.ak, akpd.accessor.AwkwardAccessor)
