@@ -365,7 +365,12 @@ class Table(Struct):
         elif library == "np":
             raise TypeError(f"Format {library} is not a supported for Tables.")
         elif library == "ak":
-            return ak.Array(self)
+            if with_units:
+                raise ValueError(
+                    "Pint does not support Awkward yet, you must view the data with_units=False"
+                )
+            else:
+                return ak.Array(self)
         else:
             raise TypeError(f"{library} is not a supported third-party format.")
 
