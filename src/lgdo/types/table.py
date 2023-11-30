@@ -7,6 +7,7 @@ from __future__ import annotations
 import logging
 import re
 from typing import Any
+from warnings import warn
 
 import awkward as ak
 import numexpr as ne
@@ -207,31 +208,14 @@ class Table(Struct):
             The prefix to be added to the column names. Used when recursively getting the
             dataframe of a Table inside this Table
         """
-        df = pd.DataFrame(copy=copy)
-        if cols is None:
-            cols = self.keys()
-        for col in cols:
-            if isinstance(self[col], Table):
-                sub_df = self[col].get_dataframe(prefix=f"{prefix}{col}_")
-                if df.empty:
-                    df = sub_df
-                else:
-                    df = df.join(sub_df)
-            else:
-                if isinstance(self[col], VectorOfVectors):
-                    column = self[col].to_aoesa()
-                else:
-                    column = self[col]
-
-                if not hasattr(column, "nda"):
-                    raise ValueError(f"column {col} does not have an nda")
-                else:
-                    if len(column.nda.shape) == 1:
-                        df[prefix + str(col)] = column.nda
-                    else:
-                        df[prefix + str(col)] = column.nda.tolist()
-
-        return df
+        warn(
+            "`get_dataframe` is deprecated and will be removed in a future release. "
+            "Instead use `view_as` to get the Table data as a pandas dataframe "
+            "or awkward Array. ",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.view_as(fmt="pd", cols=cols, prefix=prefix)
 
     def eval(self, expr_config: dict) -> Table:
         """Apply column operations to the table and return a new table holding
@@ -353,7 +337,11 @@ class Table(Struct):
         return string
 
     def view_as(
-        self, fmt: str, with_units: bool = True
+        self,
+        fmt: str,
+        with_units: bool = True,
+        cols: list[str] = None,
+        prefix: str = "",
     ) -> pd.DataFrame | np.NDArray | ak.Array:
         """Convert the data of the Table object to a third-party format.
 
@@ -371,10 +359,57 @@ class Table(Struct):
           and values are of equal length
         """
         if fmt == "pd":
-            return pd.DataFrame(self, copy=False)
+            return _view_table_as_pd(self, cols=cols, prefix=prefix)
         elif fmt == "np":
             raise TypeError(f"Format {fmt} is not a supported for Tables.")
         elif fmt == "ak":
             return ak.Array(self)
         else:
             raise TypeError(f"{fmt} is not a supported third-party format.")
+
+
+def _view_table_as_pd(
+    table: Table, cols: list[str] = None, copy: bool = False, prefix: str = ""
+) -> pd.DataFrame:
+    """Get a :class:`pandas.DataFrame` from the data in the table.
+
+    Notes
+    -----
+    The requested data must be array-like, with the ``nda`` attribute.
+
+    Parameters
+    ----------
+    cols
+        a list of column names specifying the subset of the table's columns
+        to be added to the dataframe.
+    copy
+        When ``True``, the dataframe allocates new memory and copies data
+        into it. Otherwise, the raw ``nda``'s from the table are used directly.
+    prefix
+        The prefix to be added to the column names. Used when recursively getting the
+        dataframe of a Table inside this Table
+    """
+    df = pd.DataFrame(copy=copy)
+    if cols is None:
+        cols = table.keys()
+    for col in cols:
+        if isinstance(table[col], Table):
+            sub_df = _view_table_as_pd(table[col], prefix=f"{prefix}{col}_")
+            if df.empty:
+                df = sub_df
+            else:
+                df = df.join(sub_df)
+        else:
+            column = table[col]
+
+            if not isinstance(column, VectorOfVectors) and not hasattr(column, "nda"):
+                raise ValueError(f"column {col} does not have an nda")
+            elif isinstance(column, VectorOfVectors):
+                df = df.join(ak.to_dataframe(column.view_as("ak")))
+            else:
+                if len(column.nda.shape) == 1:
+                    df[prefix + str(col)] = column.nda
+                else:
+                    df[prefix + str(col)] = column.nda.tolist()
+
+    return df
