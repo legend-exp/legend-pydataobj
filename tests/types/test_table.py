@@ -84,7 +84,7 @@ def test_join():
     assert list(tbl2.keys()) == ["c", "d", "a"]
 
 
-def test_get_dataframe():
+def test_view_as_pd():
     tbl = Table(4)
     tbl.add_column("a", lgdo.Array(np.array([1, 2, 3])))
     tbl.add_column("b", lgdo.Array(np.array([[0, 1, 2], [3, 4, 5], [6, 7, 8]])))
@@ -104,7 +104,7 @@ def test_get_dataframe():
             }
         ),
     )
-    df = tbl.get_dataframe()
+    df = tbl.view_as("pd")
     assert isinstance(df, pd.DataFrame)
     assert list(df.keys()) == ["a", "b", "c", "d_a", "d_b"]
 
