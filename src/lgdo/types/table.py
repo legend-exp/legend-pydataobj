@@ -405,29 +405,21 @@ def _view_table_as_pd(
     for col in cols:
         column = table[col]
         if isinstance(column, Array) or isinstance(column, VectorOfVectors):
+            tmp_ser = column.view_as("pd", with_units=with_units).rename(
+                prefix + str(col)
+            )
             if df.empty:
-                df = pd.DataFrame(
-                    column.view_as("pd", with_units=with_units).rename(
-                        prefix + str(col)
-                    )
-                )
+                df = pd.DataFrame(tmp_ser)
             else:
-                df = df.join(
-                    column.view_as("pd", with_units=with_units).rename(
-                        prefix + str(col)
-                    )
-                )
+                df = df.join(tmp_ser)
         elif isinstance(column, Table):
+            tmp_df = column.view_as(
+                "pd", prefix=f"{prefix}{col}_", with_units=with_units
+            )
             if df.empty:
-                df = column.view_as(
-                    "pd", prefix=f"{prefix}{col}_", with_units=with_units
-                )
+                df = tmp_df
             else:
-                df = df.join(
-                    column.view_as(
-                        "pd", prefix=f"{prefix}{col}_", with_units=with_units
-                    )
-                )
+                df = df.join(tmp_df)
         else:
             if df.empty:
                 df[prefix + str(col)] = column.view_as("pd", with_units=with_units)
