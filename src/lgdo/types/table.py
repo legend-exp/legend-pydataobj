@@ -373,7 +373,6 @@ class Table(Struct):
 def _view_table_as_pd(
     table: Table,
     cols: list[str] = None,
-    copy: bool = False,
     prefix: str = "",
     with_units: bool = False,
 ) -> pd.DataFrame:

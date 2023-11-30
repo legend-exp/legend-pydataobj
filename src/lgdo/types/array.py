@@ -165,7 +165,7 @@ class Array(LGDO):
                     )
                 else:
                     raise ValueError(
-                        "view_as() for ndarrays uses awkard_pandas to convert to pandas which does not support Pint. You must view the data with_units=False"
+                        "Pint does not support Awkward yet, you must view the data with_units=False"
                     )
             else:
                 if self.nda.ndim == 1:
