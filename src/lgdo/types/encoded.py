@@ -4,6 +4,7 @@ from collections.abc import Iterator
 from typing import Any
 
 import awkward as ak
+import awkward_pandas as akpd
 import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
@@ -228,11 +229,68 @@ class VectorOfEncodedVectors(LGDO):
         return out
 
     def view_as(
-        self, fmt: str, with_units: bool = False
+        self, library: str, with_units: bool = False
     ) -> pd.DataFrame | np.NDArray | ak.Array:
-        raise NotImplementedError(
-            "'view_as' not yet implemented for VectorOfEncodedVectors."
-        )
+        r"""View the data as third-party format structure.
+
+        Note
+        ----
+        Awkward array views partially involve memory re-allocation (the
+        `cumulative_length`\ s).
+
+        Parameters
+        ----------
+        library
+            either ``pd``, ``np`` or ``ak``.
+        with_units
+            forward physical units to the output data.
+        """
+        attach_units = with_units and "units" in self.attrs
+
+        if library == "ak":
+            if attach_units:
+                raise ValueError(
+                    "Pint does not support Awkward yet, you must view the data with_units=False"
+                )
+
+            # cannot avoid making a copy here. we should add the leading 0 to
+            # cumulative_length inside VectorOfVectors at some point in the
+            # future
+            offsets = np.empty(
+                len(self.encoded_data.cumulative_length) + 1,
+                dtype=self.encoded_data.cumulative_length.dtype,
+            )
+            offsets[1:] = self.encoded_data.cumulative_length
+            offsets[0] = 0
+
+            layout = ak.contents.ListOffsetArray(
+                offsets=ak.index.Index(offsets),
+                content=ak.contents.NumpyArray(self.encoded_data.flattened_data),
+            )
+
+            records_list = {
+                "encoded_data": ak.Array(layout),
+                "decoded_size": np.array(self.decoded_size),
+            }
+            return ak.Array(records_list)
+
+        if library == "np":
+            raise TypeError(f"Format {library} is not a supported for voev.")
+        if library == "pd":
+            if attach_units:
+                raise ValueError(
+                    "Pint does not support Awkward yet, you must view the data with_units=False"
+                )
+            else:
+                ak_view = self.view_as("ak")
+                return pd.DataFrame(
+                    {
+                        "encoded_data": akpd.from_awkward(ak_view["encoded_data"]),
+                        "decoded_size": self.decoded_size,
+                    }
+                )
+        else:
+            raise ValueError(f"{library} is not a supported third-party format.")
 
 
 class ArrayOfEncodedEqualSizedArrays(LGDO):
@@ -399,8 +457,70 @@ class ArrayOfEncodedEqualSizedArrays(LGDO):
         return out
 
     def view_as(
-        self, fmt: str, with_units: bool = False
+        self, library: str, with_units: bool = False
     ) -> pd.DataFrame | np.NDArray | ak.Array:
-        raise NotImplementedError(
-            "'view_as' not yet implemented for ArrayOfEncodedEqualSizedArrays."
-        )
+        r"""View the data as third-party format structure.
+
+        Note
+        ----
+        Awkward array views partially involve memory re-allocation (the
+        `cumulative_length`\ s).
+
+        Parameters
+        ----------
+        library
+            either ``pd``, ``np`` or ``ak``.
+        with_units
+            forward physical units to the output data.
+        """
+        attach_units = with_units and "units" in self.attrs
+
+        if library == "ak":
+            if attach_units:
+                raise ValueError(
+                    "Pint does not support Awkward yet, you must view the data with_units=False"
+                )
+
+            # cannot avoid making a copy here. we should add the leading 0 to
+            # cumulative_length inside VectorOfVectors at some point in the
+            # future
+            offsets = np.empty(
+                len(self.encoded_data.cumulative_length) + 1,
+                dtype=self.encoded_data.cumulative_length.dtype,
+            )
+            offsets[1:] = self.encoded_data.cumulative_length
+            offsets[0] = 0
+
+            layout = ak.contents.ListOffsetArray(
+                offsets=ak.index.Index(offsets),
+                content=ak.contents.NumpyArray(self.encoded_data.flattened_data),
+            )
+
+            records_list = {
+                "encoded_data": ak.Array(layout),
+                "decoded_size": np.full(
+                    len(self.encoded_data.cumulative_length), self.decoded_size.value
+                ),
+            }
+            return ak.Array(records_list)
+
+        if library == "np":
+            raise TypeError(f"Format {library} is not a supported for voev.")
+        if library == "pd":
+            if attach_units:
+                raise ValueError(
+                    "Pint does not support Awkward yet, you must view the data with_units=False"
+                )
+            else:
+                ak_view = self.view_as("ak")
+                return pd.DataFrame(
+                    {
+                        "encoded_data": akpd.from_awkward(ak_view["encoded_data"]),
+                        "decoded_size": np.full(
+                            len(self.encoded_data.cumulative_length),
+                            self.decoded_size.value,
+                        ),
+                    }
+                )
+        else:
+            raise ValueError(f"{library} is not a supported third-party format.")
