@@ -359,7 +359,9 @@ class Table(Struct):
           and values are of equal length
         """
         if library == "pd":
-            return _view_table_as_pd(self, cols=cols, prefix=prefix)
+            return _view_table_as_pd(
+                self, cols=cols, prefix=prefix, with_units=with_units
+            )
         elif library == "np":
             raise TypeError(f"Format {library} is not a supported for Tables.")
         elif library == "ak":
@@ -369,7 +371,11 @@ class Table(Struct):
 
 
 def _view_table_as_pd(
-    table: Table, cols: list[str] = None, copy: bool = False, prefix: str = ""
+    table: Table,
+    cols: list[str] = None,
+    copy: bool = False,
+    prefix: str = "",
+    with_units: bool = False,
 ) -> pd.DataFrame:
     """Get a :class:`pandas.DataFrame` from the data in the table.
 
@@ -396,17 +402,33 @@ def _view_table_as_pd(
         column = table[col]
         if isinstance(column, Array) or isinstance(column, VectorOfVectors):
             if df.empty:
-                df = pd.DataFrame(column.view_as("pd").rename(prefix + str(col)))
+                df = pd.DataFrame(
+                    column.view_as("pd", with_units=with_units).rename(
+                        prefix + str(col)
+                    )
+                )
             else:
-                df = df.join(column.view_as("pd").rename(prefix + str(col)))
+                df = df.join(
+                    column.view_as("pd", with_units=with_units).rename(
+                        prefix + str(col)
+                    )
+                )
         elif isinstance(column, Table):
             if df.empty:
-                df = column.view_as("pd", prefix=f"{prefix}{col}_")
+                df = column.view_as(
+                    "pd", prefix=f"{prefix}{col}_", with_units=with_units
+                )
             else:
-                df = df.join(column.view_as("pd", prefix=f"{prefix}{col}_"))
+                df = df.join(
+                    column.view_as(
+                        "pd", prefix=f"{prefix}{col}_", with_units=with_units
+                    )
+                )
         else:
             if df.empty:
-                df[prefix + str(col)] = column.view_as("pd")
+                df[prefix + str(col)] = column.view_as("pd", with_units=with_units)
             else:
-                df[prefix + str(col)] = df.join(column.view_as("pd"))
+                df[prefix + str(col)] = df.join(
+                    column.view_as("pd", with_units=with_units)
+                )
     return df

@@ -9,6 +9,7 @@ from collections.abc import Iterator
 from typing import Any
 
 import awkward as ak
+import awkward_pandas as akpd
 import numpy as np
 import pandas as pd
 import pint_pandas  # noqa: F401
@@ -158,11 +159,19 @@ class Array(LGDO):
 
         if library == "pd":
             if attach_units:
-                return pd.Series(
-                    self.nda, dtype=f"pint[{self.attrs['units']}]", copy=False
-                )
+                if self.nda.ndim == 1:
+                    return pd.Series(
+                        self.nda, dtype=f"pint[{self.attrs['units']}]", copy=False
+                    )
+                else:
+                    raise ValueError(
+                        "view_as() for ndarrays uses awkard_pandas to convert to pandas which does not support Pint. You must view the data with_units=False"
+                    )
             else:
-                return pd.Series(self.nda, copy=False)
+                if self.nda.ndim == 1:
+                    return pd.Series(self.nda, copy=False)
+                else:
+                    return akpd.from_awkward(self.view_as("ak"))
         elif library == "np":
             if attach_units:
                 return self.nda * u(self.attrs["units"])
