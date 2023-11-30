@@ -241,7 +241,7 @@ class VectorOfEncodedVectors(LGDO):
         Parameters
         ----------
         library
-            either ``pd``, ``np`` or ``ak``.
+            either ``pd`` or ``ak``.
         with_units
             forward physical units to the output data.
         """
@@ -282,10 +282,11 @@ class VectorOfEncodedVectors(LGDO):
                     "Pint does not support Awkward yet, you must view the data with_units=False"
                 )
             else:
-                ak_view = self.view_as("ak")
                 return pd.DataFrame(
                     {
-                        "encoded_data": akpd.from_awkward(ak_view["encoded_data"]),
+                        "encoded_data": akpd.from_awkward(
+                            self.view_as("ak")["encoded_data"]
+                        ),
                         "decoded_size": self.decoded_size,
                     }
                 )
@@ -469,7 +470,7 @@ class ArrayOfEncodedEqualSizedArrays(LGDO):
         Parameters
         ----------
         library
-            either ``pd``, ``np`` or ``ak``.
+            either ``pd`` or ``ak``.
         with_units
             forward physical units to the output data.
         """
@@ -512,10 +513,11 @@ class ArrayOfEncodedEqualSizedArrays(LGDO):
                     "Pint does not support Awkward yet, you must view the data with_units=False"
                 )
             else:
-                ak_view = self.view_as("ak")
                 return pd.DataFrame(
                     {
-                        "encoded_data": akpd.from_awkward(ak_view["encoded_data"]),
+                        "encoded_data": akpd.from_awkward(
+                            self.view_as("ak")["encoded_data"]
+                        ),
                         "decoded_size": np.full(
                             len(self.encoded_data.cumulative_length),
                             self.decoded_size.value,
