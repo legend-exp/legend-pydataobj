@@ -14,6 +14,7 @@ import numpy as np
 from numpy.typing import DTypeLike, NDArray
 
 from .. import lgdo_utils as utils
+from ..utils import numba_defaults_kwargs as nb_kwargs
 from . import arrayofequalsizedarrays as aoesa
 from .array import Array
 from .lgdo import LGDO
@@ -466,7 +467,7 @@ def build_cl(
     return _nb_build_cl(sorted_array_in, cumulative_length_out)
 
 
-@numba.njit
+@numba.njit(**nb_kwargs)
 def _nb_build_cl(sorted_array_in: NDArray, cumulative_length_out: NDArray) -> NDArray:
     """numbified inner loop for build_cl"""
     ii = 0
@@ -519,7 +520,7 @@ def explode_cl(cumulative_length: NDArray, array_out: NDArray = None) -> NDArray
     return _nb_explode_cl(cumulative_length, array_out)
 
 
-@numba.njit
+@numba.njit(**nb_kwargs)
 def _nb_explode_cl(cumulative_length: NDArray, array_out: NDArray) -> NDArray:
     """numbified inner loop for explode_cl"""
     out_len = cumulative_length[-1] if len(cumulative_length) > 0 else 0
@@ -575,7 +576,7 @@ def explode(
     return nb_explode(cumulative_length, array_in, array_out)
 
 
-@numba.njit
+@numba.njit(**nb_kwargs)
 def nb_explode(
     cumulative_length: NDArray, array_in: NDArray, array_out: NDArray
 ) -> NDArray:
