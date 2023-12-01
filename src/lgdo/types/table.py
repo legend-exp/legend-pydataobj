@@ -362,17 +362,53 @@ class Table(Struct):
             format of the returned data view.
         with_units
             forward physical units to the output data.
+        cols
+            a list of column names specifying the subset of the table's columns
+            to be added to the dataframe.
+        prefix
+            The prefix to be added to the column names. Used when recursively getting the
+            dataframe of a table inside this table.
 
         See Also
         --------
         .LGDO.view_as
         """
         if library == "pd":
-            return _view_table_as_pd(
-                self, cols=cols, prefix=prefix, with_units=with_units
-            )
+            df = pd.DataFrame()
+            if cols is None:
+                cols = self.keys()
+            for col in cols:
+                column = self[col]
+                if isinstance(column, Array) or isinstance(column, VectorOfVectors):
+                    tmp_ser = column.view_as("pd", with_units=with_units).rename(
+                        prefix + str(col)
+                    )
+                    if df.empty:
+                        df = pd.DataFrame(tmp_ser)
+                    else:
+                        df = df.join(tmp_ser)
+                elif isinstance(column, Table):
+                    tmp_df = column.view_as(
+                        "pd", prefix=f"{prefix}{col}_", with_units=with_units
+                    )
+                    if df.empty:
+                        df = tmp_df
+                    else:
+                        df = df.join(tmp_df)
+                else:
+                    if df.empty:
+                        df[prefix + str(col)] = column.view_as(
+                            "pd", with_units=with_units
+                        )
+                    else:
+                        df[prefix + str(col)] = df.join(
+                            column.view_as("pd", with_units=with_units)
+                        )
+            return df
+
         elif library == "np":
             raise TypeError(f"Format {library} is not a supported for Tables.")
+
         elif library == "ak":
             if with_units:
                 raise ValueError(
@@ -380,61 +416,6 @@ class Table(Struct):
                 )
             else:
                 return ak.Array(self)
+
         else:
             raise TypeError(f"{library} is not a supported third-party format.")
-
-
-def _view_table_as_pd(
-    table: Table,
-    cols: list[str] = None,
-    prefix: str = "",
-    with_units: bool = False,
-) -> pd.DataFrame:
-    """Get a :class:`pandas.DataFrame` from the data in the table.
-
-    Notes
-    -----
-    The requested data must be array-like, with the ``nda`` attribute, a VectorOfVectors
-    or a Table.
-
-    Parameters
-    ----------
-    cols
-        a list of column names specifying the subset of the table's columns
-        to be added to the dataframe.
-    copy
-        When ``True``, the dataframe allocates new memory and copies data
-        into it. Otherwise, the raw ``nda``'s from the table are used directly.
-    prefix
-        The prefix to be added to the column names. Used when recursively getting the
-        dataframe of a Table inside this Table
-    """
-    df = pd.DataFrame()
-    if cols is None:
-        cols = table.keys()
-    for col in cols:
-        column = table[col]
-        if isinstance(column, Array) or isinstance(column, VectorOfVectors):
-            tmp_ser = column.view_as("pd", with_units=with_units).rename(
-                prefix + str(col)
-            )
-            if df.empty:
-                df = pd.DataFrame(tmp_ser)
-            else:
-                df = df.join(tmp_ser)
-        elif isinstance(column, Table):
-            tmp_df = column.view_as(
-                "pd", prefix=f"{prefix}{col}_", with_units=with_units
-            )
-            if df.empty:
-                df = tmp_df
-            else:
-                df = df.join(tmp_df)
-        else:
-            if df.empty:
-                df[prefix + str(col)] = column.view_as("pd", with_units=with_units)
-            else:
-                df[prefix + str(col)] = df.join(
-                    column.view_as("pd", with_units=with_units)
-                )
-    return df
