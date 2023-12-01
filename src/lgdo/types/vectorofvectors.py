@@ -400,25 +400,28 @@ class VectorOfVectors(LGDO):
         np.set_printoptions(**npopt)
         return out
 
-    def to_aoesa(self, preserve_dtype: bool = False) -> aoesa.ArrayOfEqualSizedArrays:
+    def to_aoesa(
+        self, preserve_dtype: bool = False, max_len: int = None
+    ) -> aoesa.ArrayOfEqualSizedArrays:
         """Convert to :class:`ArrayOfEqualSizedArrays`.
-
-        If `preserve_dtype` is False, the output array will have dtype
-        :class:`numpy.float64` and is padded with :class:`numpy.nan`.
-        Otherwise, the dtype of the original :class:`VectorOfVectors` is
-        preserved.
+        If `preserve_dtype` is ``False``, the output array will have dtype
+        subtype of :class:`numpy.floating` and is padded with
+        :class:`numpy.nan`.  Otherwise, the dtype of the original
+        :class:`VectorOfVectors` is preserved and the padded values are left
+        uninitialized (unless the dtype is already floating-point).
         """
-        ind_lengths = np.diff(self.cumulative_length.nda, prepend=0)
-        arr_len = np.max(ind_lengths)
+        ak_arr = self.view_as("ak")
 
-        if not preserve_dtype:
-            nda = np.empty((len(self.cumulative_length), arr_len))
-            nda.fill(np.nan)
-        else:
-            nda = np.empty((len(self.cumulative_length), arr_len), dtype=self.dtype)
+        if not max_len:
+            max_len = int(ak.max(ak.count(ak_arr, axis=-1)))
 
-        for i in range(len(self.cumulative_length)):
-            nda[i, : ind_lengths[i]] = self[i]
+        nda_pad = ak.pad_none(ak_arr, max_len, clip=True).to_numpy()
+
+        if not preserve_dtype and not np.issubdtype(nda_pad.dtype, np.floating):
+            nda_pad = nda_pad.astype(float)
+            nda_pad.set_fill_value(np.nan)
+
+        nda = nda_pad.filled()
 
         return aoesa.ArrayOfEqualSizedArrays(nda=nda, attrs=self.getattrs())
 
