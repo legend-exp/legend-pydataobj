@@ -231,17 +231,28 @@ class VectorOfEncodedVectors(LGDO):
     def view_as(
         self, library: str, with_units: bool = False
     ) -> pd.DataFrame | np.NDArray | ak.Array:
-        r"""View the data as third-party format structure.
+        r"""View the VectorOfEncodedVectors data as a third-party format data structure.
 
-        Note
-        ----
-        Awkward array views partially involve memory re-allocation (the
-        `cumulative_length`\ s).
+        This is typically a zero-copy or nearly zero-copy operation unless
+        explicitly stated in the concrete LGDO documentation.
+
+        Supported third-party formats are:
+
+        - ``pd``: :mod:`pandas`
+        - ``ak``: :mod:`awkward`
+
+        Notes
+        -----
+        - Pint does not yet support Awkward yet. You will need to pass the data with_units=False
+          in the case of awkward and pandas (as it uses awkward_pandas for conversion).
+
+        - Awkward array views partially involve memory re-allocation (the
+          `cumulative_length`\ s).
 
         Parameters
         ----------
         library
-            either ``pd`` or ``ak``.
+            format of the returned data view.
         with_units
             forward physical units to the output data.
         """
@@ -445,17 +456,28 @@ class ArrayOfEncodedEqualSizedArrays(LGDO):
     def view_as(
         self, library: str, with_units: bool = False
     ) -> pd.DataFrame | np.NDArray | ak.Array:
-        r"""View the data as third-party format structure.
+        r"""View the ArrayOfEncodedEqualSizedArrays data as a third-party format data structure.
 
-        Note
-        ----
-        Awkward array views partially involve memory re-allocation (the
-        `cumulative_length`\ s).
+        This is typically a zero-copy or nearly zero-copy operation unless
+        explicitly stated in the concrete LGDO documentation.
+
+        Supported third-party formats are:
+
+        - ``pd``: :mod:`pandas`
+        - ``ak``: :mod:`awkward`
+
+        Notes
+        -----
+        - Pint does not yet support Awkward yet. You will need to pass the data with_units=False
+          in the case of awkward and pandas (as it uses awkward_pandas for conversion).
+
+        - Awkward array views partially involve memory re-allocation (the
+          `cumulative_length`\ s).
 
         Parameters
         ----------
         library
-            either ``pd`` or ``ak``.
+            format of the returned data view.
         with_units
             forward physical units to the output data.
         """

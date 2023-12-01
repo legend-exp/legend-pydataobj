@@ -42,7 +42,23 @@ class Scalar(LGDO):
     def form_datatype(self) -> str:
         return self.datatype_name()
 
-    def view_as(self, fmt: str, with_units: bool = False):
+    def view_as(self, library: str, with_units: bool = False):
+        r"""View the Scalar data object as a third-party format data structure.
+
+        This implementation is very trivial as it only returns the value of the Scalar.
+        No data conversion is applied.
+
+        Notes
+        -----
+        - as of right now, units are not forwarded.
+
+        Parameters
+        ----------
+        library
+            format of the returned data view.
+        with_units
+            forward physical units to the output data.
+        """
         return self.value
 
     def __eq__(self, other: Scalar) -> bool:

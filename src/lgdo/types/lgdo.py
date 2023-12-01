@@ -38,7 +38,7 @@ class LGDO(ABC):
     def view_as(
         self, library: str, with_units: bool = False
     ) -> pd.DataFrame | np.NDArray | ak.Array:
-        """View the LGDO data object as a third-party format data structure.
+        r"""View the LGDO data object as a third-party format data structure.
 
         This is typically a zero-copy or nearly zero-copy operation unless
         explicitly stated in the concrete LGDO documentation.
@@ -56,6 +56,8 @@ class LGDO(ABC):
         ----------
         library
             format of the returned data view.
+        with_units
+            forward physical units to the output data.
         """
         pass
 

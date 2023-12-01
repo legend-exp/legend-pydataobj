@@ -112,18 +112,29 @@ class Struct(LGDO, dict):
     def view_as(
         self, library: str, with_units: bool = False
     ) -> pd.DataFrame | np.NDArray | ak.Array:
-        """Convert the data of the Struct object to a third-party format.
+        r"""View the Struct data as a third-party format data structure.
 
-        Supported options are ...
+        This is typically a zero-copy or nearly zero-copy operation unless
+        explicitly stated in the concrete LGDO documentation.
+
+        Supported third-party formats are:
+
         - ``pd``: :mod:`pandas`
         - ``ak``: :mod:`awkward`
 
-        Note
-        ----
-        - conversion to ndarray is not supported at the moment as there is
-          no clear way how to wrap the column names and the data into one array.
+        Notes
+        -----
+        - conversion to ndarray is not supported
         - conversion to awkward array only works when the key is a string
           and values are of equal length
+
+        Parameters
+        ----------
+        library
+            format of the returned data view.
+        with_units
+            forward physical units to the output data.
+
         """
         if library == "pd":
             return pd.DataFrame(self, copy=False)

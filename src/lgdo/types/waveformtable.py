@@ -268,5 +268,26 @@ class WaveformTable(Table):
     def view_as(
         self, fmt: str, with_units: bool = False
     ) -> pd.DataFrame | np.NDArray | ak.Array:
-        """View WaveformTable object as a third-party format data structure."""
+        r"""View the WaveformTable data as a third-party format data structure.
+
+        This is typically a zero-copy or nearly zero-copy operation unless
+        explicitly stated in the concrete LGDO documentation.
+
+        Supported third-party formats are:
+
+        - ``pd``: :mod:`pandas`
+        - ``ak``: :mod:`awkward`
+
+        Notes
+        -----
+        - conversion to ndarray is not supported
+
+        Parameters
+        ----------
+        library
+            format of the returned data view.
+        with_units
+            forward physical units to the output data.
+
+        """
         return super().view_as(fmt, with_units)

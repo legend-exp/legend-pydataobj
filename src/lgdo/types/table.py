@@ -343,20 +343,29 @@ class Table(Struct):
         cols: list[str] = None,
         prefix: str = "",
     ) -> pd.DataFrame | np.NDArray | ak.Array:
-        """Convert the data of the Table object to a third-party format.
+        r"""View the Table data as a third-party format data structure.
 
-        Supported options are ...
+        This is typically a zero-copy or nearly zero-copy operation unless
+        explicitly stated in the concrete LGDO documentation.
 
-        Supported options are ...
+        Supported third-party formats are:
+
         - ``pd``: :mod:`pandas`
         - ``ak``: :mod:`awkward`
 
-        Note
-        ----
-        - conversion to ndarray is not supported at the moment as there is
-          no clear way how to wrap the column names and the data into one array.
+        Notes
+        -----
+        - conversion to ndarray is not supported
         - conversion to awkward array only works when the key is a string
           and values are of equal length
+
+        Parameters
+        ----------
+        library
+            format of the returned data view.
+        with_units
+            forward physical units to the output data.
+
         """
         if library == "pd":
             return _view_table_as_pd(
@@ -385,7 +394,8 @@ def _view_table_as_pd(
 
     Notes
     -----
-    The requested data must be array-like, with the ``nda`` attribute.
+    The requested data must be array-like, with the ``nda`` attribute, a VectorOfVectors
+    or a Table.
 
     Parameters
     ----------
