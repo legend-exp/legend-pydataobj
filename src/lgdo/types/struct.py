@@ -114,19 +114,17 @@ class Struct(LGDO, dict):
     ) -> pd.DataFrame | np.NDArray | ak.Array:
         r"""View the Struct data as a third-party format data structure.
 
-        This is typically a zero-copy or nearly zero-copy operation unless
-        explicitly stated in the concrete LGDO documentation.
+        This is a zero-copy operation.
 
         Supported third-party formats are:
 
-        - ``pd``: :mod:`pandas`
-        - ``ak``: :mod:`awkward`
+        - ``pd``: returns a :class:`pandas.DataFrame`
+        - ``ak``: returns an :class:`ak.Array` (record type)
 
         Notes
         -----
-        - conversion to ndarray is not supported
-        - conversion to awkward array only works when the key is a string
-          and values are of equal length
+        Conversion to awkward array only works when the key is a string and
+        the columns have all the same length.
 
         Parameters
         ----------
@@ -135,6 +133,9 @@ class Struct(LGDO, dict):
         with_units
             forward physical units to the output data.
 
+        See Also
+        --------
+        .LGDO.view_as
         """
         if library == "pd":
             return pd.DataFrame(self, copy=False)

@@ -428,21 +428,23 @@ class VectorOfVectors(LGDO):
     def view_as(
         self, library: str, with_units: bool = False, preserve_dtype: bool = False
     ) -> pd.DataFrame | np.NDArray | ak.Array:
-        r"""View the VectorOfVectors data as a third-party format data structure.
+        r"""View the vector data as a third-party format data structure.
 
-        This is typically a zero-copy or nearly zero-copy operation unless
-        explicitly stated in the concrete LGDO documentation.
+        This is typically a zero-copy or nearly zero-copy operation.
 
         Supported third-party formats are:
 
-        - ``pd``: :mod:`pandas`
-        - ``np``: :mod:`numpy`
-        - ``ak``: :mod:`awkward`
+        - ``pd``: returns a :class:`pandas.Series` (supported through the
+          ``awkward-pandas`` package)
+        - ``np``: returns a :class:`numpy.ndarray`, padded to make it
+          rectangular.
+        - ``ak``: returns an :class:`ak.Array`. ``self.cumulative_length`` is
+          currently re-allocated for technical reasons.
 
         Notes
         -----
-        - Awkward array views partially involve memory re-allocation (the
-          `cumulative_length`\ s).
+        Awkward array views partially involve memory re-allocation (the
+        `cumulative_length`\ s).
 
         Parameters
         ----------
@@ -450,7 +452,12 @@ class VectorOfVectors(LGDO):
             format of the returned data view.
         with_units
             forward physical units to the output data.
+        preserve_dtype
+            forwarded to :meth:`.to_aoesa`, if `library` is ``np``.
 
+        See Also
+        --------
+        .LGDO.view_as
         """
         attach_units = with_units and "units" in self.attrs
 

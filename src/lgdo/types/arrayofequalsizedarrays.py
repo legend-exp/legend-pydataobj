@@ -137,28 +137,10 @@ class ArrayOfEqualSizedArrays(Array):
     def view_as(
         self, library: str, with_units: bool = False
     ) -> pd.DataFrame | np.NDArray | ak.Array:
-        r"""View the ArrayOfEqualSizedArrays data as a third-party format data structure.
+        """View the array as a third-party format data structure.
 
-        This is typically a zero-copy or nearly zero-copy operation unless
-        explicitly stated in the concrete LGDO documentation.
-
-        Supported third-party formats are:
-
-        - ``pd``: :mod:`pandas`
-        - ``np``: :mod:`numpy`
-        - ``ak``: :mod:`awkward`
-
-        Notes
-        -----
-        - Pint does not yet support Awkward yet. You will need to pass the data with_units=False
-          in the case of awkward and pandas (as it uses awkward_pandas for conversion).
-
-        Parameters
-        ----------
-        library
-            format of the returned data view.
-        with_units
-            forward physical units to the output data.
-
+        See Also
+        --------
+        .LGDO.view_as
         """
         return super().view_as(library, with_units=with_units)

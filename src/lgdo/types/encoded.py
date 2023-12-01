@@ -231,23 +231,14 @@ class VectorOfEncodedVectors(LGDO):
     def view_as(
         self, library: str, with_units: bool = False
     ) -> pd.DataFrame | np.NDArray | ak.Array:
-        r"""View the VectorOfEncodedVectors data as a third-party format data structure.
+        """View the encoded data as a third-party format data structure.
 
-        This is typically a zero-copy or nearly zero-copy operation unless
-        explicitly stated in the concrete LGDO documentation.
+        This is a zero-copy or nearly zero-copy operation.
 
         Supported third-party formats are:
 
-        - ``pd``: :mod:`pandas`
-        - ``ak``: :mod:`awkward`
-
-        Notes
-        -----
-        - Pint does not yet support Awkward yet. You will need to pass the data with_units=False
-          in the case of awkward and pandas (as it uses awkward_pandas for conversion).
-
-        - Awkward array views partially involve memory re-allocation (the
-          `cumulative_length`\ s).
+        - ``pd``: returns a :class:`pandas.DataFrame`
+        - ``ak``: returns an :class:`ak.Array` (record type)
 
         Parameters
         ----------
@@ -255,6 +246,10 @@ class VectorOfEncodedVectors(LGDO):
             format of the returned data view.
         with_units
             forward physical units to the output data.
+
+        See Also
+        --------
+        .LGDO.view_as
         """
         attach_units = with_units and "units" in self.attrs
 
@@ -456,23 +451,18 @@ class ArrayOfEncodedEqualSizedArrays(LGDO):
     def view_as(
         self, library: str, with_units: bool = False
     ) -> pd.DataFrame | np.NDArray | ak.Array:
-        r"""View the ArrayOfEncodedEqualSizedArrays data as a third-party format data structure.
+        """View the encoded data as a third-party format data structure.
 
-        This is typically a zero-copy or nearly zero-copy operation unless
-        explicitly stated in the concrete LGDO documentation.
+        This is nearly a zero-copy operation.
 
         Supported third-party formats are:
 
-        - ``pd``: :mod:`pandas`
-        - ``ak``: :mod:`awkward`
+        - ``pd``: returns a :class:`pandas.DataFrame`
+        - ``ak``: returns an :class:`ak.Array` (record type)
 
-        Notes
-        -----
-        - Pint does not yet support Awkward yet. You will need to pass the data with_units=False
-          in the case of awkward and pandas (as it uses awkward_pandas for conversion).
-
-        - Awkward array views partially involve memory re-allocation (the
-          `cumulative_length`\ s).
+        Note
+        ----
+        In the view, `decoded_size` is expanded into an array.
 
         Parameters
         ----------
@@ -480,6 +470,10 @@ class ArrayOfEncodedEqualSizedArrays(LGDO):
             format of the returned data view.
         with_units
             forward physical units to the output data.
+
+        See Also
+        --------
+        .LGDO.view_as
         """
         attach_units = with_units and "units" in self.attrs
 

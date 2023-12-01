@@ -41,15 +41,23 @@ class LGDO(ABC):
         r"""View the LGDO data object as a third-party format data structure.
 
         This is typically a zero-copy or nearly zero-copy operation unless
-        explicitly stated in the concrete LGDO documentation.
+        explicitly stated in the concrete LGDO documentation. The view can be
+        turned into a copy explicitly by the user with the appropriate methods.
+        If requested by the user, the output format supports it and the LGDO
+        carries a ``units`` attribute, physical units are attached to the view
+        through the :mod:`pint` package.
 
-        Typical supported third-party formats are:
+        Typical supported third-party libraries are:
 
         - ``pd``: :mod:`pandas`
         - ``np``: :mod:`numpy`
         - ``ak``: :mod:`awkward`
 
-        But the actual supported formats may vary depending on the concrete
+        Note
+        ----
+        Awkward does not support attaching units through Pint, at the moment.
+
+        but the actual supported formats may vary depending on the concrete
         LGDO class.
 
         Parameters

@@ -147,16 +147,13 @@ class Array(LGDO):
     def view_as(
         self, library: str, with_units: bool = False
     ) -> pd.DataFrame | np.NDArray | ak.Array:
-        r"""View the Array data as a third-party format data structure.
+        """View the Array data as a third-party format data structure.
 
-        This is typically a zero-copy or nearly zero-copy operation unless
-        explicitly stated in the concrete LGDO documentation.
+        This is a zero-copy operation. Supported third-party formats are:
 
-        Supported third-party formats are:
-
-        - ``pd``: :mod:`pandas`
-        - ``np``: :mod:`numpy`
-        - ``ak``: :mod:`awkward`
+        - ``pd``: returns a :class:`pandas.Series`
+        - ``np``: returns the internal `nda` attribute (:class:`numpy.ndarray`)
+        - ``ak``: returns an :class:`ak.Array` initialized with `self.nda`
 
         Parameters
         ----------
@@ -165,6 +162,9 @@ class Array(LGDO):
         with_units
             forward physical units to the output data.
 
+        See Also
+        --------
+        .LGDO.view_as
         """
         # TODO: does attaching units imply a copy?
         attach_units = with_units and "units" in self.attrs
