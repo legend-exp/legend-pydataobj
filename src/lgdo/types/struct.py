@@ -56,8 +56,11 @@ class Struct(LGDO, dict):
         super().__setitem__(name, obj)
         self.update_datatype()
 
-    def __setitem__(self, name, obj) -> None:
+    def __setitem__(self, name: str, obj: LGDO) -> None:
         return self.add_field(name, obj)
+
+    def __getattr__(self, name: str) -> LGDO:
+        return self.__getitem__(name)
 
     def remove_field(self, name: str | int, delete: bool = False) -> None:
         """Remove a field from the table.
