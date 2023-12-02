@@ -23,8 +23,6 @@ class Struct(LGDO, dict):
     datatype updated, or call :meth:`update_datatype` after adding.
     """
 
-    # TODO: overload setattr to require add_field for setting?
-
     def __init__(
         self, obj_dict: dict[str, LGDO] = None, attrs: dict[str, Any] = None
     ) -> None:
@@ -55,8 +53,11 @@ class Struct(LGDO, dict):
 
     def add_field(self, name: str | int, obj: LGDO) -> None:
         """Add a field to the table."""
-        self[name] = obj
+        super().__setitem__(name, obj)
         self.update_datatype()
+
+    def __setitem__(self, name, obj) -> None:
+        return self.add_field(name, obj)
 
     def remove_field(self, name: str | int, delete: bool = False) -> None:
         """Remove a field from the table.
