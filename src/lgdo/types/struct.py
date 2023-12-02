@@ -118,34 +118,18 @@ class Struct(LGDO, dict):
     ) -> pd.DataFrame | np.NDArray | ak.Array:
         r"""View the Struct data as a third-party format data structure.
 
-        This is a zero-copy operation.
-
-        Supported third-party formats are:
-
-        - ``pd``: returns a :class:`pandas.DataFrame`
-        - ``ak``: returns an :class:`ak.Array` (record type)
-
-        Notes
+        Error
         -----
-        Conversion to awkward array only works when the key is a string and
-        the columns have all the same length.
-
-        Parameters
-        ----------
-        library
-            format of the returned data view.
-        with_units
-            forward physical units to the output data.
+        Not implemented. Since Struct's fields can have different lengths,
+        converting to a Numpy, Pandas or Awkward is generally not possible.
+        Call :meth:`.LGDO.view_as` on the fields instead.
 
         See Also
         --------
         .LGDO.view_as
         """
-        if library == "pd":
-            return pd.DataFrame(self, copy=False)
-        elif library == "np":
-            raise TypeError(f"Format {library} is not a supported for Structs.")
-        elif library == "ak":
-            return ak.Array(self)
-        else:
-            raise TypeError(f"{library} is not a supported third-party format.")
+        raise NotImplementedError(
+            "Since Struct's fields can have different lengths, "
+            "converting to a Numpy, Pandas or Awkward is generally "
+            "not possible. Call view_as() on the fields instead."
+        )
