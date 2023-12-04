@@ -517,7 +517,8 @@ def _nb_build_cl(sorted_array_in: NDArray, cumulative_length_out: NDArray) -> ND
             "f8",
             "c8",
             "c16",
-        ] for size_type in ['i4', 'i8', 'u4', 'u8']
+        ]
+        for size_type in ["i4", "i8", "u4", "u8"]
     ],
     "(l,m),(l),(n)",
     **nb_kwargs,
