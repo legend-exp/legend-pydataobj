@@ -3,8 +3,6 @@ from __future__ import annotations
 import re
 from dataclasses import asdict, dataclass
 
-numba_defaults: dict = {"nopython": True, "cache": True}
-
 
 @dataclass(frozen=True)
 class WaveformCodec:

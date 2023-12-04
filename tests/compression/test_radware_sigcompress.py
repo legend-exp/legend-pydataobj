@@ -2,7 +2,8 @@ from pathlib import Path
 
 import numpy as np
 
-from lgdo import ArrayOfEncodedEqualSizedArrays, ArrayOfEqualSizedArrays, LH5Store
+import lgdo.lh5 as lh5
+from lgdo import ArrayOfEncodedEqualSizedArrays, ArrayOfEqualSizedArrays
 from lgdo.compression.radware import (
     _get_hton_u16,
     _radware_sigcompress_decode,
@@ -177,8 +178,8 @@ def test_aoesa(wftable):
 
 
 def test_performance(lgnd_test_data):
-    store = LH5Store()
-    obj, _ = store.read_object(
+    store = lh5.LH5Store()
+    obj, _ = store.read(
         "/geds/raw/waveform",
         lgnd_test_data.get_path("lh5/LDQTA_r117_20200110T105115Z_cal_geds_raw.lh5"),
     )
