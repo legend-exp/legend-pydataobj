@@ -217,6 +217,35 @@ def test_replace(lgdo_vov):
         ]
     )
 
+def test_set_vector_unsafe(lgdo_vov):
+    desired = [
+        np.array([1, 2], dtype=lgdo_vov.dtype),
+        np.array([3, 4, 5], dtype=lgdo_vov.dtype),
+        np.array([2], dtype=lgdo_vov.dtype),
+        np.array([4, 8, 9, 7], dtype=lgdo_vov.dtype),
+        np.array([5, 3, 1], dtype=lgdo_vov.dtype),
+    ]
+    desired_aoa = np.zeros(shape=(5, 5), dtype=lgdo_vov.dtype)
+    desired_lens = np.array([len(arr) for arr in desired])
+
+    # test sequential filling
+    second_vov = lgdo.VectorOfVectors(
+        shape_guess=(5, 5),
+        dtype=lgdo_vov.dtype
+    )
+    for i, arr in enumerate(desired):
+        second_vov._set_vector_unsafe(i, arr)
+        desired_aoa[i, :len(arr)] = arr
+    assert(lgdo_vov == second_vov)
+
+    # test vectorized filling
+    third_vov = lgdo.VectorOfVectors(
+        shape_guess=(5, 5),
+        dtype=lgdo_vov.dtype
+    )
+    third_vov._set_vector_unsafe(0, desired_aoa, desired_lens)
+    assert(lgdo_vov == third_vov)
+    
 
 def test_iter(lgdo_vov):
     desired = [
