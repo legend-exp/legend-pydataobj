@@ -401,7 +401,7 @@ class VectorOfVectors(LGDO):
         return out
 
     def to_aoesa(
-        self, preserve_dtype: bool = False, max_len: int = None
+        self, preserve_dtype: bool = False, max_len: int = None, missing_value=np.nan
     ) -> aoesa.ArrayOfEqualSizedArrays:
         """Convert to :class:`ArrayOfEqualSizedArrays`.
         If `preserve_dtype` is ``False``, the output array will have dtype
@@ -412,16 +412,17 @@ class VectorOfVectors(LGDO):
         """
         ak_arr = self.view_as("ak")
 
-        if not max_len:
+        if max_len is None:
             max_len = int(ak.max(ak.count(ak_arr, axis=-1)))
 
-        nda_pad = ak.pad_none(ak_arr, max_len, clip=True).to_numpy()
+        nda = ak.fill_none(
+            ak.pad_none(ak_arr, max_len, clip=True), missing_value
+        ).to_numpy(allow_missing=False)
 
-        if not preserve_dtype and not np.issubdtype(nda_pad.dtype, np.floating):
-            nda_pad = nda_pad.astype(float)
-            nda_pad.set_fill_value(np.nan)
-
-        nda = nda_pad.filled()
+        if preserve_dtype:
+            nda = nda.astype(type(self.flattened_data[0]))
+        else:
+            nda = nda.astype(type(missing_value))
 
         return aoesa.ArrayOfEqualSizedArrays(nda=nda, attrs=self.getattrs())
 
