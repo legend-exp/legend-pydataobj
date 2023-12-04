@@ -520,8 +520,7 @@ def _nb_build_cl(sorted_array_in: NDArray, cumulative_length_out: NDArray) -> ND
         ]
     ],
     "(l,m),(l),(n)",
-    cache=True,
-    nopython=True,
+    **nb_kwargs,
 )
 def _nb_fill(aoa_in: NDArray, len_in: NDArray, flattened_array_out: NDArray):
     """Vectorized function to fill flattened array from array of arrays and
