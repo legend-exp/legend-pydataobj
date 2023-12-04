@@ -153,8 +153,14 @@ class VectorOfVectors(LGDO):
     def __eq__(self, other: VectorOfVectors) -> bool:
         if isinstance(other, VectorOfVectors):
             return (
-                self.flattened_data == other.flattened_data
-                and self.cumulative_length == other.cumulative_length
+                self.cumulative_length == other.cumulative_length
+                and (
+                    len(self.cumulative_length) == 0
+                    or np.all(
+                        self.flattened_data[: self.cumulative_length[-1]]
+                        == other.flattened_data[: other.cumulative_length[-1]]
+                    )
+                )
                 and self.dtype == other.dtype
                 and self.attrs == other.attrs
             )
@@ -327,17 +333,21 @@ class VectorOfVectors(LGDO):
 
         vidx[i:] = vidx[i:] + dlen
 
-    def _set_vector_unsafe(self, i: int, vec: NDArray) -> None:
+    def _set_vector_unsafe(self, i: int, vec: NDArray, lens: NDArray = None) -> None:
         r"""Insert vector `vec` at position `i`.
 
         Assumes that ``j = self.cumulative_length[i-1]`` is the index (in
         `self.flattened_data`) of the end of the `(i-1)`\ th vector and copies
-        `vec` in ``self.flattened_data[j:len(vec)]``. Finally updates
+        `vec` in ``self.flattened_data[j:sum(lens)]``. Finally updates
         ``self.cumulative_length[i]`` with the new flattened data array length.
 
         Vectors stored after index `i` can be overridden, producing unintended
         behavior. This method is typically used for fast sequential fill of a
         pre-allocated vector of vectors.
+
+        If vec is 1D array and lens is None, set using full array. If vec
+        is 2D, require lens to be included, and fill each array only up to
+        lengths in lens.
 
         Danger
         ------
@@ -349,9 +359,15 @@ class VectorOfVectors(LGDO):
         append, replace, insert
         """
         start = 0 if i == 0 else self.cumulative_length[i - 1]
-        end = start + len(vec)
-        self.flattened_data[start:end] = vec
-        self.cumulative_length[i] = end
+        if len(vec.shape) == 1:
+            vec = np.expand_dims(vec, axis=0)
+            if lens is None:
+                lens = np.array([vec.shape[1]], dtype="u4")
+        if not isinstance(lens, np.ndarray):
+            lens = np.array([lens], dtype="u4")
+        cum_lens = start + lens.cumsum()
+        _nb_fill(vec, lens, self.flattened_data.nda[start : cum_lens[-1]])
+        self.cumulative_length[i : i + len(lens)] = cum_lens
 
     def __iter__(self) -> Iterator[NDArray]:
         for j, stop in enumerate(self.cumulative_length):
@@ -482,6 +498,54 @@ def _nb_build_cl(sorted_array_in: NDArray, cumulative_length_out: NDArray) -> ND
         cumulative_length_out[ii] += 1
     ii += 1
     return cumulative_length_out[:ii]
+
+
+@numba.guvectorize(
+    [
+        f"{data_type}[:,:],{size_type}[:],{data_type}[:]"
+        for data_type in [
+            "b1",
+            "i1",
+            "i2",
+            "i4",
+            "i8",
+            "u1",
+            "u2",
+            "u4",
+            "u8",
+            "f4",
+            "f8",
+            "c8",
+            "c16",
+        ]
+        for size_type in ["i4", "i8", "u4", "u8"]
+    ],
+    "(l,m),(l),(n)",
+    **nb_kwargs,
+)
+def _nb_fill(aoa_in: NDArray, len_in: NDArray, flattened_array_out: NDArray):
+    """Vectorized function to fill flattened array from array of arrays and
+    lengths. Values in aoa_in past lengths will not be copied.
+
+    Parameters
+    ----------
+    aoa_in
+        array of arrays containing values to be copied
+    len_in
+        array of vector lengths for each row of aoa_in
+    flattened_array_out
+        flattened array to copy values into. Must be longer than sum of
+        lengths in len_in
+    """
+
+    if len(flattened_array_out) < len_in.sum():
+        raise ValueError("flattened array not large enough to hold values")
+
+    start = 0
+    for i, l in enumerate(len_in):
+        stop = start + l
+        flattened_array_out[start:stop] = aoa_in[i, :l]
+        start = stop
 
 
 def explode_cl(cumulative_length: NDArray, array_out: NDArray = None) -> NDArray:
