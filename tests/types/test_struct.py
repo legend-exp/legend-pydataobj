@@ -35,6 +35,15 @@ def test_add_field():
     struct.add_field("array1", lgdo.Array(shape=(700, 21), dtype="f", fill_val=2))
     assert struct.attrs["datatype"] == "struct{scalar1,array1}"
 
+    struct["array2"] = lgdo.Array(shape=(700, 21), dtype="f", fill_val=2)
+    assert struct.attrs["datatype"] == "struct{scalar1,array1,array2}"
+
+
+def test_getattr():
+    struct = lgdo.Struct()
+    struct["scalar1"] = lgdo.Scalar(value=10)
+    assert struct.scalar1.value == 10
+
 
 def test_remove_field():
     struct = lgdo.Struct()

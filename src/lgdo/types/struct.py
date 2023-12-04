@@ -23,8 +23,6 @@ class Struct(LGDO, dict):
     datatype updated, or call :meth:`update_datatype` after adding.
     """
 
-    # TODO: overload setattr to require add_field for setting?
-
     def __init__(
         self, obj_dict: dict[str, LGDO] = None, attrs: dict[str, Any] = None
     ) -> None:
@@ -55,8 +53,14 @@ class Struct(LGDO, dict):
 
     def add_field(self, name: str | int, obj: LGDO) -> None:
         """Add a field to the table."""
-        self[name] = obj
+        super().__setitem__(name, obj)
         self.update_datatype()
+
+    def __setitem__(self, name: str, obj: LGDO) -> None:
+        return self.add_field(name, obj)
+
+    def __getattr__(self, name: str) -> LGDO:
+        return self.__getitem__(name)
 
     def remove_field(self, name: str | int, delete: bool = False) -> None:
         """Remove a field from the table.
@@ -114,33 +118,18 @@ class Struct(LGDO, dict):
     ) -> pd.DataFrame | np.NDArray | ak.Array:
         r"""View the Struct data as a third-party format data structure.
 
-        This is typically a zero-copy or nearly zero-copy operation unless
-        explicitly stated in the concrete LGDO documentation.
-
-        Supported third-party formats are:
-
-        - ``pd``: :mod:`pandas`
-        - ``ak``: :mod:`awkward`
-
-        Notes
+        Error
         -----
-        - conversion to ndarray is not supported
-        - conversion to awkward array only works when the key is a string
-          and values are of equal length
+        Not implemented. Since Struct's fields can have different lengths,
+        converting to a Numpy, Pandas or Awkward is generally not possible.
+        Call :meth:`.LGDO.view_as` on the fields instead.
 
-        Parameters
-        ----------
-        library
-            format of the returned data view.
-        with_units
-            forward physical units to the output data.
-
+        See Also
+        --------
+        .LGDO.view_as
         """
-        if library == "pd":
-            return pd.DataFrame(self, copy=False)
-        elif library == "np":
-            raise TypeError(f"Format {library} is not a supported for Structs.")
-        elif library == "ak":
-            return ak.Array(self)
-        else:
-            raise TypeError(f"{library} is not a supported third-party format.")
+        raise NotImplementedError(
+            "Since Struct's fields can have different lengths, "
+            "converting to a Numpy, Pandas or Awkward is generally "
+            "not possible. Call view_as() on the fields instead."
+        )
