@@ -121,7 +121,7 @@ def test_aoesa(lgdo_vov):
     aoesa = v.to_aoesa()
     assert aoesa.dtype == np.float64
 
-    aoesa = v.to_aoesa(preserve_dtype=True)
+    aoesa = v.to_aoesa(missing_value=None)
     assert aoesa.dtype == np.int16
 
 

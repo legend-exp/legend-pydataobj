@@ -401,7 +401,7 @@ class VectorOfVectors(LGDO):
         return out
 
     def to_aoesa(
-        self, preserve_dtype: bool = False, max_len: int = None, missing_value=np.nan
+        self, max_len: int = None, missing_value=np.nan
     ) -> aoesa.ArrayOfEqualSizedArrays:
         """Convert to :class:`ArrayOfEqualSizedArrays`.
         If `preserve_dtype` is ``False``, the output array will have dtype
@@ -411,18 +411,25 @@ class VectorOfVectors(LGDO):
         uninitialized (unless the dtype is already floating-point).
         """
         ak_arr = self.view_as("ak")
+        preserve_dtype = False
 
         if max_len is None:
             max_len = int(ak.max(ak.count(ak_arr, axis=-1)))
 
+        # hack to keep preserve_dtype functionality if needed
+        if missing_value is None:
+            preserve_dtype = True
+            # this was introduced, as np.array([np.nan]).astype() would throw a RuntimeWarning if converted to a type not supporting nan values
+            if np.can_cast(np.nan, self.flattened_data.dtype):
+                missing_value = np.nan
+            else:
+                missing_value = 0
+
         nda = ak.fill_none(
             ak.pad_none(ak_arr, max_len, clip=True), missing_value
         ).to_numpy(allow_missing=False)
-
         if preserve_dtype:
-            nda = nda.astype(type(self.flattened_data[0]))
-        else:
-            nda = nda.astype(type(missing_value))
+            nda = nda.astype(self.flattened_data.dtype)
 
         return aoesa.ArrayOfEqualSizedArrays(nda=nda, attrs=self.getattrs())
 
@@ -484,9 +491,12 @@ class VectorOfVectors(LGDO):
             return ak.Array(layout)
 
         if library == "np":
-            return self.to_aoesa(preserve_dtype=preserve_dtype).view_as(
-                "np", with_units=with_units
-            )
+            if preserve_dtype:
+                return self.to_aoesa(missing_value=None).view_as(
+                    "np", with_units=with_units
+                )
+            else:
+                return self.to_aoesa().view_as("np", with_units=with_units)
         if library == "pd":
             if attach_units:
                 raise ValueError(

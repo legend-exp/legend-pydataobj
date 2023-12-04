@@ -262,7 +262,7 @@ def decode(
         # convert vector of vectors to array of equal sized arrays
         # can now decode on the 2D matrix together with number of bytes to read per row
         _, siglen = decode(
-            (sig_in.encoded_data.to_aoesa(preserve_dtype=True).nda, nbytes),
+            (sig_in.encoded_data.to_aoesa(missing_value=None).nda, nbytes),
             sig_out if isinstance(sig_out, np.ndarray) else sig_out.nda,
             shift=shift,
         )
@@ -288,7 +288,7 @@ def decode(
         # convert vector of vectors to array of equal sized arrays
         # can now decode on the 2D matrix together with number of bytes to read per row
         sig_out, siglen = decode(
-            (sig_in.encoded_data.to_aoesa(preserve_dtype=True).nda, nbytes), shift=shift
+            (sig_in.encoded_data.to_aoesa(missing_value=None).nda, nbytes), shift=shift
         )
 
         # sanity check
