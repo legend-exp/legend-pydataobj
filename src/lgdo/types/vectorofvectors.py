@@ -502,8 +502,8 @@ def _nb_build_cl(sorted_array_in: NDArray, cumulative_length_out: NDArray) -> ND
 
 @numba.guvectorize(
     [
-        f"{t}[:,:],u4[:],{t}[:]"
-        for t in [
+        f"{data_type}[:,:],{size_type}[:],{data_type}[:]"
+        for data_type in [
             "b1",
             "i1",
             "i2",
@@ -517,7 +517,7 @@ def _nb_build_cl(sorted_array_in: NDArray, cumulative_length_out: NDArray) -> ND
             "f8",
             "c8",
             "c16",
-        ]
+        ] for size_type in ['i4', 'i8', 'u4', 'u8']
     ],
     "(l,m),(l),(n)",
     **nb_kwargs,
