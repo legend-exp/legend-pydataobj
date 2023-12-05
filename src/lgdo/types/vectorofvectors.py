@@ -401,33 +401,45 @@ class VectorOfVectors(LGDO):
         return out
 
     def to_aoesa(
-        self, max_len: int = None, missing_value=np.nan
+        self,
+        max_len: int = None,
+        fill_val: int | float = np.nan,
+        preserve_dtype: bool = False,
     ) -> aoesa.ArrayOfEqualSizedArrays:
         """Convert to :class:`ArrayOfEqualSizedArrays`.
-        If `preserve_dtype` is ``False``, the output array will have dtype
-        subtype of :class:`numpy.floating` and is padded with
-        :class:`numpy.nan`.  Otherwise, the dtype of the original
-        :class:`VectorOfVectors` is preserved and the padded values are left
-        uninitialized (unless the dtype is already floating-point).
+
+        Note
+        ----
+        The dtype of the original vector is typically not strictly preserved.
+        The output dtype will be either :any:`np.float64` or :any:`np.int64`.
+        If you want to use the same exact dtype, set `preserve_dtype` to
+        ``True``.
+
+        Parameters
+        ----------
+        max_len
+            the length of the returned array along its second dimension. Longer
+            vectors will be truncated, shorter will be padded with `fill_val`.
+            If ``None``, the length will be equal to the length of the longest
+            vector.
+        fill_val
+            value used to pad shorter vectors up to `max_len`. The dtype of the
+            output array will be such that both `fill_val` and the vector
+            values can be represented in the same data structure.
+        preserve_dtype
+            whether the output array should have exactly the same dtype as the
+            original vector of vectors. The type `fill_val` must be a
+            compatible one.
         """
         ak_arr = self.view_as("ak")
-        preserve_dtype = False
 
         if max_len is None:
             max_len = int(ak.max(ak.count(ak_arr, axis=-1)))
 
-        # hack to keep preserve_dtype functionality if needed
-        if missing_value is None:
-            preserve_dtype = True
-            # this was introduced, as np.array([np.nan]).astype() would throw a RuntimeWarning if converted to a type not supporting nan values
-            if np.can_cast(np.nan, self.flattened_data.dtype):
-                missing_value = np.nan
-            else:
-                missing_value = 0
+        nda = ak.fill_none(ak.pad_none(ak_arr, max_len, clip=True), fill_val).to_numpy(
+            allow_missing=False
+        )
 
-        nda = ak.fill_none(
-            ak.pad_none(ak_arr, max_len, clip=True), missing_value
-        ).to_numpy(allow_missing=False)
         if preserve_dtype:
             nda = nda.astype(self.flattened_data.dtype)
 
@@ -444,8 +456,8 @@ class VectorOfVectors(LGDO):
 
         - ``pd``: returns a :class:`pandas.Series` (supported through the
           ``awkward-pandas`` package)
-        - ``np``: returns a :class:`numpy.ndarray`, padded to make it
-          rectangular.
+        - ``np``: returns a :class:`numpy.ndarray`, padded with zeros to make
+          it rectangular.
         - ``ak``: returns an :class:`ak.Array`. ``self.cumulative_length`` is
           currently re-allocated for technical reasons.
 
@@ -492,7 +504,7 @@ class VectorOfVectors(LGDO):
 
         if library == "np":
             if preserve_dtype:
-                return self.to_aoesa(missing_value=None).view_as(
+                return self.to_aoesa(fill_val=0, preserve_dtype=True).view_as(
                     "np", with_units=with_units
                 )
             else:

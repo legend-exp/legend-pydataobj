@@ -109,7 +109,7 @@ def test_aoesa(lgdo_vov):
         ]
     )
     assert isinstance(arr, lgdo.ArrayOfEqualSizedArrays)
-    assert arr.dtype == np.float64
+    assert np.issubdtype(arr.dtype, np.floating)
     assert np.array_equal(arr.nda, desired, True)
 
     v = VectorOfVectors(
@@ -119,10 +119,17 @@ def test_aoesa(lgdo_vov):
         cumulative_length=lgdo.Array(nda=np.array([2, 5, 6, 10, 13])),
     )
     aoesa = v.to_aoesa()
-    assert aoesa.dtype == np.float64
 
-    aoesa = v.to_aoesa(missing_value=None)
-    assert aoesa.dtype == np.int16
+    assert np.issubdtype(aoesa.dtype, np.floating)
+
+    aoesa = v.to_aoesa(fill_val=-999.9)
+    assert np.issubdtype(aoesa.nda.dtype, np.floating)
+
+    aoesa = v.to_aoesa(fill_val=-999)
+    assert np.issubdtype(aoesa.nda.dtype, np.integer)
+
+    aoesa = v.to_aoesa(fill_val=-999, preserve_dtype=True)
+    assert aoesa.nda.dtype == np.int16
 
 
 def test_set_vector(lgdo_vov):
