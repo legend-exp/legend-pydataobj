@@ -411,7 +411,7 @@ class VectorOfVectors(LGDO):
         Note
         ----
         The dtype of the original vector is typically not strictly preserved.
-        The output dtype will be either :any:`np.float64` or :any:`np.int64`.
+        The output dtype will be either :class:`np.float64` or :class:`np.int64`.
         If you want to use the same exact dtype, set `preserve_dtype` to
         ``True``.
 
