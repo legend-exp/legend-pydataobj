@@ -441,7 +441,7 @@ class VectorOfVectors(LGDO):
         )
 
         if preserve_dtype:
-            nda.astype(self.flattened_data.dtype, copy=False)
+            nda = nda.astype(self.flattened_data.dtype, copy=False)
 
         return aoesa.ArrayOfEqualSizedArrays(nda=nda, attrs=self.getattrs())
 
