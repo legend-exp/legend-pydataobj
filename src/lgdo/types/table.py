@@ -407,7 +407,7 @@ class Table(Struct):
             return df
 
         elif library == "np":
-            raise TypeError(f"Format {library} is not a supported for Tables.")
+            raise TypeError(f"Format {library} is not supported for Tables.")
 
         elif library == "ak":
             if with_units:
