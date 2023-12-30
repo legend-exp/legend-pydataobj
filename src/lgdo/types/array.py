@@ -8,9 +8,14 @@ import logging
 from collections.abc import Iterator
 from typing import Any
 
+import awkward as ak
+import awkward_pandas as akpd
 import numpy as np
+import pandas as pd
+import pint_pandas  # noqa: F401
 
 from .. import utils as utils
+from ..units import default_units_registry as u
 from .lgdo import LGDO
 
 log = logging.getLogger(__name__)
@@ -138,3 +143,58 @@ class Array(LGDO):
             )
             + f", attrs={repr(self.attrs)})"
         )
+
+    def view_as(
+        self, library: str, with_units: bool = False
+    ) -> pd.DataFrame | np.NDArray | ak.Array:
+        """View the Array data as a third-party format data structure.
+
+        This is a zero-copy operation. Supported third-party formats are:
+
+        - ``pd``: returns a :class:`pandas.Series`
+        - ``np``: returns the internal `nda` attribute (:class:`numpy.ndarray`)
+        - ``ak``: returns an :class:`ak.Array` initialized with `self.nda`
+
+        Parameters
+        ----------
+        library
+            format of the returned data view.
+        with_units
+            forward physical units to the output data.
+
+        See Also
+        --------
+        .LGDO.view_as
+        """
+        # TODO: does attaching units imply a copy?
+        attach_units = with_units and "units" in self.attrs
+
+        if library == "pd":
+            if attach_units:
+                if self.nda.ndim == 1:
+                    return pd.Series(
+                        self.nda, dtype=f"pint[{self.attrs['units']}]", copy=False
+                    )
+                else:
+                    raise ValueError(
+                        "Pint does not support Awkward yet, you must view the data with_units=False"
+                    )
+            else:
+                if self.nda.ndim == 1:
+                    return pd.Series(self.nda, copy=False)
+                else:
+                    return akpd.from_awkward(self.view_as("ak"))
+        elif library == "np":
+            if attach_units:
+                return self.nda * u(self.attrs["units"])
+            else:
+                return self.nda
+        elif library == "ak":
+            if attach_units:
+                raise ValueError(
+                    "Pint does not support Awkward yet, you must view the data with_units=False"
+                )
+            else:
+                return ak.Array(self.nda)
+        else:
+            raise ValueError(f"{library} is not a supported third-party format.")

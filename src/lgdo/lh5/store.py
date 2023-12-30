@@ -53,7 +53,7 @@ class LH5Store:
     >>> store = LH5Store()
     >>> obj, _ = store.read("/geds/waveform", "file.lh5")
     >>> type(obj)
-    lgdo.waveform_table.WaveformTable
+    lgdo.waveformtable.WaveformTable
     """
 
     def __init__(self, base_path: str = "", keep_open: bool = False) -> None:
@@ -890,13 +890,13 @@ class LH5Store:
         `compression` attribute.
 
         Note
-        ----
+        ----------
         The `compression` LGDO attribute takes precedence over the default HDF5
         compression settings. The `hdf5_settings` attribute takes precedence
         over `compression`. These attributes are not written to disk.
 
         Note
-        ----
+        ----------
         HDF5 compression is skipped for the `encoded_data.flattened_data`
         dataset of :class:`.VectorOfEncodedVectors` and
         :class:`.ArrayOfEncodedEqualSizedArrays`.

@@ -130,7 +130,9 @@ def encode(
             )
         # convert VectorOfVectors to ArrayOfEqualSizedArrays so it can be
         # directly passed to the low-level encoding routine
-        sig_out_nda, nbytes = encode(sig_in.to_aoesa(), shift=shift)
+        sig_out_nda, nbytes = encode(
+            sig_in.to_aoesa(fill_val=0, preserve_dtype=True), shift=shift
+        )
 
         # build the encoded LGDO
         encoded_data = lgdo.ArrayOfEqualSizedArrays(nda=sig_out_nda).to_vov(
@@ -263,7 +265,7 @@ def decode(
         # convert vector of vectors to array of equal sized arrays
         # can now decode on the 2D matrix together with number of bytes to read per row
         _, siglen = decode(
-            (sig_in.encoded_data.to_aoesa(preserve_dtype=True).nda, nbytes),
+            (sig_in.encoded_data.to_aoesa(fill_val=0, preserve_dtype=True).nda, nbytes),
             sig_out if isinstance(sig_out, np.ndarray) else sig_out.nda,
             shift=shift,
         )
@@ -289,7 +291,8 @@ def decode(
         # convert vector of vectors to array of equal sized arrays
         # can now decode on the 2D matrix together with number of bytes to read per row
         sig_out, siglen = decode(
-            (sig_in.encoded_data.to_aoesa(preserve_dtype=True).nda, nbytes), shift=shift
+            (sig_in.encoded_data.to_aoesa(fill_val=0, preserve_dtype=True).nda, nbytes),
+            shift=shift,
         )
 
         # sanity check

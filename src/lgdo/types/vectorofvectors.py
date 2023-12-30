@@ -9,8 +9,11 @@ import logging
 from collections.abc import Iterator
 from typing import Any
 
+import awkward as ak
+import awkward_pandas as akpd
 import numba
 import numpy as np
+import pandas as pd
 from numpy.typing import DTypeLike, NDArray
 
 from .. import utils as utils
@@ -414,27 +417,124 @@ class VectorOfVectors(LGDO):
         np.set_printoptions(**npopt)
         return out
 
-    def to_aoesa(self, preserve_dtype: bool = False) -> aoesa.ArrayOfEqualSizedArrays:
+    def to_aoesa(
+        self,
+        max_len: int = None,
+        fill_val: int | float = np.nan,
+        preserve_dtype: bool = False,
+    ) -> aoesa.ArrayOfEqualSizedArrays:
         """Convert to :class:`ArrayOfEqualSizedArrays`.
 
-        If `preserve_dtype` is False, the output array will have dtype
-        :class:`numpy.float64` and is padded with :class:`numpy.nan`.
-        Otherwise, the dtype of the original :class:`VectorOfVectors` is
-        preserved.
+        Note
+        ----
+        The dtype of the original vector is typically not strictly preserved.
+        The output dtype will be either :class:`np.float64` or :class:`np.int64`.
+        If you want to use the same exact dtype, set `preserve_dtype` to
+        ``True``.
+
+        Parameters
+        ----------
+        max_len
+            the length of the returned array along its second dimension. Longer
+            vectors will be truncated, shorter will be padded with `fill_val`.
+            If ``None``, the length will be equal to the length of the longest
+            vector.
+        fill_val
+            value used to pad shorter vectors up to `max_len`. The dtype of the
+            output array will be such that both `fill_val` and the vector
+            values can be represented in the same data structure.
+        preserve_dtype
+            whether the output array should have exactly the same dtype as the
+            original vector of vectors. The type `fill_val` must be a
+            compatible one.
         """
-        ind_lengths = np.diff(self.cumulative_length.nda, prepend=0)
-        arr_len = np.max(ind_lengths)
+        ak_arr = self.view_as("ak")
 
-        if not preserve_dtype:
-            nda = np.empty((len(self.cumulative_length), arr_len))
-            nda.fill(np.nan)
-        else:
-            nda = np.empty((len(self.cumulative_length), arr_len), dtype=self.dtype)
+        if max_len is None:
+            max_len = int(ak.max(ak.count(ak_arr, axis=-1)))
 
-        for i in range(len(self.cumulative_length)):
-            nda[i, : ind_lengths[i]] = self[i]
+        nda = ak.fill_none(ak.pad_none(ak_arr, max_len, clip=True), fill_val).to_numpy(
+            allow_missing=False
+        )
+
+        if preserve_dtype:
+            nda = nda.astype(self.flattened_data.dtype, copy=False)
 
         return aoesa.ArrayOfEqualSizedArrays(nda=nda, attrs=self.getattrs())
+
+    def view_as(
+        self, library: str, with_units: bool = False, preserve_dtype: bool = False
+    ) -> pd.DataFrame | np.NDArray | ak.Array:
+        r"""View the vector data as a third-party format data structure.
+
+        This is typically a zero-copy or nearly zero-copy operation.
+
+        Supported third-party formats are:
+
+        - ``pd``: returns a :class:`pandas.Series` (supported through the
+          ``awkward-pandas`` package)
+        - ``np``: returns a :class:`numpy.ndarray`, padded with zeros to make
+          it rectangular.
+        - ``ak``: returns an :class:`ak.Array`. ``self.cumulative_length`` is
+          currently re-allocated for technical reasons.
+
+        Notes
+        -----
+        Awkward array views partially involve memory re-allocation (the
+        `cumulative_length`\ s).
+
+        Parameters
+        ----------
+        library
+            format of the returned data view.
+        with_units
+            forward physical units to the output data.
+        preserve_dtype
+            forwarded to :meth:`.to_aoesa`, if `library` is ``np``.
+
+        See Also
+        --------
+        .LGDO.view_as
+        """
+        attach_units = with_units and "units" in self.attrs
+
+        if library == "ak":
+            if attach_units:
+                raise ValueError(
+                    "Pint does not support Awkward yet, you must view the data with_units=False"
+                )
+
+            # cannot avoid making a copy here. we should add the leading 0 to
+            # cumulative_length inside VectorOfVectors at some point in the
+            # future
+            offsets = np.empty(
+                len(self.cumulative_length) + 1, dtype=self.cumulative_length.dtype
+            )
+            offsets[1:] = self.cumulative_length
+            offsets[0] = 0
+
+            layout = ak.contents.ListOffsetArray(
+                offsets=ak.index.Index(offsets),
+                content=ak.contents.NumpyArray(self.flattened_data),
+            )
+            return ak.Array(layout)
+
+        if library == "np":
+            if preserve_dtype:
+                return self.to_aoesa(fill_val=0, preserve_dtype=True).view_as(
+                    "np", with_units=with_units
+                )
+            else:
+                return self.to_aoesa().view_as("np", with_units=with_units)
+        if library == "pd":
+            if attach_units:
+                raise ValueError(
+                    "Pint does not support Awkward yet, you must view the data with_units=False"
+                )
+            else:
+                return akpd.from_awkward(self.view_as("ak"))
+        else:
+            raise ValueError(f"{library} is not a supported third-party format.")
 
 
 def build_cl(

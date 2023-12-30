@@ -42,6 +42,15 @@ class Scalar(LGDO):
     def form_datatype(self) -> str:
         return self.datatype_name()
 
+    def view_as(self, library: str, with_units: bool = False):
+        r"""Dummy function, returns the scalar value itself.
+
+        See Also
+        --------
+        .LGDO.view_as
+        """
+        return self.value
+
     def __eq__(self, other: Scalar) -> bool:
         if isinstance(other, Scalar):
             return self.value == other.value and self.attrs == self.attrs

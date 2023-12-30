@@ -7,7 +7,9 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+import awkward as ak
 import numpy as np
+import pandas as pd
 
 from .lgdo import LGDO
 
@@ -20,8 +22,6 @@ class Struct(LGDO, dict):
     After instantiation, add fields using :meth:`add_field` to keep the
     datatype updated, or call :meth:`update_datatype` after adding.
     """
-
-    # TODO: overload setattr to require add_field for setting?
 
     def __init__(
         self, obj_dict: dict[str, LGDO] = None, attrs: dict[str, Any] = None
@@ -53,8 +53,14 @@ class Struct(LGDO, dict):
 
     def add_field(self, name: str | int, obj: LGDO) -> None:
         """Add a field to the table."""
-        self[name] = obj
+        super().__setitem__(name, obj)
         self.update_datatype()
+
+    def __setitem__(self, name: str, obj: LGDO) -> None:
+        return self.add_field(name, obj)
+
+    def __getattr__(self, name: str) -> LGDO:
+        return self.__getitem__(name)
 
     def remove_field(self, name: str | int, delete: bool = False) -> None:
         """Remove a field from the table.
@@ -106,3 +112,24 @@ class Struct(LGDO, dict):
         )
         np.set_printoptions(**npopt)
         return " ".join(out.replace("\n", " ").split())
+
+    def view_as(
+        self, library: str, with_units: bool = False
+    ) -> pd.DataFrame | np.NDArray | ak.Array:
+        r"""View the Struct data as a third-party format data structure.
+
+        Error
+        -----
+        Not implemented. Since Struct's fields can have different lengths,
+        converting to a Numpy, Pandas or Awkward is generally not possible.
+        Call :meth:`.LGDO.view_as` on the fields instead.
+
+        See Also
+        --------
+        .LGDO.view_as
+        """
+        raise NotImplementedError(
+            "Since Struct's fields can have different lengths, "
+            "converting to a Numpy, Pandas or Awkward is generally "
+            "not possible. Call view_as() on the fields instead."
+        )

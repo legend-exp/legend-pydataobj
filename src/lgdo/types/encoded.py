@@ -3,7 +3,10 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import Any
 
+import awkward as ak
+import awkward_pandas as akpd
 import numpy as np
+import pandas as pd
 from numpy.typing import NDArray
 
 from .. import utils as utils
@@ -225,6 +228,64 @@ class VectorOfEncodedVectors(LGDO):
         np.set_printoptions(**npopt)
         return out
 
+    def view_as(
+        self, library: str, with_units: bool = False
+    ) -> pd.DataFrame | np.NDArray | ak.Array:
+        """View the encoded data as a third-party format data structure.
+
+        This is a zero-copy or nearly zero-copy operation.
+
+        Supported third-party formats are:
+
+        - ``pd``: returns a :class:`pandas.DataFrame`
+        - ``ak``: returns an :class:`ak.Array` (record type)
+
+        Parameters
+        ----------
+        library
+            format of the returned data view.
+        with_units
+            forward physical units to the output data.
+
+        See Also
+        --------
+        .LGDO.view_as
+        """
+        attach_units = with_units and "units" in self.attrs
+
+        if library == "ak":
+            if attach_units:
+                raise ValueError(
+                    "Pint does not support Awkward yet, you must view the data with_units=False"
+                )
+
+            records_list = {
+                "encoded_data": self.encoded_data.view_as("ak"),
+                "decoded_size": np.array(self.decoded_size),
+            }
+            return ak.Array(records_list)
+
+        if library == "np":
+            raise TypeError(
+                f"Format {library} is not supported for VectorOfEncodedVectors."
+            )
+        if library == "pd":
+            if attach_units:
+                raise ValueError(
+                    "Pint does not support Awkward yet, you must view the data with_units=False"
+                )
+            else:
+                return pd.DataFrame(
+                    {
+                        "encoded_data": akpd.from_awkward(
+                            self.encoded_data.view_as("ak")
+                        ),
+                        "decoded_size": self.decoded_size,
+                    }
+                )
+        else:
+            raise ValueError(f"{library} is not a supported third-party format.")
+
 
 class ArrayOfEncodedEqualSizedArrays(LGDO):
     """An array of encoded arrays with equal decoded size.
@@ -388,3 +449,70 @@ class ArrayOfEncodedEqualSizedArrays(LGDO):
         )
         np.set_printoptions(**npopt)
         return out
+
+    def view_as(
+        self, library: str, with_units: bool = False
+    ) -> pd.DataFrame | np.NDArray | ak.Array:
+        """View the encoded data as a third-party format data structure.
+
+        This is nearly a zero-copy operation.
+
+        Supported third-party formats are:
+
+        - ``pd``: returns a :class:`pandas.DataFrame`
+        - ``ak``: returns an :class:`ak.Array` (record type)
+
+        Note
+        ----
+        In the view, `decoded_size` is expanded into an array.
+
+        Parameters
+        ----------
+        library
+            format of the returned data view.
+        with_units
+            forward physical units to the output data.
+
+        See Also
+        --------
+        .LGDO.view_as
+        """
+        attach_units = with_units and "units" in self.attrs
+
+        if library == "ak":
+            if attach_units:
+                raise ValueError(
+                    "Pint does not support Awkward yet, you must view the data with_units=False"
+                )
+
+            records_list = {
+                "encoded_data": self.encoded_data.view_as("ak"),
+                "decoded_size": np.full(
+                    len(self.encoded_data.cumulative_length), self.decoded_size.value
+                ),
+            }
+            return ak.Array(records_list)
+
+        if library == "np":
+            raise TypeError(
+                f"Format {library} is not supported for ArrayOfEncodedEqualSizedArrays."
+            )
+        if library == "pd":
+            if attach_units:
+                raise ValueError(
+                    "Pint does not support Awkward yet, you must view the data with_units=False"
+                )
+            else:
+                return pd.DataFrame(
+                    {
+                        "encoded_data": akpd.from_awkward(
+                            self.encoded_data.view_as("ak")
+                        ),
+                        "decoded_size": np.full(
+                            len(self.encoded_data.cumulative_length),
+                            self.decoded_size.value,
+                        ),
+                    }
+                )
+        else:
+            raise ValueError(f"{library} is not a supported third-party format.")

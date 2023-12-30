@@ -7,7 +7,9 @@ from __future__ import annotations
 import logging
 import re
 from typing import Any
+from warnings import warn
 
+import awkward as ak
 import numexpr as ne
 import numpy as np
 import pandas as pd
@@ -206,31 +208,14 @@ class Table(Struct):
             The prefix to be added to the column names. Used when recursively getting the
             dataframe of a Table inside this Table
         """
-        df = pd.DataFrame(copy=copy)
-        if cols is None:
-            cols = self.keys()
-        for col in cols:
-            if isinstance(self[col], Table):
-                sub_df = self[col].get_dataframe(prefix=f"{prefix}{col}_")
-                if df.empty:
-                    df = sub_df
-                else:
-                    df = df.join(sub_df)
-            else:
-                if isinstance(self[col], VectorOfVectors):
-                    column = self[col].to_aoesa()
-                else:
-                    column = self[col]
-
-                if not hasattr(column, "nda"):
-                    raise ValueError(f"column {col} does not have an nda")
-                else:
-                    if len(column.nda.shape) == 1:
-                        df[prefix + str(col)] = column.nda
-                    else:
-                        df[prefix + str(col)] = column.nda.tolist()
-
-        return df
+        warn(
+            "`get_dataframe` is deprecated and will be removed in a future release. "
+            "Instead use `view_as` to get the Table data as a pandas dataframe "
+            "or awkward Array. ",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.view_as(library="pd", cols=cols, prefix=prefix)
 
     def eval(self, expr_config: dict) -> Table:
         """Apply column operations to the table and return a new table holding
@@ -335,7 +320,7 @@ class Table(Struct):
         opts["index"] = False
 
         try:
-            string = self.get_dataframe().to_string(**opts)
+            string = self.view_as("pd").to_string(**opts)
         except ValueError:
             string = "Cannot print Table with VectorOfVectors yet!"
 
@@ -350,3 +335,87 @@ class Table(Struct):
             string += f"\nwith attrs={attrs}"
 
         return string
+
+    def view_as(
+        self,
+        library: str,
+        with_units: bool = False,
+        cols: list[str] = None,
+        prefix: str = "",
+    ) -> pd.DataFrame | np.NDArray | ak.Array:
+        r"""View the Table data as a third-party format data structure.
+
+        This is typically a zero-copy or nearly zero-copy operation.
+
+        Supported third-party formats are:
+
+        - ``pd``: returns a :class:`pandas.DataFrame`
+        - ``ak``: returns an :class:`ak.Array` (record type)
+
+        Notes
+        -----
+        Conversion to Awkward array only works when the key is a string.
+
+        Parameters
+        ----------
+        library
+            format of the returned data view.
+        with_units
+            forward physical units to the output data.
+        cols
+            a list of column names specifying the subset of the table's columns
+            to be added to the dataframe.
+        prefix
+            The prefix to be added to the column names. Used when recursively getting the
+            dataframe of a table inside this table.
+
+        See Also
+        --------
+        .LGDO.view_as
+        """
+        if library == "pd":
+            df = pd.DataFrame()
+            if cols is None:
+                cols = self.keys()
+            for col in cols:
+                column = self[col]
+                if isinstance(column, Array) or isinstance(column, VectorOfVectors):
+                    tmp_ser = column.view_as("pd", with_units=with_units).rename(
+                        prefix + str(col)
+                    )
+                    if df.empty:
+                        df = pd.DataFrame(tmp_ser)
+                    else:
+                        df = df.join(tmp_ser)
+                elif isinstance(column, Table):
+                    tmp_df = column.view_as(
+                        "pd", with_units=with_units, prefix=f"{prefix}{col}_"
+                    )
+                    if df.empty:
+                        df = tmp_df
+                    else:
+                        df = df.join(tmp_df)
+                else:
+                    if df.empty:
+                        df[prefix + str(col)] = column.view_as(
+                            "pd", with_units=with_units
+                        )
+                    else:
+                        df[prefix + str(col)] = df.join(
+                            column.view_as("pd", with_units=with_units)
+                        )
+            return df
+
+        elif library == "np":
+            raise TypeError(f"Format {library} is not supported for Tables.")
+
+        elif library == "ak":
+            if with_units:
+                raise ValueError(
+                    "Pint does not support Awkward yet, you must view the data with_units=False"
+                )
+            else:
+                return ak.Array(self)
+
+        else:
+            raise TypeError(f"{library} is not a supported third-party format.")

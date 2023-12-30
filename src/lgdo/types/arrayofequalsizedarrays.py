@@ -7,7 +7,9 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import Any
 
+import awkward as ak
 import numpy as np
+import pandas as pd
 
 from .. import utils as utils
 from . import vectorofvectors as vov
@@ -131,3 +133,14 @@ class ArrayOfEqualSizedArrays(Array):
             cumulative_length=cumulative_length,
             attrs=attrs,
         )
+
+    def view_as(
+        self, library: str, with_units: bool = False
+    ) -> pd.DataFrame | np.NDArray | ak.Array:
+        """View the array as a third-party format data structure.
+
+        See Also
+        --------
+        .LGDO.view_as
+        """
+        return super().view_as(library, with_units=with_units)

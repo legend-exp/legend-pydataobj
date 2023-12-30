@@ -111,7 +111,10 @@ def test_uleb128zzdiff_encode_decode_lgdo_aoesa(wftable):
         wf_dec, siglen = varlen.decode((wf_enc, nbytes))
         assert np.array_equal(wf_dec[:siglen], wftable.values[i])
 
-    assert voev.encoded_data.to_aoesa(preserve_dtype=True).nda.dtype == np.ubyte
+    assert (
+        voev.encoded_data.to_aoesa(fill_val=0, preserve_dtype=True).nda.dtype
+        == np.ubyte
+    )
 
     sig_in_dec = varlen.decode(voev)
     assert isinstance(sig_in_dec, ArrayOfEqualSizedArrays)

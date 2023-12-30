@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Any
 
-import numpy
+import numpy as np
 
 from .array import Array
 
@@ -24,9 +24,9 @@ class FixedSizeArray(Array):
 
     def __init__(
         self,
-        nda: numpy.ndarray = None,
+        nda: np.ndarray = None,
         shape: tuple[int, ...] = (),
-        dtype: numpy.dtype = None,
+        dtype: np.dtype = None,
         fill_val: int | float = None,
         attrs: dict[str, Any] = None,
     ) -> None:
@@ -41,3 +41,12 @@ class FixedSizeArray(Array):
 
     def datatype_name(self) -> str:
         return "fixedsize_array"
+
+    def view_as(self, library: str, with_units: bool = False):
+        """View the array as a third-party format data structure.
+
+        See Also
+        --------
+        .LGDO.view_as
+        """
+        return super.view_as(library, with_units=with_units)
