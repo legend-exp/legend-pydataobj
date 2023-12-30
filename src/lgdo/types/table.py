@@ -389,7 +389,7 @@ class Table(Struct):
                         df = df.join(tmp_ser)
                 elif isinstance(column, Table):
                     tmp_df = column.view_as(
-                        "pd", prefix=f"{prefix}{col}_", with_units=with_units
+                        "pd", with_units=with_units, prefix=f"{prefix}{col}_"
                     )
                     if df.empty:
                         df = tmp_df

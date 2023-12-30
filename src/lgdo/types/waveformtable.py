@@ -266,7 +266,11 @@ class WaveformTable(Table):
         return string
 
     def view_as(
-        self, fmt: str, with_units: bool = False
+        self,
+        library: str,
+        with_units: bool = False,
+        cols: list[str] = None,
+        prefix: str = "",
     ) -> pd.DataFrame | np.NDArray | ak.Array:
         r"""View the waveform data as a third-party format data structure.
 
@@ -274,4 +278,4 @@ class WaveformTable(Table):
         --------
         .LGDO.view_as
         """
-        return super().view_as(fmt, with_units)
+        return super().view_as(library, with_units, cols, prefix)
