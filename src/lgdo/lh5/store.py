@@ -1337,6 +1337,7 @@ def show(
     attrs: bool = False,
     indent: str = "",
     header: bool = True,
+    depth: int | None = None,
 ) -> None:
     """Print a tree of LH5 file contents with LGDO datatype.
 
@@ -1352,6 +1353,8 @@ def show(
         indent the diagram with this string.
     header
         print `lh5_group` at the top of the diagram.
+    depth
+        maximum tree depth of groups to print
 
     Examples
     --------
@@ -1367,6 +1370,10 @@ def show(
     │   └── values · array_of_equalsized_arrays<1,1>{real}
     └── wf_std · array<1>{real}
     """
+    # check tree depth if we are using it
+    if depth is not None and depth<=0:
+        return
+
     # open file
     if isinstance(lh5_file, str):
         lh5_file = h5py.File(expand_path(lh5_file), "r")
@@ -1422,6 +1429,7 @@ def show(
                 indent=indent + ("    " if killme else "│   "),
                 header=False,
                 attrs=attrs,
+                depth=depth-1 if depth else None
             )
 
         # break or move to next key
