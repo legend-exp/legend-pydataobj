@@ -60,7 +60,13 @@ class Struct(LGDO, dict):
         return self.add_field(name, obj)
 
     def __getattr__(self, name: str) -> LGDO:
-        return self.__getitem__(name)
+        if hasattr(super(), name):
+            return super().__getattr__(name)
+
+        if name in self.keys():
+            return super().__getitem__(name)
+
+        raise AttributeError(name)
 
     def remove_field(self, name: str | int, delete: bool = False) -> None:
         """Remove a field from the table.
