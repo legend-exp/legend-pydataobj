@@ -70,6 +70,8 @@ class ArrayOfEqualSizedArrays(Array):
             if nda is None:
                 s = shape
             else:
+                if not isinstance(nda, np.ndarray):
+                    nda = np.array(nda)
                 s = nda.shape
             self.dims = (1, len(s) - 1)
         else:
