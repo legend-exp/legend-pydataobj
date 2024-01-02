@@ -131,6 +131,37 @@ class LH5Store(lh5.LH5Store):
         )
         super().__init__(base_path, keep_open)
 
+    def read_object(
+        self,
+        name: str,
+        lh5_file: str | h5py.File | list[str | h5py.File],
+        **kwargs,
+    ) -> tuple[LGDO, int]:
+        warn(
+            "LH5Store.read_object() has been renamed to LH5Store.read(), "
+            "Please update your code."
+            "LH5Store.read_object() will be removed in a future release.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return super().read(self, name, lh5_file, **kwargs)
+
+    def write_object(
+        self,
+        obj: LGDO,
+        name: str,
+        lh5_file: str | h5py.File,
+        **kwargs,
+    ) -> tuple[LGDO, int]:
+        warn(
+            "LH5Store.write_object() has been renamed to LH5Store.write(), "
+            "Please update your code."
+            "LH5Store.write_object() will be removed in a future release.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return super().read(self, obj, name, lh5_file, **kwargs)
+
 
 def load_dfs(
     f_list: str | list[str],
