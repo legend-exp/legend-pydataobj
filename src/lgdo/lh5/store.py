@@ -1371,7 +1371,7 @@ def show(
     └── wf_std · array<1>{real}
     """
     # check tree depth if we are using it
-    if depth is not None and depth<=0:
+    if depth is not None and depth <= 0:
         return
 
     # open file
@@ -1429,7 +1429,7 @@ def show(
                 indent=indent + ("    " if killme else "│   "),
                 header=False,
                 attrs=attrs,
-                depth=depth-1 if depth else None
+                depth=depth - 1 if depth else None,
             )
 
         # break or move to next key

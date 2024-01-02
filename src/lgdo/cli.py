@@ -38,7 +38,13 @@ def lh5ls():
     parser.add_argument(
         "--attributes", "-a", action="store_true", help="""Print HDF5 attributes too"""
     )
-    parser.add_argument("--depth", "-d", type=int, default=None, help="""Maximum tree depth of groups to print""")
+    parser.add_argument(
+        "--depth",
+        "-d",
+        type=int,
+        default=None,
+        help="""Maximum tree depth of groups to print""",
+    )
 
     args = parser.parse_args()
 
