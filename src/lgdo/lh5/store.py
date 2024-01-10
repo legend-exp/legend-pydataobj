@@ -347,9 +347,7 @@ class LH5Store:
                     default = not field_mask[list(field_mask.keys())[0]]
                 field_mask = defaultdict(lambda: default, field_mask)
             elif isinstance(field_mask, (list, tuple)):
-                field_mask = defaultdict(
-                    lambda: False, {field: True for field in field_mask}
-                )
+                field_mask = defaultdict(bool, {field: True for field in field_mask})
             elif not isinstance(field_mask, defaultdict):
                 raise RuntimeError("bad field_mask of type", type(field_mask).__name__)
         elif field_mask is not None:
