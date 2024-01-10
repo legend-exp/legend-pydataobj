@@ -6,7 +6,7 @@ import lgdo
 def test_eval_dependency():
     obj = lgdo.Table(
         col_dict={
-            "a": lgdo.Array([1, 2, 3, 4]),
+            "a": lgdo.Array([1, 2, 3, 4], attrs={"units": "s"}),
             "b": lgdo.Array([5, 6, 7, 8]),
             "c": lgdo.ArrayOfEqualSizedArrays(
                 nda=[[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]

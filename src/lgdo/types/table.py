@@ -276,10 +276,10 @@ class Table(Struct):
         for obj in c.co_names:
             if obj in self.keys():
                 if isinstance(self[obj], VectorOfVectors):
-                    self_unwrap[obj] = self[obj].view_as("ak")
+                    self_unwrap[obj] = self[obj].view_as("ak", with_units=False)
                     has_ak = True
                 else:
-                    self_unwrap[obj] = self[obj].view_as("np")
+                    self_unwrap[obj] = self[obj].view_as("np", with_units=False)
 
         # use numexpr if we are only dealing with numpy data types
         if not has_ak:
