@@ -780,8 +780,8 @@ def test_write_object_overwrite_lgdo(caplog, tmptestdir):
     assert scalar_dat.value == 1
 
     # Finally, try overwriting a vector of vectors
-    vov1 = types.VectorOfVectors(listoflists=[np.zeros(1), np.ones(2), np.zeros(3)])
-    vov2 = types.VectorOfVectors(listoflists=[np.ones(1), np.zeros(2), np.ones(3)])
+    vov1 = types.VectorOfVectors([np.zeros(1), np.ones(2), np.zeros(3)])
+    vov2 = types.VectorOfVectors([np.ones(1), np.zeros(2), np.ones(3)])
     store = lh5.LH5Store()
     store.write(vov1, "my_vector", f"{tmptestdir}/write_object_overwrite_test.lh5")
     store.write(
