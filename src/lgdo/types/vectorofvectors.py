@@ -35,7 +35,7 @@ class VectorOfVectors(LGDO):
 
     def __init__(
         self,
-        listoflists: list[list[int | float]] = None,
+        array: ak.Array | list[list[int | float]] = None,
         flattened_data: Array | NDArray = None,
         cumulative_length: Array | NDArray = None,
         shape_guess: tuple[int, int] = None,
@@ -46,9 +46,10 @@ class VectorOfVectors(LGDO):
         """
         Parameters
         ----------
-        listoflists
-            create a VectorOfVectors out of a Python list of lists. Takes
-            priority over `flattened_data` and `cumulative_length`.
+        array
+            create a ``VectorOfVectors`` out of a Python list of lists or an
+            :class:`ak.Array`. Takes priority over `flattened_data` and
+            `cumulative_length`.
         flattened_data
             if not ``None``, used as the internal array for
             `self.flattened_data`.  Otherwise, an internal `flattened_data` is
@@ -67,30 +68,43 @@ class VectorOfVectors(LGDO):
             of `flattened_data` if it was not supplied.
         dtype
             sets the type of data stored in `flattened_data`. Required if
-            `flattened_data` and `listoflists` are ``None``.
+            `flattened_data` and `array` are ``None``.
         fill_val
             fill all of `self.flattened_data` with this value.
         attrs
             a set of user attributes to be carried along with this LGDO.
         """
-        if listoflists is not None:
-            cl_nda = np.cumsum([len(ll) for ll in listoflists])
-            if dtype is None:
-                if len(cl_nda) == 0 or cl_nda[-1] == 0:
-                    raise ValueError("listoflists can't be empty with dtype=None!")
-                else:
-                    # Set dtype from the first element in the list
-                    # Find it efficiently, allowing for zero-length lists as some of the entries
-                    first_element = next(itertools.chain.from_iterable(listoflists))
-                    dtype = type(first_element)
+        if array is not None:
+            if isinstance(array, ak.Array):
+                if array.ndim != 2:
+                    raise ValueError(
+                        "cannot initialize a VectorOfVectors with "
+                        f"{array.ndim}-dimensional data"
+                    )
 
-            self.dtype = np.dtype(dtype)
-            self.cumulative_length = Array(cl_nda)
-            self.flattened_data = Array(
-                np.fromiter(
-                    itertools.chain.from_iterable(listoflists), dtype=self.dtype
+                form, length, container = ak.to_buffers(array)
+
+                return self.__init__(
+                    flattened_data=container["node1-data"],
+                    cumulative_length=container["node0-offsets"][1:],
                 )
-            )
+
+            else:
+                cl_nda = np.cumsum([len(ll) for ll in array])
+                if dtype is None:
+                    if len(cl_nda) == 0 or cl_nda[-1] == 0:
+                        raise ValueError("array can't be empty with dtype=None!")
+                    else:
+                        # Set dtype from the first element in the list
+                        # Find it efficiently, allowing for zero-length lists as some of the entries
+                        first_element = next(itertools.chain.from_iterable(array))
+                        dtype = type(first_element)
+
+                self.dtype = np.dtype(dtype)
+                self.cumulative_length = Array(cl_nda)
+                self.flattened_data = Array(
+                    np.fromiter(itertools.chain.from_iterable(array), dtype=self.dtype)
+                )
 
         else:
             if cumulative_length is None:
