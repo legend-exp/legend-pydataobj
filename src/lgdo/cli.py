@@ -5,7 +5,7 @@ import sys
 
 import lgdo
 import lgdo.logging
-from lgdo import show
+from lgdo.lh5 import show
 
 
 def lh5ls():
@@ -26,7 +26,6 @@ def lh5ls():
     )
     parser.add_argument(
         "--debug",
-        "-d",
         action="store_true",
         help="""Increase the program verbosity to maximum""",
     )
@@ -38,6 +37,13 @@ def lh5ls():
     parser.add_argument("lh5_group", nargs="?", help="""LH5 group.""", default="/")
     parser.add_argument(
         "--attributes", "-a", action="store_true", help="""Print HDF5 attributes too"""
+    )
+    parser.add_argument(
+        "--depth",
+        "-d",
+        type=int,
+        default=None,
+        help="""Maximum tree depth of groups to print""",
     )
 
     args = parser.parse_args()
@@ -53,4 +59,4 @@ def lh5ls():
         print(lgdo.__version__)  # noqa: T201
         sys.exit()
 
-    show(args.lh5_file, args.lh5_group, attrs=args.attributes)
+    show(args.lh5_file, args.lh5_group, attrs=args.attributes, depth=args.depth)
