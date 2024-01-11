@@ -12,6 +12,7 @@ import sys
 from bisect import bisect_left
 from collections import defaultdict
 from typing import Any, Union
+from warnings import warn
 
 import h5py
 import numba as nb
@@ -1467,6 +1468,14 @@ def load_nda(
         Each entry contains the data for the specified parameter concatenated
         over all files in `f_list`.
     """
+    warn(
+        "load_nda() is deprecated. "
+        "Please replace it with LH5Store.read(...).view_as('np'). "
+        "load_nda() will be removed in a future release.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+
     if isinstance(f_list, str):
         f_list = [f_list]
         if idx_list is not None:
@@ -1521,6 +1530,13 @@ def load_dfs(
         all data for the associated parameters concatenated over all files in
         `f_list`.
     """
+    warn(
+        "load_dfs() is deprecated. "
+        "Please replace it with LH5Store.read(...).view_as('pd'). "
+        "load_dfs() will be removed in a future release.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return pd.DataFrame(
         load_nda(f_list, par_list, lh5_group=lh5_group, idx_list=idx_list)
     )
