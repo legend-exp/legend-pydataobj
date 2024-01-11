@@ -3,7 +3,6 @@ import os
 
 import h5py
 import numpy as np
-import pandas as pd
 import pytest
 
 import lgdo
@@ -67,21 +66,6 @@ def test_show(lgnd_file):
     lh5.show(lgnd_file)
     lh5.show(lgnd_file, "/geds/raw")
     lh5.show(lgnd_file, "geds/raw")
-
-
-def test_load_nda(lgnd_file):
-    nda = lh5.load_nda(
-        [lgnd_file, lgnd_file],
-        ["baseline", "waveform/values"],
-        lh5_group="/geds/raw",
-        idx_list=[[1, 3, 5], [2, 6, 7]],
-    )
-
-    assert isinstance(nda, dict)
-    assert isinstance(nda["baseline"], np.ndarray)
-    assert nda["baseline"].shape == (6,)
-    assert isinstance(nda["waveform/values"], np.ndarray)
-    assert nda["waveform/values"].shape == (6, 5592)
 
 
 @pytest.fixture(scope="module")
@@ -906,14 +890,3 @@ def test_write_object_append_column(tmptestdir):
     assert isinstance(tb_dat, types.Table)
     assert np.array_equal(tb_dat["dset1"].nda, np.zeros(10))
     assert np.array_equal(tb_dat["dset2"].nda, np.ones(10))
-
-
-def test_load_dfs(lgnd_file):
-    dfs = lh5.load_dfs(
-        [lgnd_file, lgnd_file],
-        ["baseline", "waveform/t0"],
-        lh5_group="/geds/raw",
-        idx_list=[[1, 3, 5], [2, 6, 7]],
-    )
-
-    assert isinstance(dfs, pd.DataFrame)
