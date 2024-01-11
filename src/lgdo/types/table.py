@@ -5,8 +5,7 @@ equal length and corresponding utilities.
 from __future__ import annotations
 
 import logging
-import re
-from typing import Any
+from typing import Any, Mapping
 from warnings import warn
 
 import awkward as ak
@@ -18,6 +17,7 @@ from pandas.io.formats import format as fmt
 from .array import Array
 from .arrayofequalsizedarrays import ArrayOfEqualSizedArrays
 from .lgdo import LGDO
+from .scalar import Scalar
 from .struct import Struct
 from .vectorofvectors import VectorOfVectors
 
@@ -37,8 +37,6 @@ class Table(Struct):
     resize it before passing to data processing functions, as they will call
     :meth:`__len__` to access valid data, which returns the ``size`` attribute.
     """
-
-    # TODO: overload getattr to allow access to fields as object attributes?
 
     def __init__(
         self,
@@ -217,102 +215,114 @@ class Table(Struct):
         )
         return self.view_as(library="pd", cols=cols, prefix=prefix)
 
-    def eval(self, expr_config: dict) -> Table:
-        """Apply column operations to the table and return a new table holding
-        the resulting columns.
+    def eval(
+        self,
+        expr: str,
+        parameters: Mapping[str, str] = None,
+    ) -> LGDO:
+        """Apply column operations to the table and return a new LGDO.
 
-        Currently defers all the job to :meth:`numexpr.evaluate`. This
-        might change in the future.
+        Internally uses :func:`numexpr.evaluate` if dealing with columns
+        representable as NumPy arrays or :func:`eval` if
+        :class:`.VectorOfVectors` are involved. In the latter case, the VoV
+        columns are viewed as :class:`ak.Array` and the respective routines are
+        therefore available.
 
         Parameters
         ----------
-        expr_config
-            dictionary that configures expressions according the following
-            specification:
+        expr
+            if the expression only involves non-:class:`.VectorOfVectors`
+            columns, the syntax is the one supported by
+            :func:`numexpr.evaluate` (see `here
+            <https://numexpr.readthedocs.io/projects/NumExpr3/en/latest/index.html>`_
+            for documentation). Note: because of internal limitations,
+            reduction operations must appear the last in the stack. If at least
+            one considered column is a :class:`.VectorOfVectors`, plain
+            :func:`eval` is used and :class:`ak.Array` transforms can be used
+            through the ``ak.`` prefix. (NumPy functions are analogously
+            accessible through ``np.``). See also examples below.
+        parameters
+            a dictionary of function parameters. Passed to
+            :func:`numexpr.evaluate`` as `local_dict` argument or to
+            :func:`eval` as `locals` argument.
 
-            .. code-block:: js
-
-                {
-                    "O1": {
-                        "expression": "p1 + p2 * a**2",
-                        "parameters": {
-                            "p1": 2,
-                            "p2": 3
-                        }
-                    },
-                    "O2": {
-                        "expression": "O1 - b"
-                    }
-                    // ...
-                }
-
-            where:
-
-            - ``expression`` is an expression string supported by
-              :meth:`numexpr.evaluate` (see also `here
-              <https://numexpr.readthedocs.io/projects/NumExpr3/en/latest/index.html>`_
-              for documentation). Note: because of internal limitations,
-              reduction operations must appear the last in the stack.
-            - ``parameters`` is a dictionary of function parameters. Passed to
-              :meth:`numexpr.evaluate`` as `local_dict` argument.
-
-
-        Warning
-        -------
-        Blocks in `expr_config` must be ordered according to mutual dependency.
+        Examples
+        --------
+        >>> import lgdo
+        >>> tbl = lgdo.Table(
+        ...   col_dict={
+        ...     "a": lgdo.Array([1, 2, 3]),
+        ...     "b": lgdo.VectorOfVectors([[5], [6, 7], [8, 9, 0]]),
+        ...   }
+        ... )
+        >>> print(tbl.eval("a + b"))
+        [[6],
+         [8 9],
+         [11 12  3],
+        ]
+        >>> print(tbl.eval("np.sum(a) + ak.sum(b)"))
+        41
         """
-        out_tbl = Table(size=self.size)
-        for out_var, spec in expr_config.items():
-            in_vars = {}
-            # Find all valid python variables in expression (e.g "a*b+sin(Cool)" --> ['a','b','sin','Cool'])
-            for elem in re.findall(r"\s*[A-Za-z_]\w*\s*", spec["expression"]):
-                elem = elem.strip()
-                if elem in self:  # check if the variable comes from dsp
-                    in_vars[elem] = self[elem]
-                elif (
-                    elem in out_tbl.keys()
-                ):  # if not try from previously processed data, else ignore since it is e.g sin func
-                    in_vars[elem] = out_tbl[elem]
+        if parameters is None:
+            parameters = {}
 
+        # get the valid python variable names in the expression
+        c = compile(expr, "0vbb is real!", "eval")
+
+        # make a dictionary of low-level objects (numpy or awkward)
+        # for later computation
+        self_unwrap = {}
+        has_ak = False
+        for obj in c.co_names:
+            if obj in self.keys():
+                if isinstance(self[obj], VectorOfVectors):
+                    self_unwrap[obj] = self[obj].view_as("ak", with_units=False)
+                    has_ak = True
                 else:
-                    continue
-                # get the nda if it is an Array instance
-                if isinstance(in_vars[elem], Array):
-                    in_vars[elem] = in_vars[elem].nda
-                # No vector of vectors support yet
-                elif isinstance(in_vars[elem], VectorOfVectors):
-                    raise TypeError("Data of type VectorOfVectors not supported (yet)")
+                    self_unwrap[obj] = self[obj].view_as("np", with_units=False)
 
+        # use numexpr if we are only dealing with numpy data types
+        if not has_ak:
             out_data = ne.evaluate(
-                f"{spec['expression']}",
-                local_dict=dict(in_vars, **spec["parameters"])
-                if "parameters" in spec
-                else in_vars,
-            )  # Division is chosen by __future__.division in the interpreter
+                expr,
+                local_dict=(self_unwrap | parameters),
+            )
 
-            # smart way to find right LGDO data type:
-
-            # out_data has one row and this row has a scalar (eg scalar product of two rows)
-            if len(np.shape(out_data)) == 0:
-                out_data = Array(nda=out_data)
-
-            # out_data has scalar in each row
-            elif len(np.shape(out_data)) == 1:
-                out_data = Array(nda=out_data)
-
-            # out_data is  like
-            elif len(np.shape(out_data)) == 2:
-                out_data = ArrayOfEqualSizedArrays(nda=out_data)
-
-            # higher order data (eg matrix product of ArrayOfEqualSizedArrays) not supported yet
+            # need to convert back to LGDO
+            # np.evaluate should always return a numpy thing?
+            if out_data.ndim == 0:
+                return Scalar(out_data.item())
+            elif out_data.ndim == 1:
+                return Array(out_data)
+            elif out_data.ndim == 2:
+                return ArrayOfEqualSizedArrays(nda=out_data)
             else:
-                ValueError(
-                    f"Calculation resulted in {len(np.shape(out_data))-1}-D row which is not supported yet"
+                msg = (
+                    f"evaluation resulted in {out_data.ndim}-dimensional data, "
+                    "I don't know which LGDO this corresponds to"
                 )
+                raise RuntimeError(msg)
 
-            out_tbl.add_column(out_var, out_data)
+        else:
+            # resort to good ol' eval()
+            globs = {"ak": ak, "np": np}
+            out_data = eval(expr, globs, (self_unwrap | parameters))
 
-        return out_tbl
+            # need to convert back to LGDO
+            if isinstance(out_data, ak.Array):
+                if out_data.ndim == 1:
+                    return Array(out_data.to_numpy())
+                else:
+                    return VectorOfVectors(out_data)
+
+            if np.isscalar(out_data):
+                return Scalar(out_data)
+            else:
+                msg = (
+                    f"evaluation resulted in a {type(out_data)} object, "
+                    "I don't know which LGDO this corresponds to"
+                )
+                raise RuntimeError(msg)
 
     def __str__(self):
         opts = fmt.get_dataframe_repr_params()
