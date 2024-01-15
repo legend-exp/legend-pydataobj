@@ -434,7 +434,7 @@ class VectorOfVectors(LGDO):
     def to_aoesa(
         self,
         max_len: int = None,
-        fill_val: int | float = np.nan,
+        fill_val: bool | int | float = np.nan,
         preserve_dtype: bool = False,
     ) -> aoesa.ArrayOfEqualSizedArrays:
         """Convert to :class:`ArrayOfEqualSizedArrays`.
@@ -477,7 +477,11 @@ class VectorOfVectors(LGDO):
         return aoesa.ArrayOfEqualSizedArrays(nda=nda, attrs=self.getattrs())
 
     def view_as(
-        self, library: str, with_units: bool = False, preserve_dtype: bool = False
+        self,
+        library: str,
+        with_units: bool = False,
+        fill_val: bool | int | float = np.nan,
+        preserve_dtype: bool = False,
     ) -> pd.DataFrame | np.NDArray | ak.Array:
         r"""View the vector data as a third-party format data structure.
 
@@ -488,14 +492,15 @@ class VectorOfVectors(LGDO):
         - ``pd``: returns a :class:`pandas.Series` (supported through the
           ``awkward-pandas`` package)
         - ``np``: returns a :class:`numpy.ndarray`, padded with zeros to make
-          it rectangular.
+          it rectangular. This implies memory re-allocation.
         - ``ak``: returns an :class:`ak.Array`. ``self.cumulative_length`` is
           currently re-allocated for technical reasons.
 
         Notes
         -----
         Awkward array views partially involve memory re-allocation (the
-        `cumulative_length`\ s).
+        `cumulative_length`\ s), while NumPy "exploded" views clearly imply a
+        full copy.
 
         Parameters
         ----------
@@ -503,6 +508,8 @@ class VectorOfVectors(LGDO):
             format of the returned data view.
         with_units
             forward physical units to the output data.
+        fill_val
+            forwarded to :meth:`.to_aoesa`, if `library` is ``np``.
         preserve_dtype
             forwarded to :meth:`.to_aoesa`, if `library` is ``np``.
 
@@ -535,7 +542,7 @@ class VectorOfVectors(LGDO):
 
         if library == "np":
             if preserve_dtype:
-                return self.to_aoesa(fill_val=0, preserve_dtype=True).view_as(
+                return self.to_aoesa(fill_val=fill_val, preserve_dtype=True).view_as(
                     "np", with_units=with_units
                 )
             else:
