@@ -324,7 +324,7 @@ def test_view(lgdo_vov):
     assert isinstance(np_arr, np.ndarray)
     assert np.issubdtype(np_arr.dtype, np.floating)
 
-    np_arr = lgdo_vov.view_as("np", with_units=False, preserve_dtype=True)
+    np_arr = lgdo_vov.view_as("np", with_units=False, fill_val=0, preserve_dtype=True)
     assert np.issubdtype(np_arr.dtype, np.integer)
 
     np_arr = lgdo_vov.view_as("pd", with_units=False)
