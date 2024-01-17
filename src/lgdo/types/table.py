@@ -140,7 +140,7 @@ class Table(Struct):
 
         super().add_field(name, obj)
 
-        if not self.size:
+        if self.size is None:
             self.size = len(obj)
 
         # check / update sizes
