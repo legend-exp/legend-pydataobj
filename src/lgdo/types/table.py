@@ -142,6 +142,14 @@ class Table(Struct):
 
         # check / update sizes
         if self.size != len(obj):
+            warn(
+                f"warning: you are trying to add {name} with length {len(obj)} to a table with size {self.size}. \n"
+                f"With 'use_obj_size' set to:\n"
+                f"  - True, the table will be resized to length {len(obj)} by padding/clipping its columns being.\n"
+                f"  - False (default), object {name} will be padded/clipped to length {self.size}.",
+                UserWarning,
+                stacklevel=2,
+            )
             new_size = len(obj) if use_obj_size else self.size
             self.resize(new_size=new_size)
 
