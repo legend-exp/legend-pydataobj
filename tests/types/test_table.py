@@ -1,3 +1,5 @@
+import warnings
+
 import awkward as ak
 import numpy as np
 import pandas as pd
@@ -66,6 +68,11 @@ def test_add_column():
     tbl = Table()
     tbl.add_column("a", lgdo.Array(np.array([1, 2, 3])), use_obj_size=True)
     assert tbl.size == 3
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        tbl.add_column("b", lgdo.Array(np.array([1, 2, 3, 4])))
+        assert len(w) == 1
+        assert issubclass(w[-1].category, UserWarning)
 
 
 def test_join():
