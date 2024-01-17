@@ -9,7 +9,7 @@ from lgdo import Table
 
 def test_init():
     tbl = Table()
-    assert tbl.size
+    assert not tbl.size
     assert tbl.loc == 0
 
     tbl = Table(size=10)
