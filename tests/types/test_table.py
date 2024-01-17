@@ -9,7 +9,7 @@ from lgdo import Table
 
 def test_init():
     tbl = Table()
-    assert tbl.size == 1024
+    assert tbl.size
     assert tbl.loc == 0
 
     tbl = Table(size=10)
@@ -86,7 +86,7 @@ def test_join():
 
 
 def test_view_as():
-    tbl = Table(4)
+    tbl = Table(3)
     tbl.add_column("a", lgdo.Array(np.array([1, 2, 3]), attrs={"units": "m"}))
     tbl.add_column("b", lgdo.Array(np.array([[0, 1, 2], [3, 4, 5], [6, 7, 8]])))
     tbl.add_column(
@@ -100,8 +100,8 @@ def test_view_as():
         "d",
         lgdo.Table(
             col_dict={
-                "a": lgdo.Array(np.array([2, 4, 6, 8]), attrs={"units": "m"}),
-                "b": lgdo.Array(np.array([[1, 1], [2, 4], [3, 9], [4, 16]])),
+                "a": lgdo.Array(np.array([2, 4, 6]), attrs={"units": "m"}),
+                "b": lgdo.Array(np.array([[1, 1], [2, 4], [3, 9]])),
             }
         ),
     )

@@ -77,7 +77,7 @@ class Table(Struct):
 
         # if no col_dict, just set the size (default to 1024)
         else:
-            self.size = size if size is not None else 1024
+            self.size = size if size is not None else None
 
         # always start at loc=0
         self.loc = 0
@@ -139,6 +139,9 @@ class Table(Struct):
             raise TypeError("cannot add field of type", type(obj).__name__)
 
         super().add_field(name, obj)
+
+        if not self.size:
+            self.size = len(obj)
 
         # check / update sizes
         if self.size != len(obj):
