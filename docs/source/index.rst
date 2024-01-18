@@ -3,6 +3,7 @@ LEGEND Data Objects
 
 |legend-pydataobj| is a Python implementation of the `LEGEND Data Format Specification <1_>`_.
 
+
 Getting started
 ---------------
 
@@ -27,6 +28,16 @@ local systems with `pip <3_>`_:
     <https://hub.docker.com/r/legendexp/legend-software>`_ or follow
     instructions on the `LEGEND wiki
     <https://legend-exp.atlassian.net/l/cp/nF1ww5KH>`_.
+
+If you plan to develop |legend-pydataobj|, refer to the :doc:`developer's guide
+<developer>`.
+
+.. attention::
+
+    If installing in a user directory (typically when invoking pip as a normal
+    user), make sure ``~/.local/bin`` is appended to ``PATH``. The ``lh5ls``
+    executable is installed there.
+
 
 Inspecting LH5 files from the command line
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -63,6 +74,7 @@ For more information, have a look at the command's help section:
 
     $ lh5ls --help
 
+
 Next steps
 ----------
 
@@ -71,6 +83,24 @@ Next steps
 
    tutorials
    Package API reference <api/modules>
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Related projects
+
+   pygama <https://pygama.readthedocs.io>
+   Decoding Digitizer Data <https://legend-daq2lh5.readthedocs.io>
+   Digital Signal Processing <https://dspeed.readthedocs.io>
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Development
+
+   Source Code <https://github.com/legend-exp/legend-pydataobj>
+   License <https://github.com/legend-exp/legend-pydataobj/blob/main/LICENSE>
+   Changelog <https://github.com/legend-exp/legend-pydataobj/releases>
+   developer
+
 
 .. _1: https://legend-exp.github.io/legend-data-format-specs
 .. _2: https://pypi.org/project/legend-pydataobj
