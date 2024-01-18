@@ -1,6 +1,7 @@
 [build-system]
 requires = [
     "setuptools>=61.2",
+    "setuptools_scm[toml]>=7"
 ]
 build-backend = "setuptools.build_meta"
 
@@ -53,6 +54,9 @@ Homepage = "https://github.com/legend-exp/legend-pydataobj"
 Discussions = "https://github.com/legend-exp/legend-pydataobj/discussions"
 Changelog = "https://github.com/legend-exp/legend-pydataobj/releases"
 
+[tool.setuptools_scm]
+write_to = "src/lgdo/_version.py"
+
 [project.optional-dependencies]
 all = [
     "legend-pydataobj[docs,test]",
@@ -92,11 +96,8 @@ where = [
 ]
 namespaces = false
 
-[tool.setuptools.dynamic.version]
-attr = "lgdo._version.version"
-
 [tool.coverage]
-run.source = ["pkgtemplate"]
+run.source = ["lgdo"]
 report.exclude_also = [
   '\.\.\.',
   'if typing.TYPE_CHECKING:',
@@ -136,7 +137,7 @@ ignore = [
 ]
 isort.required-imports = ["from __future__ import annotations"]
 # Uncomment if using a _compat.typing backport
-# typing-modules = ["pkgtemplate._compat.typing"]
+# typing-modules = ["lgdo._compat.typing"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["T20"]
