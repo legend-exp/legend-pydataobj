@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import numpy as np
 import pytest
 
 import lgdo
-import lgdo.lh5 as lh5
+from lgdo import lh5
 
 
 @pytest.fixture(scope="module")

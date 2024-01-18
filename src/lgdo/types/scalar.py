@@ -59,10 +59,7 @@ class Scalar(LGDO):
 
     def __str__(self) -> str:
         attrs = self.getattrs()
-        return f"{str(self.value)} with attrs={repr(attrs)}"
+        return f"{self.value!s} with attrs={attrs!r}"
 
     def __repr__(self) -> str:
-        return (
-            self.__class__.__name__
-            + f"(value={repr(self.value)}, attrs={repr(self.attrs)})"
-        )
+        return self.__class__.__name__ + f"(value={self.value!r}, attrs={self.attrs!r})"

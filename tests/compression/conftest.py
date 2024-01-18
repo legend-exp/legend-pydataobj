@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import pytest
 
-import lgdo.lh5 as lh5
+from lgdo import lh5
 
 
 @pytest.fixture()

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import awkward as ak
 import awkward_pandas as akpd
 import numpy as np
@@ -6,8 +8,7 @@ import pint
 import pytest
 
 import lgdo
-import lgdo.utils as utils
-from lgdo import VectorOfVectors
+from lgdo import VectorOfVectors, utils
 from lgdo.types import vectorofvectors as vov
 
 

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import shutil
 import uuid
@@ -7,7 +9,7 @@ from tempfile import gettempdir
 import pytest
 from legendtestdata import LegendTestData
 
-_tmptestdir = os.path.join(gettempdir(), f"lgdo-tests-{getuser()}-{str(uuid.uuid4())}")
+_tmptestdir = os.path.join(gettempdir(), f"lgdo-tests-{getuser()}-{uuid.uuid4()!s}")
 
 
 @pytest.fixture(scope="session")

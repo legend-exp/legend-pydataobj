@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import sys
-from typing import Iterator, Union
+from collections.abc import Iterator
+from typing import Union
 from warnings import warn
 
 import h5py
@@ -9,16 +10,18 @@ import numpy as np
 import pandas as pd
 
 from . import lh5
-from .types import Array  # noqa: F401
-from .types import ArrayOfEncodedEqualSizedArrays  # noqa: F401
-from .types import ArrayOfEqualSizedArrays  # noqa: F401
-from .types import FixedSizeArray  # noqa: F401
-from .types import Scalar  # noqa: F401
-from .types import Struct  # noqa: F401
-from .types import Table  # noqa: F401
-from .types import VectorOfEncodedVectors  # noqa: F401
-from .types import VectorOfVectors  # noqa: F401
-from .types import WaveformTable  # noqa: F401
+from .types import (
+    Array,
+    ArrayOfEncodedEqualSizedArrays,  # noqa: F401
+    ArrayOfEqualSizedArrays,  # noqa: F401
+    FixedSizeArray,  # noqa: F401
+    Scalar,
+    Struct,
+    Table,  # noqa: F401
+    VectorOfEncodedVectors,  # noqa: F401
+    VectorOfVectors,
+    WaveformTable,  # noqa: F401
+)
 
 DEFAULT_HDF5_COMPRESSION = None
 LGDO = Union[Array, Scalar, Struct, VectorOfVectors]

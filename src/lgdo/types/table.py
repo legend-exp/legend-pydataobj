@@ -5,7 +5,8 @@ equal length and corresponding utilities.
 from __future__ import annotations
 
 import logging
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 from warnings import warn
 
 import awkward as ak
@@ -389,7 +390,7 @@ class Table(Struct):
                 cols = self.keys()
             for col in cols:
                 column = self[col]
-                if isinstance(column, Array) or isinstance(column, VectorOfVectors):
+                if isinstance(column, (Array, VectorOfVectors)):
                     tmp_ser = column.view_as("pd", with_units=with_units).rename(
                         prefix + str(col)
                     )

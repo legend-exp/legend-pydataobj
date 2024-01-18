@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 
 import lgdo
@@ -76,9 +78,9 @@ def test_representations():
     }
 
     for k, it in objs.items():
-        print(f">>> {k} (__repr__)")  # noqa: T201
-        print(repr(it))  # noqa: T201
-        print()  # noqa: T201
-        print(f">>> print({k}) (__str__)")  # noqa: T201
-        print(it)  # noqa: T201
-        print()  # noqa: T201
+        print(f">>> {k} (__repr__)")
+        print(repr(it))
+        print()
+        print(f">>> print({k}) (__str__)")
+        print(it)
+        print()

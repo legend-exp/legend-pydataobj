@@ -114,7 +114,7 @@ class Struct(LGDO, dict):
             self.__class__.__name__
             + "(dict="
             + dict.__repr__(self)
-            + f", attrs={repr(self.attrs)})"
+            + f", attrs={self.attrs!r})"
         )
         np.set_printoptions(**npopt)
         return " ".join(out.replace("\n", " ").split())

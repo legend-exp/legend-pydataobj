@@ -11,7 +11,8 @@
 ![License](https://img.shields.io/github/license/legend-exp/legend-pydataobj)
 [![Read the Docs](https://img.shields.io/readthedocs/legend-pydataobj?logo=readthedocs)](https://legend-pydataobj.readthedocs.io)
 
-This package provides a Python implementation of the LEGEND Data Objects (LGDO) and I/O
-to HDF5, including [Numba](https://numba.pydata.org/)-accelerated custom compression
-algorithms for particle detector signals. More documentation is available in the
+This package provides a Python implementation of the LEGEND Data Objects (LGDO)
+and I/O to HDF5, including [Numba](https://numba.pydata.org/)-accelerated custom
+compression algorithms for particle detector signals. More documentation is
+available in the
 [LEGEND data format specification](https://legend-exp.github.io/legend-data-format-specs).

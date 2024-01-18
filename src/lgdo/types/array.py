@@ -141,7 +141,7 @@ class Array(LGDO):
                     "int": lambda x: f"0x{x:02x}" if self.dtype == np.ubyte else str(x)
                 },
             )
-            + f", attrs={repr(self.attrs)})"
+            + f", attrs={self.attrs!r})"
         )
 
     def view_as(

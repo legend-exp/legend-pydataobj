@@ -1,4 +1,5 @@
 """LEGEND Data Objects (LGDO) types."""
+from __future__ import annotations
 
 from .array import Array
 from .arrayofequalsizedarrays import ArrayOfEqualSizedArrays

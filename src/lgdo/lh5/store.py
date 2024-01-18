@@ -942,7 +942,7 @@ class LH5Store:
             as an `obj` attribute.**
         """
         log.debug(
-            f"writing {repr(obj)}[{start_row}:{n_rows}] as "
+            f"writing {obj!r}[{start_row}:{n_rows}] as "
             f"{lh5_file}:{group}/{name}[{write_start}:], "
             f"mode = {wo_mode}, h5py_kwargs = {h5py_kwargs}"
         )

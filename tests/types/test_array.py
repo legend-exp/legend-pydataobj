@@ -1,11 +1,12 @@
+from __future__ import annotations
+
 import awkward as ak
 import numpy as np
 import pandas as pd
 import pint
 import pytest
 
-import lgdo.utils as utils
-from lgdo import Array
+from lgdo import Array, utils
 
 
 def test_datatype_name():

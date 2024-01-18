@@ -5,8 +5,10 @@ functions. It it inspired by the design of Celery's sphinx extension
 
 Adapted from https://github.com/numba/numba/issues/5755#issuecomment-646587651
 """
+from __future__ import annotations
+
+from collections.abc import Iterator
 from copy import copy
-from typing import Iterator, List
 
 from docutils import nodes
 from numba.core.dispatcher import Dispatcher
@@ -44,7 +46,7 @@ class NumbaFunctionDocumenter(FunctionDocumenter):
                 success = False
         return success
 
-    def process_doc(self, docstrings: List[List[str]]) -> Iterator[str]:
+    def process_doc(self, docstrings: list[list[str]]) -> Iterator[str]:
         """Let the user process the docstrings before adding them."""
         # Essentially copied from FunctionDocumenter
         for docstringlines in docstrings:
