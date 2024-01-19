@@ -95,7 +95,7 @@ def encode(
         # return without resizing
         return sig_out, nbytes
 
-    elif isinstance(sig_in, lgdo.VectorOfVectors):
+    if isinstance(sig_in, lgdo.VectorOfVectors):
         if sig_out is not None:
             log.warning(
                 "a pre-allocated VectorOfEncodedVectors was given "
@@ -116,8 +116,7 @@ def encode(
 
         return lgdo.VectorOfEncodedVectors(encoded_data, decoded_size)
 
-
-    elif isinstance(sig_in, lgdo.ArrayOfEqualSizedArrays):
+    if isinstance(sig_in, lgdo.ArrayOfEqualSizedArrays):
         if sig_out:
             log.warning(
                 "a pre-allocated VectorOfEncodedVectors was given "
@@ -137,15 +136,13 @@ def encode(
             encoded_data, decoded_size=sig_in.nda.shape[1]
         )
 
-
-    elif isinstance(sig_in, lgdo.Array):
+    if isinstance(sig_in, lgdo.Array):
         # encode the internal numpy array
         sig_out_nda, nbytes = encode(sig_in.nda, sig_out)
         return lgdo.Array(sig_out_nda), nbytes
 
-    else:
-        msg = f"unsupported input signal type ({type(sig_in)})"
-        raise ValueError(msg)
+    msg = f"unsupported input signal type ({type(sig_in)})"
+    raise ValueError(msg)
 
 
 def decode(
@@ -208,7 +205,7 @@ def decode(
 
         return sig_out, siglen
 
-    elif isinstance(sig_in, lgdo.ArrayOfEncodedEqualSizedArrays):
+    if isinstance(sig_in, lgdo.ArrayOfEncodedEqualSizedArrays):
         if sig_out is None:
             # initialize output structure with decoded_size
             sig_out = lgdo.ArrayOfEqualSizedArrays(
@@ -237,7 +234,7 @@ def decode(
 
         return sig_out
 
-    elif isinstance(sig_in, lgdo.VectorOfEncodedVectors):
+    if isinstance(sig_in, lgdo.VectorOfEncodedVectors):
         if sig_out:
             log.warning(
                 "a pre-allocated VectorOfVectors was given "
@@ -262,9 +259,8 @@ def decode(
         # converto to VOV before returning
         return sig_out.to_vov(np.cumsum(siglen, dtype=uint32))
 
-    else:
-        msg = "unsupported input signal type"
-        raise ValueError(msg)
+    msg = "unsupported input signal type"
+    raise ValueError(msg)
 
 
 @numba.vectorize(
@@ -290,7 +286,7 @@ def uleb128_encode(x: int, encx: NDArray[ubyte]) -> int:
     """Compute a variable-length representation of an unsigned integer.
 
     Implements the Unsigned Little Endian Base-128 encoding [#WikiULEB128]_.
-    Only positive numbers are expected, as no *two’s complement* is applied.
+    Only positive numbers are expected, as no *two's complement* is applied.
 
     Parameters
     ----------
@@ -323,7 +319,7 @@ def uleb128_decode(encx: NDArray[ubyte]) -> (int, int):
     """Decode a variable-length integer into an unsigned integer.
 
     Implements the Unsigned Little Endian Base-128 decoding [#WikiULEB128]_.
-    Only encoded positive numbers are expected, as no *two’s complement* is
+    Only encoded positive numbers are expected, as no *two's complement* is
     applied.
 
     Parameters
@@ -345,8 +341,7 @@ def uleb128_decode(encx: NDArray[ubyte]) -> (int, int):
         x = x | ((b & 0x7F) << pos)
         if (b & 0x80) == 0:
             return (x, int(pos / 7 + 1))
-        else:
-            pos += 7
+        pos += 7
 
         if pos >= 64:
             msg = "overflow during decoding of varint encoded number"

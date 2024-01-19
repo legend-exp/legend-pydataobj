@@ -116,9 +116,7 @@ class Table(Struct):
     def clear(self) -> None:
         self.loc = 0
 
-    def add_field(
-        self, name: str, obj: LGDO, use_obj_size: bool = False, do_warn=True
-    ) -> None:
+    def add_field(self, name: str, obj: LGDO, use_obj_size: bool = False) -> None:
         """Add a field (column) to the table.
 
         Use the name "field" here to match the terminology used in
@@ -132,9 +130,6 @@ class Table(Struct):
             the object to be added to the table.
         use_obj_size
             if ``True``, resize the table to match the length of `obj`.
-        do_warn
-            print or don't print useful info. Passed to :meth:`resize` when
-            `use_obj_size` is ``True``.
         """
         if not hasattr(obj, "__len__"):
             msg = "cannot add field of type"
@@ -147,11 +142,9 @@ class Table(Struct):
             new_size = len(obj) if use_obj_size else self.size
             self.resize(new_size=new_size)
 
-    def add_column(
-        self, name: str, obj: LGDO, use_obj_size: bool = False, do_warn: bool = True
-    ) -> None:
+    def add_column(self, name: str, obj: LGDO, use_obj_size: bool = False) -> None:
         """Alias for :meth:`.add_field` using table terminology 'column'."""
-        self.add_field(name, obj, use_obj_size=use_obj_size, do_warn=do_warn)
+        self.add_field(name, obj, use_obj_size=use_obj_size)
 
     def remove_column(self, name: str, delete: bool = False) -> None:
         """Alias for :meth:`.remove_field` using table terminology 'column'."""
@@ -185,10 +178,13 @@ class Table(Struct):
         if cols is None:
             cols = other_table.keys()
         for name in cols:
-            self.add_column(name, other_table[name], do_warn=do_warn)
+            self.add_column(name, other_table[name])
 
     def get_dataframe(
-        self, cols: list[str] | None = None, copy: bool = False, prefix: str = ""
+        self,
+        cols: list[str] | None = None,
+        copy: bool = False,  # noqa: ARG002
+        prefix: str = "",
     ) -> pd.DataFrame:
         """Get a :class:`pandas.DataFrame` from the data in the table.
 
@@ -294,37 +290,35 @@ class Table(Struct):
             # np.evaluate should always return a numpy thing?
             if out_data.ndim == 0:
                 return Scalar(out_data.item())
-            elif out_data.ndim == 1:
+            if out_data.ndim == 1:
                 return Array(out_data)
-            elif out_data.ndim == 2:
+            if out_data.ndim == 2:
                 return ArrayOfEqualSizedArrays(nda=out_data)
-            else:
-                msg = (
-                    f"evaluation resulted in {out_data.ndim}-dimensional data, "
-                    "I don't know which LGDO this corresponds to"
-                )
-                raise RuntimeError(msg)
 
-        else:
-            # resort to good ol' eval()
-            globs = {"ak": ak, "np": np}
-            out_data = eval(expr, globs, (self_unwrap | parameters))
+            msg = (
+                f"evaluation resulted in {out_data.ndim}-dimensional data, "
+                "I don't know which LGDO this corresponds to"
+            )
+            raise RuntimeError(msg)
 
-            # need to convert back to LGDO
-            if isinstance(out_data, ak.Array):
-                if out_data.ndim == 1:
-                    return Array(out_data.to_numpy())
-                else:
-                    return VectorOfVectors(out_data)
+        # resort to good ol' eval()
+        globs = {"ak": ak, "np": np}
+        out_data = eval(expr, globs, (self_unwrap | parameters))  # noqa: PGH001
 
-            if np.isscalar(out_data):
-                return Scalar(out_data)
-            else:
-                msg = (
-                    f"evaluation resulted in a {type(out_data)} object, "
-                    "I don't know which LGDO this corresponds to"
-                )
-                raise RuntimeError(msg)
+        # need to convert back to LGDO
+        if isinstance(out_data, ak.Array):
+            if out_data.ndim == 1:
+                return Array(out_data.to_numpy())
+            return VectorOfVectors(out_data)
+
+        if np.isscalar(out_data):
+            return Scalar(out_data)
+
+        msg = (
+            f"evaluation resulted in a {type(out_data)} object, "
+            "I don't know which LGDO this corresponds to"
+        )
+        raise RuntimeError(msg)
 
     def __str__(self):
         opts = fmt.get_dataframe_repr_params()
@@ -401,30 +395,24 @@ class Table(Struct):
                         "pd", with_units=with_units, prefix=f"{prefix}{col}_"
                     )
                     df = tmp_df if df.empty else df.join(tmp_df)
+                elif df.empty:
+                    df[prefix + str(col)] = column.view_as("pd", with_units=with_units)
                 else:
-                    if df.empty:
-                        df[prefix + str(col)] = column.view_as(
-                            "pd", with_units=with_units
-                        )
-                    else:
-                        df[prefix + str(col)] = df.join(
-                            column.view_as("pd", with_units=with_units)
-                        )
+                    df[prefix + str(col)] = df.join(
+                        column.view_as("pd", with_units=with_units)
+                    )
             return df
 
-        elif library == "np":
+        if library == "np":
             msg = f"Format {library} is not supported for Tables."
             raise TypeError(msg)
 
-        elif library == "ak":
+        if library == "ak":
             if with_units:
                 msg = "Pint does not support Awkward yet, you must view the data with_units=False"
-                raise ValueError(
-                    msg
-                )
-            else:
-                return ak.Array(self)
+                raise ValueError(msg)
 
-        else:
-            msg = f"{library} is not a supported third-party format."
-            raise TypeError(msg)
+            return ak.Array(self)
+
+        msg = f"{library} is not a supported third-party format."
+        raise TypeError(msg)

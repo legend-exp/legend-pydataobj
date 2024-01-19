@@ -121,7 +121,7 @@ def encode(
         # return without resizing
         return sig_out, nbytes
 
-    elif isinstance(sig_in, lgdo.VectorOfVectors):
+    if isinstance(sig_in, lgdo.VectorOfVectors):
         if sig_out is not None:
             log.warning(
                 "a pre-allocated VectorOfEncodedVectors was given "
@@ -144,8 +144,7 @@ def encode(
 
         return lgdo.VectorOfEncodedVectors(encoded_data, decoded_size)
 
-
-    elif isinstance(sig_in, lgdo.ArrayOfEqualSizedArrays):
+    if isinstance(sig_in, lgdo.ArrayOfEqualSizedArrays):
         if sig_out is not None:
             log.warning(
                 "a pre-allocated ArrayOfEncodedEqualSizedArrays was given "
@@ -165,15 +164,13 @@ def encode(
             encoded_data, decoded_size=sig_in.nda.shape[1]
         )
 
-
-    elif isinstance(sig_in, lgdo.Array):
+    if isinstance(sig_in, lgdo.Array):
         # encode the internal numpy array
         sig_out_nda, nbytes = encode(sig_in.nda, sig_out, shift=shift)
         return lgdo.Array(sig_out_nda), nbytes
 
-    else:
-        msg = f"unsupported input signal type ({type(sig_in)})"
-        raise ValueError(msg)
+    msg = f"unsupported input signal type ({type(sig_in)})"
+    raise ValueError(msg)
 
 
 def decode(
@@ -245,7 +242,7 @@ def decode(
 
         return sig_out, siglen
 
-    elif isinstance(sig_in, lgdo.ArrayOfEncodedEqualSizedArrays):
+    if isinstance(sig_in, lgdo.ArrayOfEncodedEqualSizedArrays):
         if sig_out is None:
             # initialize output structure with decoded_size
             sig_out = lgdo.ArrayOfEqualSizedArrays(
@@ -275,7 +272,7 @@ def decode(
 
         return sig_out
 
-    elif isinstance(sig_in, lgdo.VectorOfEncodedVectors):
+    if isinstance(sig_in, lgdo.VectorOfEncodedVectors):
         if sig_out:
             log.warning(
                 "a pre-allocated VectorOfVectors was given "
@@ -301,9 +298,8 @@ def decode(
         # converto to VOV before returning
         return sig_out.to_vov(np.cumsum(siglen, dtype=uint32))
 
-    else:
-        msg = "unsupported input signal type"
-        raise ValueError(msg)
+    msg = "unsupported input signal type"
+    raise ValueError(msg)
 
 
 @numba.jit(**nb_kwargs(nopython=True))
@@ -332,8 +328,8 @@ def _get_hton_u16(a: NDArray[ubyte], i: int) -> uint16:
     i_2 = i_1 + 1
     if a.ndim == 1:
         return uint16(a[i_1] << 8 | a[i_2])
-    else:
-        return a[..., i_1].astype("uint16") << 8 | a[..., i_2]
+
+    return a[..., i_1].astype("uint16") << 8 | a[..., i_2]
 
 
 @numba.jit("uint16(uint32)", **nb_kwargs(nopython=True))

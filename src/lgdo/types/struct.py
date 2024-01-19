@@ -7,9 +7,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-import awkward as ak
 import numpy as np
-import pandas as pd
 
 from .lgdo import LGDO
 
@@ -24,7 +22,9 @@ class Struct(LGDO, dict):
     """
 
     def __init__(
-        self, obj_dict: dict[str, LGDO] | None = None, attrs: dict[str, Any] | None = None
+        self,
+        obj_dict: dict[str, LGDO] | None = None,
+        attrs: dict[str, Any] | None = None,
     ) -> None:
         """
         Parameters
@@ -119,15 +119,13 @@ class Struct(LGDO, dict):
         np.set_printoptions(**npopt)
         return " ".join(out.replace("\n", " ").split())
 
-    def view_as(
-        self, library: str, with_units: bool = False
-    ) -> pd.DataFrame | np.NDArray | ak.Array:
+    def view_as(self) -> None:
         r"""View the Struct data as a third-party format data structure.
 
         Error
         -----
         Not implemented. Since Struct's fields can have different lengths,
-        converting to a Numpy, Pandas or Awkward is generally not possible.
+        converting to a NumPy, Pandas or Awkward is generally not possible.
         Call :meth:`.LGDO.view_as` on the fields instead.
 
         See Also
@@ -136,9 +134,7 @@ class Struct(LGDO, dict):
         """
         msg = (
             "Since Struct's fields can have different lengths, "
-            "converting to a Numpy, Pandas or Awkward is generally "
+            "converting to a NumPy, Pandas or Awkward is generally "
             "not possible. Call view_as() on the fields instead."
         )
-        raise NotImplementedError(
-            msg
-        )
+        raise NotImplementedError(msg)

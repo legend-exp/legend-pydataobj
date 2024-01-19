@@ -117,8 +117,8 @@ class Array(LGDO):
     def __eq__(self, other: Array) -> bool:
         if isinstance(other, Array):
             return self.attrs == other.attrs and np.array_equal(self.nda, other.nda)
-        else:
-            return False
+
+        return False
 
     def __iter__(self) -> Iterator:
         yield from self.nda
@@ -175,29 +175,27 @@ class Array(LGDO):
                     return pd.Series(
                         self.nda, dtype=f"pint[{self.attrs['units']}]", copy=False
                     )
-                else:
-                    msg = "Pint does not support Awkward yet, you must view the data with_units=False"
-                    raise ValueError(
-                        msg
-                    )
-            else:
-                if self.nda.ndim == 1:
-                    return pd.Series(self.nda, copy=False)
-                else:
-                    return akpd.from_awkward(self.view_as("ak"))
-        elif library == "np":
+
+                msg = "Pint does not support Awkward yet, you must view the data with_units=False"
+                raise ValueError(msg)
+
+            if self.nda.ndim == 1:
+                return pd.Series(self.nda, copy=False)
+
+            return akpd.from_awkward(self.view_as("ak"))
+
+        if library == "np":
             if attach_units:
                 return self.nda * u(self.attrs["units"])
-            else:
-                return self.nda
-        elif library == "ak":
+
+            return self.nda
+
+        if library == "ak":
             if attach_units:
                 msg = "Pint does not support Awkward yet, you must view the data with_units=False"
-                raise ValueError(
-                    msg
-                )
-            else:
-                return ak.Array(self.nda)
-        else:
-            msg = f"{library} is not a supported third-party format."
-            raise ValueError(msg)
+                raise ValueError(msg)
+
+            return ak.Array(self.nda)
+
+        msg = f"{library} is not a supported third-party format."
+        raise ValueError(msg)

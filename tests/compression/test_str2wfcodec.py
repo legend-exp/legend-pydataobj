@@ -19,6 +19,7 @@ def test_str2wfcodec():
         assert str2wfcodec("RadwareSigcompress") == RadwareSigcompress(
             codec_shift=-32768
         )
+    with pytest.raises(ValueError):
         assert str2wfcodec("RadwareSigcompress(blabla)") == RadwareSigcompress(
             codec_shift=-32768
         )

@@ -39,8 +39,8 @@ def parse_datatype(datatype: str) -> tuple[str, tuple[int, ...], str | list[str]
         datatype, dims = parse("{}<{}>", datatype)
         dims = [int(i) for i in dims.split(",")]
         return datatype, tuple(dims), element_description
-    else:
-        return datatype, None, element_description.split(",")
+
+    return datatype, None, element_description.split(",")
 
 
 def expand_vars(expr: str, substitute: dict[str, str] | None = None) -> str:
@@ -111,10 +111,10 @@ def expand_path(
         if len(paths) == 0:
             msg = f"could not find path matching {path}"
             raise FileNotFoundError(msg)
-        elif len(paths) > 1:
+        if len(paths) > 1:
             msg = f"found multiple paths matching {path}"
             raise FileNotFoundError(msg)
-        else:
-            return paths[0]
-    else:
-        return paths
+
+        return paths[0]
+
+    return paths

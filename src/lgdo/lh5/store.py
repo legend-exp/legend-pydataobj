@@ -144,11 +144,12 @@ class LH5Store:
             if not overwrite:
                 msg = "grp_attrs != group.attrs but overwrite not set"
                 raise RuntimeError(msg)
-            else:
-                log.debug(f"overwriting {group}.attrs...")
-                for key in group.attrs:
-                    group.attrs.pop(key)
-                group.attrs.update(grp_attrs)
+
+            log.debug(f"overwriting {group}.attrs...")
+            for key in group.attrs:
+                group.attrs.pop(key)
+            group.attrs.update(grp_attrs)
+
         return group
 
     def get_buffer(
@@ -334,9 +335,7 @@ class LH5Store:
         # get the object's datatype
         if "datatype" not in h5f[name].attrs:
             msg = f"'{name}' in file {lh5_file} is missing the datatype attribute"
-            raise RuntimeError(
-                msg
-            )
+            raise RuntimeError(msg)
 
         datatype = h5f[name].attrs["datatype"]
         datatype, shape, elements = parse_datatype(datatype)
@@ -369,8 +368,8 @@ class LH5Store:
                 obj_buf.value = value
                 obj_buf.attrs.update(h5f[name].attrs)
                 return obj_buf, 1
-            else:
-                return Scalar(value=value, attrs=h5f[name].attrs), 1
+
+            return Scalar(value=value, attrs=h5f[name].attrs), 1
 
         # Struct
         # recursively build a struct, return as a dictionary
@@ -438,12 +437,9 @@ class LH5Store:
                 if obj_buf is not None:
                     if not isinstance(obj_buf, Table) or field not in obj_buf:
                         msg = f"obj_buf for LGDO Table '{name}' not formatted correctly"
-                        raise ValueError(
-                            msg
-                        )
+                        raise ValueError(msg)
 
-                    else:
-                        fld_buf = obj_buf[field]
+                    fld_buf = obj_buf[field]
 
                 col_dict[field], n_rows_read = self.read(
                     name + "/" + field,
@@ -502,23 +498,21 @@ class LH5Store:
                 # set (write) loc to end of tree
                 table.loc = n_rows_read
                 return table, n_rows_read
-            else:
-                # We have read all fields into the object buffer. Run
-                # checks: All columns should be the same size. So update
-                # table's size as necessary, warn if any mismatches are found
-                obj_buf.resize(do_warn=True)
-                # set (write) loc to end of tree
-                obj_buf.loc = obj_buf_start + n_rows_read
-                # check attributes
-                if set(obj_buf.attrs.keys()) != set(attrs.keys()):
-                    msg = (
-                        f"attrs mismatch. obj_buf.attrs: "
-                        f"{obj_buf.attrs}, h5f[{name}].attrs: {attrs}"
-                    )
-                    raise RuntimeError(
-                        msg
-                    )
-                return obj_buf, n_rows_read
+
+            # We have read all fields into the object buffer. Run
+            # checks: All columns should be the same size. So update
+            # table's size as necessary, warn if any mismatches are found
+            obj_buf.resize(do_warn=True)
+            # set (write) loc to end of tree
+            obj_buf.loc = obj_buf_start + n_rows_read
+            # check attributes
+            if set(obj_buf.attrs.keys()) != set(attrs.keys()):
+                msg = (
+                    f"attrs mismatch. obj_buf.attrs: "
+                    f"{obj_buf.attrs}, h5f[{name}].attrs: {attrs}"
+                )
+                raise RuntimeError(msg)
+            return obj_buf, n_rows_read
 
         # ArrayOfEncodedEqualSizedArrays and VectorOfEncodedVectors
         for cond, enc_lgdo in [
@@ -582,7 +576,7 @@ class LH5Store:
                     return rawdata, n_rows_read
 
                 # if no buffer, decode and return
-                elif obj_buf is None and decompress:
+                if obj_buf is None and decompress:
                     return compress.decode(rawdata), n_rows_read
 
                 # eventually expand provided obj_buf, if too short
@@ -594,18 +588,14 @@ class LH5Store:
                 if enc_lgdo == ArrayOfEncodedEqualSizedArrays:
                     if not isinstance(obj_buf, ArrayOfEqualSizedArrays):
                         msg = f"obj_buf for decoded '{name}' not an ArrayOfEqualSizedArrays"
-                        raise ValueError(
-                            msg
-                        )
+                        raise ValueError(msg)
 
                     compress.decode(rawdata, obj_buf[obj_buf_start:buf_size])
 
                 elif enc_lgdo == VectorOfEncodedVectors:
                     if not isinstance(obj_buf, VectorOfVectors):
                         msg = f"obj_buf for decoded '{name}' not a VectorOfVectors"
-                        raise ValueError(
-                            msg
-                        )
+                        raise ValueError(msg)
 
                     # FIXME: not a good idea. an in place decoding version
                     # of decode would be needed to avoid extra memory
@@ -701,9 +691,7 @@ class LH5Store:
                             f"cumulative_length non-increasing between entries "
                             f"{start_row} and {start_row+n_rows_read} ??"
                         )
-                        raise RuntimeError(
-                            msg
-                        )
+                        raise RuntimeError(msg)
 
                 # determine the number of rows for the flattened_data readout
                 fd_n_rows = this_cumulen_nda[-1] if n_rows_read > 0 else 0
@@ -820,24 +808,22 @@ class LH5Store:
                     obj_buf.nda[dest_sel] = h5f[name][...][source_sel]
 
                 nda = obj_buf.nda
+            elif n_rows == 0:
+                tmp_shape = (0,) + h5f[name].shape[1:]
+                nda = np.empty(tmp_shape, h5f[name].dtype)
+            elif change_idx_to_slice or idx is None or use_h5idx:
+                nda = h5f[name][source_sel]
             else:
-                if n_rows == 0:
-                    tmp_shape = (0,) + h5f[name].shape[1:]
-                    nda = np.empty(tmp_shape, h5f[name].dtype)
-                else:
-                    if change_idx_to_slice or idx is None or use_h5idx:
-                        nda = h5f[name][source_sel]
-                    else:
-                        # it is faster to read the whole object and then do fancy indexing
-                        nda = h5f[name][...][source_sel]
+                # it is faster to read the whole object and then do fancy indexing
+                nda = h5f[name][...][source_sel]
 
-                        # if reading a list of files recursively, this is given to obj_buf on
-                        # the first file read. obj_buf needs to be resized and therefore
-                        # it needs to hold the data itself (not a view of the data).
-                        # a view is returned by the source_sel indexing, which cannot be resized
-                        # by ndarray.resize().
-                        if hasattr(self, "in_file_loop") and self.in_file_loop:
-                            nda = np.copy(nda)
+                # if reading a list of files recursively, this is given to obj_buf on
+                # the first file read. obj_buf needs to be resized and therefore
+                # it needs to hold the data itself (not a view of the data).
+                # a view is returned by the source_sel indexing, which cannot be resized
+                # by ndarray.resize().
+                if hasattr(self, "in_file_loop") and self.in_file_loop:
+                    nda = np.copy(nda)
 
             # special handling for bools
             # (c and Julia store as uint8 so cast to bool)
@@ -863,9 +849,7 @@ class LH5Store:
                         f"obj_buf.attrs: {obj_buf.attrs}, "
                         f"h5f[{name}].attrs: {attrs}"
                     )
-                    raise RuntimeError(
-                        msg
-                    )
+                    raise RuntimeError(msg)
                 return obj_buf, n_rows_to_read
 
         msg = "don't know how to read datatype {datatype}"
@@ -1003,23 +987,17 @@ class LH5Store:
                 datatype, shape, fields = parse_datatype(old_group.attrs["datatype"])
                 if datatype not in ["table", "struct"]:
                     msg = f"Trying to append columns to an object of type {datatype}"
-                    raise RuntimeError(
-                        msg
-                    )
+                    raise RuntimeError(msg)
 
                 # If the mode is `append_column`, make sure we aren't appending a table that has a column of the same name as in the existing table
                 # Also make sure that the field we are adding has the same size
                 if len(list(set(fields).intersection(set(obj.keys())))) != 0:
                     msg = f"Can't append {list(set(fields).intersection(set(obj.keys())))} column(s) to a table with the same field(s)"
-                    raise ValueError(
-                        msg
-                    )
+                    raise ValueError(msg)
                 # It doesn't matter what key we access, as all fields in the old table have the same size
                 if old_group[next(iter(old_group.keys()))].size != obj.size:
                     msg = f"Table sizes don't match. Trying to append column of size {obj.size} to a table of size {old_group[next(iter(old_group.keys()))].size}."
-                    raise ValueError(
-                        msg
-                    )
+                    raise ValueError(msg)
 
                 # Now we can append the obj.keys() to the old fields, and then update obj.attrs.
                 fields.extend(list(obj.keys()))
@@ -1075,22 +1053,21 @@ class LH5Store:
             return
 
         # scalars
-        elif isinstance(obj, Scalar):
+        if isinstance(obj, Scalar):
             if name in group:
                 if wo_mode in ["o", "a"]:
                     log.debug(f"overwriting {name} in {group}")
                     del group[name]
                 else:
                     msg = f"tried to overwrite {name} in {group} for wo_mode {wo_mode}"
-                    raise RuntimeError(
-                        msg
-                    )
+                    raise RuntimeError(msg)
             ds = group.create_dataset(name, shape=(), data=obj.value)
             ds.attrs.update(obj.attrs)
+
             return
 
         # vector of encoded vectors
-        elif isinstance(obj, (VectorOfEncodedVectors, ArrayOfEncodedEqualSizedArrays)):
+        if isinstance(obj, (VectorOfEncodedVectors, ArrayOfEncodedEqualSizedArrays)):
             group = self.gimme_group(
                 name, group, grp_attrs=obj.attrs, overwrite=(wo_mode == "o")
             )
@@ -1241,9 +1218,7 @@ class LH5Store:
                     f"existing HDF5 object '{name}' in group '{group}'"
                     " is not a dataset! Cannot overwrite or append"
                 )
-                raise RuntimeError(
-                    msg
-                )
+                raise RuntimeError(msg)
 
             old_len = ds.shape[0]
             if wo_mode == "a":
@@ -1255,9 +1230,7 @@ class LH5Store:
 
         else:
             msg = f"do not know how to write '{name}' of type '{type(obj).__name__}'"
-            raise RuntimeError(
-                msg
-            )
+            raise RuntimeError(msg)
 
     def read_n_rows(self, name: str, lh5_file: str | h5py.File) -> int | None:
         """Look up the number of rows in an Array-like object called `name` in
@@ -1273,9 +1246,7 @@ class LH5Store:
         # get the datatype
         if "datatype" not in h5f[name].attrs:
             msg = f"'{name}' in file {lh5_file} is missing the datatype attribute"
-            raise RuntimeError(
-                msg
-            )
+            raise RuntimeError(msg)
 
         datatype = h5f[name].attrs["datatype"]
         datatype, shape, elements = parse_datatype(datatype)
@@ -1357,11 +1328,11 @@ def ls(lh5_file: str | h5py.Group, lh5_group: str = "") -> list[str]:
 
     if len(splitpath) == 1:
         return matchingkeys
-    else:
-        ret = []
-        for key in matchingkeys:
-            ret.extend([f"{key}/{path}" for path in ls(lh5_file[key], splitpath[1])])
-        return ret
+
+    ret = []
+    for key in matchingkeys:
+        ret.extend([f"{key}/{path}" for path in ls(lh5_file[key], splitpath[1])])
+    return ret
 
 
 def show(
@@ -1468,8 +1439,8 @@ def show(
         # break or move to next key
         if killme:
             break
-        else:
-            key = k_new
+
+        key = k_new
 
 
 def load_nda(
@@ -1516,17 +1487,15 @@ def load_nda(
             idx_list = [idx_list]
     if idx_list is not None and len(f_list) != len(idx_list):
         msg = f"f_list length ({len(f_list)}) != idx_list length ({len(idx_list)})!"
-        raise ValueError(
-            msg
-        )
+        raise ValueError(msg)
 
     # Expand wildcards
     f_list = [f for f_wc in f_list for f in sorted(glob.glob(os.path.expandvars(f_wc)))]
 
     sto = LH5Store()
     par_data = {par: [] for par in par_list}
-    for ii, f in enumerate(f_list):
-        f = sto.gimme_file(f, "r")
+    for ii, ff in enumerate(f_list):
+        f = sto.gimme_file(ff, "r")
         for par in par_list:
             if f"{lh5_group}/{par}" not in f:
                 msg = f"'{lh5_group}/{par}' not in file {f_list[ii]}"

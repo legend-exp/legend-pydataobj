@@ -1,3 +1,5 @@
+# ruff: noqa: ARG001
+
 from __future__ import annotations
 
 import numpy as np

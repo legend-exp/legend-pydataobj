@@ -21,9 +21,7 @@ class LGDO(ABC):
                     f"datatype attribute ({self.attrs['datatype']}) does "
                     f"not match class datatype ({self.form_datatype()})!"
                 )
-                raise ValueError(
-                    msg
-                )
+                raise ValueError(msg)
         else:
             self.attrs["datatype"] = self.form_datatype()
 

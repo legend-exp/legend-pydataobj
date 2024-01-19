@@ -53,9 +53,7 @@ def get_element_type(obj: object) -> str:
 
     # couldn't figure it out
     msg = "cannot determine lgdo element_type for object of type"
-    raise ValueError(
-        msg, type(obj).__name__
-    )
+    raise ValueError(msg, type(obj).__name__)
 
 
 def copy(obj: lgdo.LGDO, dtype: np.dtype = None) -> lgdo.LGDO:
@@ -84,9 +82,8 @@ def copy(obj: lgdo.LGDO, dtype: np.dtype = None) -> lgdo.LGDO:
             attrs=dict(obj.attrs),
         )
 
-    else:
-        msg = f"copy of {type(obj)} not supported"
-        raise ValueError(msg)
+    msg = f"copy of {type(obj)} not supported"
+    raise ValueError(msg)
 
 
 def getenv_bool(name: str, default: bool = False) -> bool:

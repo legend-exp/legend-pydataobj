@@ -90,8 +90,7 @@ class VectorOfEncodedVectors(LGDO):
                 and self.attrs == other.attrs
             )
 
-        else:
-            return False
+        return False
 
     def resize(self, new_size: int) -> None:
         """Resize vector along the first axis.
@@ -258,9 +257,7 @@ class VectorOfEncodedVectors(LGDO):
         if library == "ak":
             if attach_units:
                 msg = "Pint does not support Awkward yet, you must view the data with_units=False"
-                raise ValueError(
-                    msg
-                )
+                raise ValueError(msg)
 
             records_list = {
                 "encoded_data": self.encoded_data.view_as("ak"),
@@ -270,27 +267,21 @@ class VectorOfEncodedVectors(LGDO):
 
         if library == "np":
             msg = f"Format {library} is not supported for VectorOfEncodedVectors."
-            raise TypeError(
-                msg
-            )
+            raise TypeError(msg)
         if library == "pd":
             if attach_units:
                 msg = "Pint does not support Awkward yet, you must view the data with_units=False"
-                raise ValueError(
-                    msg
-                )
-            else:
-                return pd.DataFrame(
-                    {
-                        "encoded_data": akpd.from_awkward(
-                            self.encoded_data.view_as("ak")
-                        ),
-                        "decoded_size": self.decoded_size,
-                    }
-                )
-        else:
-            msg = f"{library} is not a supported third-party format."
-            raise ValueError(msg)
+                raise ValueError(msg)
+
+            return pd.DataFrame(
+                {
+                    "encoded_data": akpd.from_awkward(self.encoded_data.view_as("ak")),
+                    "decoded_size": self.decoded_size,
+                }
+            )
+
+        msg = f"{library} is not a supported third-party format."
+        raise ValueError(msg)
 
 
 class ArrayOfEncodedEqualSizedArrays(LGDO):
@@ -358,8 +349,7 @@ class ArrayOfEncodedEqualSizedArrays(LGDO):
                 and self.attrs == other.attrs
             )
 
-        else:
-            return False
+        return False
 
     def resize(self, new_size: int) -> None:
         """Resize array along the first axis.
@@ -489,9 +479,7 @@ class ArrayOfEncodedEqualSizedArrays(LGDO):
         if library == "ak":
             if attach_units:
                 msg = "Pint does not support Awkward yet, you must view the data with_units=False"
-                raise ValueError(
-                    msg
-                )
+                raise ValueError(msg)
 
             records_list = {
                 "encoded_data": self.encoded_data.view_as("ak"),
@@ -502,28 +490,25 @@ class ArrayOfEncodedEqualSizedArrays(LGDO):
             return ak.Array(records_list)
 
         if library == "np":
-            msg = f"Format {library} is not supported for ArrayOfEncodedEqualSizedArrays."
-            raise TypeError(
-                msg
+            msg = (
+                f"Format {library} is not supported for ArrayOfEncodedEqualSizedArrays."
             )
+            raise TypeError(msg)
+
         if library == "pd":
             if attach_units:
                 msg = "Pint does not support Awkward yet, you must view the data with_units=False"
-                raise ValueError(
-                    msg
-                )
-            else:
-                return pd.DataFrame(
-                    {
-                        "encoded_data": akpd.from_awkward(
-                            self.encoded_data.view_as("ak")
-                        ),
-                        "decoded_size": np.full(
-                            len(self.encoded_data.cumulative_length),
-                            self.decoded_size.value,
-                        ),
-                    }
-                )
-        else:
-            msg = f"{library} is not a supported third-party format."
-            raise ValueError(msg)
+                raise ValueError(msg)
+
+            return pd.DataFrame(
+                {
+                    "encoded_data": akpd.from_awkward(self.encoded_data.view_as("ak")),
+                    "decoded_size": np.full(
+                        len(self.encoded_data.cumulative_length),
+                        self.decoded_size.value,
+                    ),
+                }
+            )
+
+        msg = f"{library} is not a supported third-party format."
+        raise ValueError(msg)

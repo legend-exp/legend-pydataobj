@@ -18,7 +18,9 @@ class Scalar(LGDO):
 
     # TODO: do scalars need proper numpy dtypes?
 
-    def __init__(self, value: int | float | str, attrs: dict[str, Any] | None = None) -> None:
+    def __init__(
+        self, value: int | float | str, attrs: dict[str, Any] | None = None
+    ) -> None:
         """
         Parameters
         ----------
@@ -37,8 +39,8 @@ class Scalar(LGDO):
     def datatype_name(self) -> str:
         if hasattr(self.value, "datatype_name"):
             return self.value.datatype_name
-        else:
-            return utils.get_element_type(self.value)
+
+        return utils.get_element_type(self.value)
 
     def form_datatype(self) -> str:
         return self.datatype_name()
@@ -55,8 +57,8 @@ class Scalar(LGDO):
     def __eq__(self, other: Scalar) -> bool:
         if isinstance(other, Scalar):
             return self.value == other.value and self.attrs == self.attrs
-        else:
-            return False
+
+        return False
 
     def __str__(self) -> str:
         attrs = self.getattrs()

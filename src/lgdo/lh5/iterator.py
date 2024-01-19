@@ -107,9 +107,7 @@ class LH5Iterator(typing.Iterator):
 
         if entry_list is not None and entry_mask is not None:
             msg = "entry_list and entry_mask arguments are mutually exclusive"
-            raise ValueError(
-                msg
-            )
+            raise ValueError(msg)
 
         # Map to last row in each file
         self.file_map = np.full(len(self.lh5_files), np.iinfo("i").max, "i")
@@ -156,7 +154,7 @@ class LH5Iterator(typing.Iterator):
         elif entry_mask is not None:
             # Convert entry mask into an entry list
             if isinstance(entry_mask, pd.Series):
-                entry_mask = entry_mask.values
+                entry_mask = entry_mask.to_numpy()
             if isinstance(entry_mask, np.ndarray):
                 self.local_entry_list = [None] * len(self.file_map)
                 self.global_entry_list = np.nonzero(entry_mask)[0]
