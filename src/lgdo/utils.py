@@ -3,8 +3,8 @@ from __future__ import annotations
 
 import logging
 import os
-from collections.abc import MutableMapping
-from typing import Any, Iterator
+from collections.abc import Iterator, MutableMapping
+from typing import Any
 
 import numpy as np
 
@@ -52,9 +52,8 @@ def get_element_type(obj: object) -> str:
         return "string"
 
     # couldn't figure it out
-    raise ValueError(
-        "cannot determine lgdo element_type for object of type", type(obj).__name__
-    )
+    msg = "cannot determine lgdo element_type for object of type"
+    raise ValueError(msg, type(obj).__name__)
 
 
 def copy(obj: lgdo.LGDO, dtype: np.dtype = None) -> lgdo.LGDO:
@@ -83,8 +82,8 @@ def copy(obj: lgdo.LGDO, dtype: np.dtype = None) -> lgdo.LGDO:
             attrs=dict(obj.attrs),
         )
 
-    else:
-        raise ValueError(f"copy of {type(obj)} not supported")
+    msg = f"copy of {type(obj)} not supported"
+    raise ValueError(msg)
 
 
 def getenv_bool(name: str, default: bool = False) -> bool:
@@ -94,10 +93,7 @@ def getenv_bool(name: str, default: bool = False) -> bool:
     val = os.getenv(name)
     if not val:
         return default
-    elif val.lower() in ("1", "t", "true"):
-        return True
-    else:
-        return False
+    return val.lower() in ("1", "t", "true")
 
 
 class NumbaDefaults(MutableMapping):

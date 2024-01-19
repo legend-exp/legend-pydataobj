@@ -4,6 +4,7 @@ is done via the class :class:`.store.LH5Store`. LH5 files can also be
 browsed easily in python like any `HDF5 <https://www.hdfgroup.org>`_ file using
 `h5py <https://www.h5py.org>`_.
 """
+from __future__ import annotations
 
 from .iterator import LH5Iterator
 from .store import LH5Store, load_dfs, load_nda, ls, show

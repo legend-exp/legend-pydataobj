@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from lgdo import ArrayOfEncodedEqualSizedArrays, compression
 from lgdo.compression import RadwareSigcompress
 from lgdo.compression.generic import _is_codec

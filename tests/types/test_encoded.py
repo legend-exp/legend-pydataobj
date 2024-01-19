@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import awkward as ak
 import awkward_pandas as akpd
 import numpy as np

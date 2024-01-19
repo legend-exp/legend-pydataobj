@@ -24,14 +24,15 @@ def encode(
     codec
         algorithm to be used for encoding.
     """
-    log.debug(f"encoding {repr(obj)} with {codec}")
+    log.debug(f"encoding {obj!r} with {codec}")
 
     if _is_codec(codec, radware.RadwareSigcompress):
         enc_obj = radware.encode(obj, shift=codec.codec_shift)
     elif _is_codec(codec, varlen.ULEB128ZigZagDiff):
         enc_obj = varlen.encode(obj)
     else:
-        raise ValueError(f"'{codec}' not supported")
+        msg = f"'{codec}' not supported"
+        raise ValueError(msg)
 
     enc_obj.attrs |= codec.asdict()
 
@@ -57,27 +58,32 @@ def decode(
         wrapped encoders for limitations.
     """
     if "codec" not in obj.attrs:
-        raise RuntimeError(
+        msg = (
             "object does not carry any 'codec' attribute, I don't know how to decode it"
         )
+        raise RuntimeError(msg)
 
     codec = obj.attrs["codec"]
-    log.debug(f"decoding {repr(obj)} with {codec}")
+    log.debug(f"decoding {obj!r} with {codec}")
 
     if _is_codec(codec, radware.RadwareSigcompress):
         return radware.decode(
             obj, sig_out=out_buf, shift=int(obj.attrs.get("codec_shift", 0))
         )
-    elif _is_codec(codec, varlen.ULEB128ZigZagDiff):
+
+    if _is_codec(codec, varlen.ULEB128ZigZagDiff):
         return varlen.decode(obj, sig_out=out_buf)
-    else:
-        raise ValueError(f"'{codec}' not supported")
+
+    msg = f"'{codec}' not supported"
+    raise ValueError(msg)
 
 
 def _is_codec(ident: WaveformCodec | str, codec) -> bool:
     if isinstance(ident, WaveformCodec):
         return isinstance(ident, codec)
-    elif isinstance(ident, str):
+
+    if isinstance(ident, str):
         return ident == codec().codec
-    else:
-        raise ValueError("input must be WaveformCodec object or string identifier")
+
+    msg = "input must be WaveformCodec object or string identifier"
+    raise ValueError(msg)

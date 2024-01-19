@@ -11,7 +11,7 @@ import awkward as ak
 import numpy as np
 import pandas as pd
 
-from .. import utils as utils
+from .. import utils
 from . import vectorofvectors as vov
 from .array import Array
 
@@ -25,12 +25,12 @@ class ArrayOfEqualSizedArrays(Array):
 
     def __init__(
         self,
-        dims: tuple[int, ...] = None,
+        dims: tuple[int, ...] | None = None,
         nda: np.ndarray = None,
         shape: tuple[int, ...] = (),
         dtype: np.dtype = None,
-        fill_val: int | float = None,
-        attrs: dict[str, Any] = None,
+        fill_val: int | float | None = None,
+        attrs: dict[str, Any] | None = None,
     ) -> None:
         """
         Parameters

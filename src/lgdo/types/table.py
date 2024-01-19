@@ -5,7 +5,8 @@ equal length and corresponding utilities.
 from __future__ import annotations
 
 import logging
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 from warnings import warn
 
 import awkward as ak
@@ -40,9 +41,9 @@ class Table(Struct):
 
     def __init__(
         self,
-        size: int = None,
-        col_dict: dict[str, LGDO] = None,
-        attrs: dict[str, Any] = None,
+        size: int | None = None,
+        col_dict: dict[str, LGDO] | None = None,
+        attrs: dict[str, Any] | None = None,
     ) -> None:
         r"""
         Parameters
@@ -72,7 +73,7 @@ class Table(Struct):
         # if size is also supplied, resize all fields to match it
         # otherwise, warn if the supplied fields have varying size
         if col_dict is not None and len(col_dict) > 0:
-            do_warn = True if size is None else False
+            do_warn = size is None
             self.resize(new_size=size, do_warn=do_warn)
 
         # if no col_dict, just set the size (default to 1024)
@@ -89,7 +90,7 @@ class Table(Struct):
         """Provides ``__len__`` for this array-like class."""
         return self.size
 
-    def resize(self, new_size: int = None, do_warn: bool = False) -> None:
+    def resize(self, new_size: int | None = None, do_warn: bool = False) -> None:
         # if new_size = None, use the size from the first field
         for field, obj in self.items():
             if new_size is None:
@@ -115,9 +116,7 @@ class Table(Struct):
     def clear(self) -> None:
         self.loc = 0
 
-    def add_field(
-        self, name: str, obj: LGDO, use_obj_size: bool = False, do_warn=True
-    ) -> None:
+    def add_field(self, name: str, obj: LGDO, use_obj_size: bool = False) -> None:
         """Add a field (column) to the table.
 
         Use the name "field" here to match the terminology used in
@@ -131,12 +130,10 @@ class Table(Struct):
             the object to be added to the table.
         use_obj_size
             if ``True``, resize the table to match the length of `obj`.
-        do_warn
-            print or don't print useful info. Passed to :meth:`resize` when
-            `use_obj_size` is ``True``.
         """
         if not hasattr(obj, "__len__"):
-            raise TypeError("cannot add field of type", type(obj).__name__)
+            msg = "cannot add field of type"
+            raise TypeError(msg, type(obj).__name__)
 
         super().add_field(name, obj)
 
@@ -145,18 +142,16 @@ class Table(Struct):
             new_size = len(obj) if use_obj_size else self.size
             self.resize(new_size=new_size)
 
-    def add_column(
-        self, name: str, obj: LGDO, use_obj_size: bool = False, do_warn: bool = True
-    ) -> None:
+    def add_column(self, name: str, obj: LGDO, use_obj_size: bool = False) -> None:
         """Alias for :meth:`.add_field` using table terminology 'column'."""
-        self.add_field(name, obj, use_obj_size=use_obj_size, do_warn=do_warn)
+        self.add_field(name, obj, use_obj_size=use_obj_size)
 
     def remove_column(self, name: str, delete: bool = False) -> None:
         """Alias for :meth:`.remove_field` using table terminology 'column'."""
         super().remove_field(name, delete)
 
     def join(
-        self, other_table: Table, cols: list[str] = None, do_warn: bool = True
+        self, other_table: Table, cols: list[str] | None = None, do_warn: bool = True
     ) -> None:
         """Add the columns of another table to this table.
 
@@ -183,10 +178,13 @@ class Table(Struct):
         if cols is None:
             cols = other_table.keys()
         for name in cols:
-            self.add_column(name, other_table[name], do_warn=do_warn)
+            self.add_column(name, other_table[name])
 
     def get_dataframe(
-        self, cols: list[str] = None, copy: bool = False, prefix: str = ""
+        self,
+        cols: list[str] | None = None,
+        copy: bool = False,  # noqa: ARG002
+        prefix: str = "",
     ) -> pd.DataFrame:
         """Get a :class:`pandas.DataFrame` from the data in the table.
 
@@ -218,7 +216,7 @@ class Table(Struct):
     def eval(
         self,
         expr: str,
-        parameters: Mapping[str, str] = None,
+        parameters: Mapping[str, str] | None = None,
     ) -> LGDO:
         """Apply column operations to the table and return a new LGDO.
 
@@ -292,37 +290,35 @@ class Table(Struct):
             # np.evaluate should always return a numpy thing?
             if out_data.ndim == 0:
                 return Scalar(out_data.item())
-            elif out_data.ndim == 1:
+            if out_data.ndim == 1:
                 return Array(out_data)
-            elif out_data.ndim == 2:
+            if out_data.ndim == 2:
                 return ArrayOfEqualSizedArrays(nda=out_data)
-            else:
-                msg = (
-                    f"evaluation resulted in {out_data.ndim}-dimensional data, "
-                    "I don't know which LGDO this corresponds to"
-                )
-                raise RuntimeError(msg)
 
-        else:
-            # resort to good ol' eval()
-            globs = {"ak": ak, "np": np}
-            out_data = eval(expr, globs, (self_unwrap | parameters))
+            msg = (
+                f"evaluation resulted in {out_data.ndim}-dimensional data, "
+                "I don't know which LGDO this corresponds to"
+            )
+            raise RuntimeError(msg)
 
-            # need to convert back to LGDO
-            if isinstance(out_data, ak.Array):
-                if out_data.ndim == 1:
-                    return Array(out_data.to_numpy())
-                else:
-                    return VectorOfVectors(out_data)
+        # resort to good ol' eval()
+        globs = {"ak": ak, "np": np}
+        out_data = eval(expr, globs, (self_unwrap | parameters))  # noqa: PGH001
 
-            if np.isscalar(out_data):
-                return Scalar(out_data)
-            else:
-                msg = (
-                    f"evaluation resulted in a {type(out_data)} object, "
-                    "I don't know which LGDO this corresponds to"
-                )
-                raise RuntimeError(msg)
+        # need to convert back to LGDO
+        if isinstance(out_data, ak.Array):
+            if out_data.ndim == 1:
+                return Array(out_data.to_numpy())
+            return VectorOfVectors(out_data)
+
+        if np.isscalar(out_data):
+            return Scalar(out_data)
+
+        msg = (
+            f"evaluation resulted in a {type(out_data)} object, "
+            "I don't know which LGDO this corresponds to"
+        )
+        raise RuntimeError(msg)
 
     def __str__(self):
         opts = fmt.get_dataframe_repr_params()
@@ -350,7 +346,7 @@ class Table(Struct):
         self,
         library: str,
         with_units: bool = False,
-        cols: list[str] = None,
+        cols: list[str] | None = None,
         prefix: str = "",
     ) -> pd.DataFrame | np.NDArray | ak.Array:
         r"""View the Table data as a third-party format data structure.
@@ -389,43 +385,34 @@ class Table(Struct):
                 cols = self.keys()
             for col in cols:
                 column = self[col]
-                if isinstance(column, Array) or isinstance(column, VectorOfVectors):
+                if isinstance(column, (Array, VectorOfVectors)):
                     tmp_ser = column.view_as("pd", with_units=with_units).rename(
                         prefix + str(col)
                     )
-                    if df.empty:
-                        df = pd.DataFrame(tmp_ser)
-                    else:
-                        df = df.join(tmp_ser)
+                    df = pd.DataFrame(tmp_ser) if df.empty else df.join(tmp_ser)
                 elif isinstance(column, Table):
                     tmp_df = column.view_as(
                         "pd", with_units=with_units, prefix=f"{prefix}{col}_"
                     )
-                    if df.empty:
-                        df = tmp_df
-                    else:
-                        df = df.join(tmp_df)
+                    df = tmp_df if df.empty else df.join(tmp_df)
+                elif df.empty:
+                    df[prefix + str(col)] = column.view_as("pd", with_units=with_units)
                 else:
-                    if df.empty:
-                        df[prefix + str(col)] = column.view_as(
-                            "pd", with_units=with_units
-                        )
-                    else:
-                        df[prefix + str(col)] = df.join(
-                            column.view_as("pd", with_units=with_units)
-                        )
+                    df[prefix + str(col)] = df.join(
+                        column.view_as("pd", with_units=with_units)
+                    )
             return df
 
-        elif library == "np":
-            raise TypeError(f"Format {library} is not supported for Tables.")
+        if library == "np":
+            msg = f"Format {library} is not supported for Tables."
+            raise TypeError(msg)
 
-        elif library == "ak":
+        if library == "ak":
             if with_units:
-                raise ValueError(
-                    "Pint does not support Awkward yet, you must view the data with_units=False"
-                )
-            else:
-                return ak.Array(self)
+                msg = "Pint does not support Awkward yet, you must view the data with_units=False"
+                raise ValueError(msg)
 
-        else:
-            raise TypeError(f"{library} is not a supported third-party format.")
+            return ak.Array(self)
+
+        msg = f"{library} is not a supported third-party format."
+        raise TypeError(msg)

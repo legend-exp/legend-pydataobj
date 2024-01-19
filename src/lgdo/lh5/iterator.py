@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-import typing as typing
+import typing
 
 import numpy as np
 import pandas as pd
@@ -44,11 +44,11 @@ class LH5Iterator(typing.Iterator):
         lh5_files: str | list[str],
         groups: str | list[str],
         base_path: str = "",
-        entry_list: list[int] | list[list[int]] = None,
-        entry_mask: list[bool] | list[list[bool]] = None,
-        field_mask: dict[str, bool] | list[str] | tuple[str] = None,
+        entry_list: list[int] | list[list[int]] | None = None,
+        entry_mask: list[bool] | list[list[bool]] | None = None,
+        field_mask: dict[str, bool] | list[str] | tuple[str] | None = None,
         buffer_len: int = 3200,
-        friend: typing.Iterator = None,
+        friend: typing.Iterator | None = None,
     ) -> None:
         """
         Parameters
@@ -85,15 +85,18 @@ class LH5Iterator(typing.Iterator):
             if isinstance(groups, list):
                 lh5_files *= len(groups)
         elif not isinstance(lh5_files, list):
-            raise ValueError("lh5_files must be a string or list of strings")
+            msg = "lh5_files must be a string or list of strings"
+            raise ValueError(msg)
 
         if isinstance(groups, str):
             groups = [groups] * len(lh5_files)
         elif not isinstance(groups, list):
-            raise ValueError("group must be a string or list of strings")
+            msg = "group must be a string or list of strings"
+            raise ValueError(msg)
 
-        if not len(groups) == len(lh5_files):
-            raise ValueError("lh5_files and groups must have same length")
+        if len(groups) != len(lh5_files):
+            msg = "lh5_files and groups must have same length"
+            raise ValueError(msg)
 
         self.lh5_files = []
         self.groups = []
@@ -103,9 +106,8 @@ class LH5Iterator(typing.Iterator):
             self.groups += [g] * len(f_exp)
 
         if entry_list is not None and entry_mask is not None:
-            raise ValueError(
-                "entry_list and entry_mask arguments are mutually exclusive"
-            )
+            msg = "entry_list and entry_mask arguments are mutually exclusive"
+            raise ValueError(msg)
 
         # Map to last row in each file
         self.file_map = np.full(len(self.lh5_files), np.iinfo("i").max, "i")
@@ -124,7 +126,8 @@ class LH5Iterator(typing.Iterator):
             )
             self.file_map[0] = self.lh5_st.read_n_rows(g, f)
         else:
-            raise RuntimeError(f"can't open any files from {lh5_files}")
+            msg = f"can't open any files from {lh5_files}"
+            raise RuntimeError(msg)
 
         self.n_rows = 0
         self.current_entry = 0
@@ -151,7 +154,7 @@ class LH5Iterator(typing.Iterator):
         elif entry_mask is not None:
             # Convert entry mask into an entry list
             if isinstance(entry_mask, pd.Series):
-                entry_mask = entry_mask.values
+                entry_mask = entry_mask.to_numpy()
             if isinstance(entry_mask, np.ndarray):
                 self.local_entry_list = [None] * len(self.file_map)
                 self.global_entry_list = np.nonzero(entry_mask)[0]
@@ -163,7 +166,8 @@ class LH5Iterator(typing.Iterator):
         # Attach the friend
         if friend is not None:
             if not isinstance(friend, typing.Iterator):
-                raise ValueError("Friend must be an Iterator")
+                msg = "Friend must be an Iterator"
+                raise ValueError(msg)
             self.lh5_buffer.join(friend.lh5_buffer)
         self.friend = friend
 

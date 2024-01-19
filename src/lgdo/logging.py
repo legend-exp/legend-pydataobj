@@ -1,4 +1,6 @@
 """This module implements some helpers for setting up logging."""
+from __future__ import annotations
+
 import logging
 
 import colorlog
@@ -11,7 +13,7 @@ FATAL = logging.FATAL
 CRITICAL = logging.CRITICAL
 
 
-def setup(level: int = logging.INFO, logger: logging.Logger = None) -> None:
+def setup(level: int = logging.INFO, logger: logging.Logger | None = None) -> None:
     """Setup a colorful logging output.
 
     If `logger` is None, sets up only the ``pygama`` logger.

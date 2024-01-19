@@ -39,11 +39,11 @@ def parse_datatype(datatype: str) -> tuple[str, tuple[int, ...], str | list[str]
         datatype, dims = parse("{}<{}>", datatype)
         dims = [int(i) for i in dims.split(",")]
         return datatype, tuple(dims), element_description
-    else:
-        return datatype, None, element_description.split(",")
+
+    return datatype, None, element_description.split(",")
 
 
-def expand_vars(expr: str, substitute: dict[str, str] = None) -> str:
+def expand_vars(expr: str, substitute: dict[str, str] | None = None) -> str:
     """Expand (environment) variables.
 
     Note
@@ -70,9 +70,9 @@ def expand_vars(expr: str, substitute: dict[str, str] = None) -> str:
 
 def expand_path(
     path: str,
-    substitute: dict[str, str] = None,
+    substitute: dict[str, str] | None = None,
     list: bool = False,
-    base_path: str = None,
+    base_path: str | None = None,
 ) -> str | list:
     """Expand (environment) variables and wildcards to return absolute paths.
 
@@ -109,10 +109,12 @@ def expand_path(
 
     if not list:
         if len(paths) == 0:
-            raise FileNotFoundError(f"could not find path matching {path}")
-        elif len(paths) > 1:
-            raise FileNotFoundError(f"found multiple paths matching {path}")
-        else:
-            return paths[0]
-    else:
-        return paths
+            msg = f"could not find path matching {path}"
+            raise FileNotFoundError(msg)
+        if len(paths) > 1:
+            msg = f"found multiple paths matching {path}"
+            raise FileNotFoundError(msg)
+
+        return paths[0]
+
+    return paths

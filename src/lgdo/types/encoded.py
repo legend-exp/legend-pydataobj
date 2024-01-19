@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
 
-from .. import utils as utils
+from .. import utils
 from .array import Array
 from .lgdo import LGDO
 from .scalar import Scalar
@@ -33,7 +33,7 @@ class VectorOfEncodedVectors(LGDO):
         self,
         encoded_data: VectorOfVectors = None,
         decoded_size: Array = None,
-        attrs: dict[str, Any] = None,
+        attrs: dict[str, Any] | None = None,
     ) -> None:
         """
         Parameters
@@ -52,7 +52,8 @@ class VectorOfEncodedVectors(LGDO):
         elif encoded_data is None:
             self.encoded_data = VectorOfVectors(dtype="ubyte")
         else:
-            raise ValueError("encoded_data must be a valid VectorOfVectors")
+            msg = "encoded_data must be a valid VectorOfVectors"
+            raise ValueError(msg)
 
         if isinstance(decoded_size, Array):
             self.decoded_size = decoded_size
@@ -66,7 +67,8 @@ class VectorOfEncodedVectors(LGDO):
             self.decoded_size = Array()
 
         if len(self.encoded_data) != len(self.decoded_size):
-            raise RuntimeError("encoded_data vs. decoded_size shape mismatch")
+            msg = "encoded_data vs. decoded_size shape mismatch"
+            raise RuntimeError(msg)
 
         super().__init__(attrs)
 
@@ -88,8 +90,7 @@ class VectorOfEncodedVectors(LGDO):
                 and self.attrs == other.attrs
             )
 
-        else:
-            return False
+        return False
 
     def resize(self, new_size: int) -> None:
         """Resize vector along the first axis.
@@ -255,9 +256,8 @@ class VectorOfEncodedVectors(LGDO):
 
         if library == "ak":
             if attach_units:
-                raise ValueError(
-                    "Pint does not support Awkward yet, you must view the data with_units=False"
-                )
+                msg = "Pint does not support Awkward yet, you must view the data with_units=False"
+                raise ValueError(msg)
 
             records_list = {
                 "encoded_data": self.encoded_data.view_as("ak"),
@@ -266,25 +266,22 @@ class VectorOfEncodedVectors(LGDO):
             return ak.Array(records_list)
 
         if library == "np":
-            raise TypeError(
-                f"Format {library} is not supported for VectorOfEncodedVectors."
-            )
+            msg = f"Format {library} is not supported for VectorOfEncodedVectors."
+            raise TypeError(msg)
         if library == "pd":
             if attach_units:
-                raise ValueError(
-                    "Pint does not support Awkward yet, you must view the data with_units=False"
-                )
-            else:
-                return pd.DataFrame(
-                    {
-                        "encoded_data": akpd.from_awkward(
-                            self.encoded_data.view_as("ak")
-                        ),
-                        "decoded_size": self.decoded_size,
-                    }
-                )
-        else:
-            raise ValueError(f"{library} is not a supported third-party format.")
+                msg = "Pint does not support Awkward yet, you must view the data with_units=False"
+                raise ValueError(msg)
+
+            return pd.DataFrame(
+                {
+                    "encoded_data": akpd.from_awkward(self.encoded_data.view_as("ak")),
+                    "decoded_size": self.decoded_size,
+                }
+            )
+
+        msg = f"{library} is not a supported third-party format."
+        raise ValueError(msg)
 
 
 class ArrayOfEncodedEqualSizedArrays(LGDO):
@@ -304,7 +301,7 @@ class ArrayOfEncodedEqualSizedArrays(LGDO):
         self,
         encoded_data: VectorOfVectors = None,
         decoded_size: Scalar | int = None,
-        attrs: dict[str, Any] = None,
+        attrs: dict[str, Any] | None = None,
     ) -> None:
         """
         Parameters
@@ -322,7 +319,8 @@ class ArrayOfEncodedEqualSizedArrays(LGDO):
         elif encoded_data is None:
             self.encoded_data = VectorOfVectors(dtype="ubyte")
         else:
-            raise ValueError("encoded_data must be a valid VectorOfVectors")
+            msg = "encoded_data must be a valid VectorOfVectors"
+            raise ValueError(msg)
 
         if isinstance(decoded_size, Scalar):
             self.decoded_size = decoded_size
@@ -351,8 +349,7 @@ class ArrayOfEncodedEqualSizedArrays(LGDO):
                 and self.attrs == other.attrs
             )
 
-        else:
-            return False
+        return False
 
     def resize(self, new_size: int) -> None:
         """Resize array along the first axis.
@@ -481,9 +478,8 @@ class ArrayOfEncodedEqualSizedArrays(LGDO):
 
         if library == "ak":
             if attach_units:
-                raise ValueError(
-                    "Pint does not support Awkward yet, you must view the data with_units=False"
-                )
+                msg = "Pint does not support Awkward yet, you must view the data with_units=False"
+                raise ValueError(msg)
 
             records_list = {
                 "encoded_data": self.encoded_data.view_as("ak"),
@@ -494,25 +490,25 @@ class ArrayOfEncodedEqualSizedArrays(LGDO):
             return ak.Array(records_list)
 
         if library == "np":
-            raise TypeError(
+            msg = (
                 f"Format {library} is not supported for ArrayOfEncodedEqualSizedArrays."
             )
+            raise TypeError(msg)
+
         if library == "pd":
             if attach_units:
-                raise ValueError(
-                    "Pint does not support Awkward yet, you must view the data with_units=False"
-                )
-            else:
-                return pd.DataFrame(
-                    {
-                        "encoded_data": akpd.from_awkward(
-                            self.encoded_data.view_as("ak")
-                        ),
-                        "decoded_size": np.full(
-                            len(self.encoded_data.cumulative_length),
-                            self.decoded_size.value,
-                        ),
-                    }
-                )
-        else:
-            raise ValueError(f"{library} is not a supported third-party format.")
+                msg = "Pint does not support Awkward yet, you must view the data with_units=False"
+                raise ValueError(msg)
+
+            return pd.DataFrame(
+                {
+                    "encoded_data": akpd.from_awkward(self.encoded_data.view_as("ak")),
+                    "decoded_size": np.full(
+                        len(self.encoded_data.cumulative_length),
+                        self.decoded_size.value,
+                    ),
+                }
+            )
+
+        msg = f"{library} is not a supported third-party format."
+        raise ValueError(msg)
