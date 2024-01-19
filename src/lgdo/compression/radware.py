@@ -104,7 +104,8 @@ def encode(
             sig_out = np.empty(s[:-1] + (s[-1] * 2,), dtype=ubyte)
 
         if sig_out.dtype != ubyte:
-            raise ValueError("sig_out must be of type ubyte")
+            msg = "sig_out must be of type ubyte"
+            raise ValueError(msg)
 
         # nbytes has one dimension less (the last one)
         nbytes = np.empty(s[:-1], dtype=uint32)
@@ -141,9 +142,8 @@ def encode(
         # decoded_size is an array, compute it by diff'ing the original VOV
         decoded_size = np.diff(sig_in.cumulative_length, prepend=uint32(0))
 
-        sig_out = lgdo.VectorOfEncodedVectors(encoded_data, decoded_size)
+        return lgdo.VectorOfEncodedVectors(encoded_data, decoded_size)
 
-        return sig_out
 
     elif isinstance(sig_in, lgdo.ArrayOfEqualSizedArrays):
         if sig_out is not None:
@@ -161,11 +161,10 @@ def encode(
         encoded_data = lgdo.ArrayOfEqualSizedArrays(nda=sig_out_nda).to_vov(
             cumulative_length=np.cumsum(nbytes, dtype=uint32)
         )
-        sig_out = lgdo.ArrayOfEncodedEqualSizedArrays(
+        return lgdo.ArrayOfEncodedEqualSizedArrays(
             encoded_data, decoded_size=sig_in.nda.shape[1]
         )
 
-        return sig_out
 
     elif isinstance(sig_in, lgdo.Array):
         # encode the internal numpy array
@@ -173,7 +172,8 @@ def encode(
         return lgdo.Array(sig_out_nda), nbytes
 
     else:
-        raise ValueError(f"unsupported input signal type ({type(sig_in)})")
+        msg = f"unsupported input signal type ({type(sig_in)})"
+        raise ValueError(msg)
 
 
 def decode(
@@ -302,7 +302,8 @@ def decode(
         return sig_out.to_vov(np.cumsum(siglen, dtype=uint32))
 
     else:
-        raise ValueError("unsupported input signal type")
+        msg = "unsupported input signal type"
+        raise ValueError(msg)
 
 
 @numba.jit(**nb_kwargs(nopython=True))
@@ -692,6 +693,7 @@ def _radware_sigcompress_decode(
         j += nw
 
     if _siglen != iso:
-        raise RuntimeError("failure: unexpected signal length after decompression")
+        msg = "failure: unexpected signal length after decompression"
+        raise RuntimeError(msg)
 
     siglen[0] = _siglen  # number of shorts in decompressed signal data

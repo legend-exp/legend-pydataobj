@@ -27,8 +27,8 @@ class FixedSizeArray(Array):
         nda: np.ndarray = None,
         shape: tuple[int, ...] = (),
         dtype: np.dtype = None,
-        fill_val: int | float = None,
-        attrs: dict[str, Any] = None,
+        fill_val: int | float | None = None,
+        attrs: dict[str, Any] | None = None,
     ) -> None:
         """
         See Also

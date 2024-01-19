@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 import pint_pandas  # noqa: F401
 
-from .. import utils as utils
+from .. import utils
 from ..units import default_units_registry as u
 from .lgdo import LGDO
 
@@ -42,8 +42,8 @@ class Array(LGDO):
         nda: np.ndarray = None,
         shape: tuple[int, ...] = (),
         dtype: np.dtype = None,
-        fill_val: float | int = None,
-        attrs: dict[str, Any] = None,
+        fill_val: float | int | None = None,
+        attrs: dict[str, Any] | None = None,
     ) -> None:
         """
         Parameters
@@ -176,8 +176,9 @@ class Array(LGDO):
                         self.nda, dtype=f"pint[{self.attrs['units']}]", copy=False
                     )
                 else:
+                    msg = "Pint does not support Awkward yet, you must view the data with_units=False"
                     raise ValueError(
-                        "Pint does not support Awkward yet, you must view the data with_units=False"
+                        msg
                     )
             else:
                 if self.nda.ndim == 1:
@@ -191,10 +192,12 @@ class Array(LGDO):
                 return self.nda
         elif library == "ak":
             if attach_units:
+                msg = "Pint does not support Awkward yet, you must view the data with_units=False"
                 raise ValueError(
-                    "Pint does not support Awkward yet, you must view the data with_units=False"
+                    msg
                 )
             else:
                 return ak.Array(self.nda)
         else:
-            raise ValueError(f"{library} is not a supported third-party format.")
+            msg = f"{library} is not a supported third-party format."
+            raise ValueError(msg)

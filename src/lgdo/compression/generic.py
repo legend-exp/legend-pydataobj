@@ -31,7 +31,8 @@ def encode(
     elif _is_codec(codec, varlen.ULEB128ZigZagDiff):
         enc_obj = varlen.encode(obj)
     else:
-        raise ValueError(f"'{codec}' not supported")
+        msg = f"'{codec}' not supported"
+        raise ValueError(msg)
 
     enc_obj.attrs |= codec.asdict()
 
@@ -57,8 +58,9 @@ def decode(
         wrapped encoders for limitations.
     """
     if "codec" not in obj.attrs:
+        msg = "object does not carry any 'codec' attribute, I don't know how to decode it"
         raise RuntimeError(
-            "object does not carry any 'codec' attribute, I don't know how to decode it"
+            msg
         )
 
     codec = obj.attrs["codec"]
@@ -71,7 +73,8 @@ def decode(
     elif _is_codec(codec, varlen.ULEB128ZigZagDiff):
         return varlen.decode(obj, sig_out=out_buf)
     else:
-        raise ValueError(f"'{codec}' not supported")
+        msg = f"'{codec}' not supported"
+        raise ValueError(msg)
 
 
 def _is_codec(ident: WaveformCodec | str, codec) -> bool:
@@ -80,4 +83,5 @@ def _is_codec(ident: WaveformCodec | str, codec) -> bool:
     elif isinstance(ident, str):
         return ident == codec().codec
     else:
-        raise ValueError("input must be WaveformCodec object or string identifier")
+        msg = "input must be WaveformCodec object or string identifier"
+        raise ValueError(msg)

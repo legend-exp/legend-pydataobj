@@ -34,11 +34,11 @@ class LH5Iterator(lh5.LH5Iterator):
         lh5_files: str | list[str],
         groups: str | list[str],
         base_path: str = "",
-        entry_list: list[int] | list[list[int]] = None,
-        entry_mask: list[bool] | list[list[bool]] = None,
-        field_mask: dict[str, bool] | list[str] | tuple[str] = None,
+        entry_list: list[int] | list[list[int]] | None = None,
+        entry_mask: list[bool] | list[list[bool]] | None = None,
+        field_mask: dict[str, bool] | list[str] | tuple[str] | None = None,
         buffer_len: int = 3200,
-        friend: Iterator = None,
+        friend: Iterator | None = None,
     ) -> None:
         warn(
             "lgdo.lh5_store has moved to a subfolder lgdo.lh5 containing LH5Iterator."
@@ -65,7 +65,7 @@ class LH5Iterator(lh5.LH5Iterator):
         lh5_file: str | h5py.File,
         group: str | h5py.Group = "/",
         start_row: int = 0,
-        n_rows: int = None,
+        n_rows: int | None = None,
         wo_mode: str = "append",
         write_start: int = 0,
         **h5py_kwargs,
@@ -97,7 +97,7 @@ class LH5Iterator(lh5.LH5Iterator):
         start_row: int = 0,
         n_rows: int = sys.maxsize,
         idx: np.ndarray | list | tuple | list[np.ndarray | list | tuple] = None,
-        field_mask: dict[str, bool] | list[str] | tuple[str] = None,
+        field_mask: dict[str, bool] | list[str] | tuple[str] | None = None,
         obj_buf: LGDO = None,
         obj_buf_start: int = 0,
         decompress: bool = True,
@@ -170,7 +170,7 @@ def load_dfs(
     f_list: str | list[str],
     par_list: list[str],
     lh5_group: str = "",
-    idx_list: list[np.ndarray | list | tuple] = None,
+    idx_list: list[np.ndarray | list | tuple] | None = None,
 ) -> pd.DataFrame:
     warn(
         "lgdo.lh5_store has moved to a subfolder lgdo.lh5. "
@@ -186,7 +186,7 @@ def load_nda(
     f_list: str | list[str],
     par_list: list[str],
     lh5_group: str = "",
-    idx_list: list[np.ndarray | list | tuple] = None,
+    idx_list: list[np.ndarray | list | tuple] | None = None,
 ) -> dict[str, np.ndarray]:
     warn(
         "lgdo.lh5_store has moved to a subfolder lgdo.lh5. "

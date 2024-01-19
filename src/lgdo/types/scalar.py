@@ -7,7 +7,7 @@ from typing import Any
 
 import numpy as np
 
-from .. import utils as utils
+from .. import utils
 from .lgdo import LGDO
 
 log = logging.getLogger(__name__)
@@ -18,7 +18,7 @@ class Scalar(LGDO):
 
     # TODO: do scalars need proper numpy dtypes?
 
-    def __init__(self, value: int | float | str, attrs: dict[str, Any] = None) -> None:
+    def __init__(self, value: int | float | str, attrs: dict[str, Any] | None = None) -> None:
         """
         Parameters
         ----------
@@ -28,7 +28,8 @@ class Scalar(LGDO):
             a set of user attributes to be carried along with this LGDO.
         """
         if not np.isscalar(value):
-            raise ValueError("cannot instantiate a Scalar with a non-scalar value")
+            msg = "cannot instantiate a Scalar with a non-scalar value"
+            raise ValueError(msg)
 
         self.value = value
         super().__init__(attrs)

@@ -41,9 +41,9 @@ class Table(Struct):
 
     def __init__(
         self,
-        size: int = None,
-        col_dict: dict[str, LGDO] = None,
-        attrs: dict[str, Any] = None,
+        size: int | None = None,
+        col_dict: dict[str, LGDO] | None = None,
+        attrs: dict[str, Any] | None = None,
     ) -> None:
         r"""
         Parameters
@@ -73,7 +73,7 @@ class Table(Struct):
         # if size is also supplied, resize all fields to match it
         # otherwise, warn if the supplied fields have varying size
         if col_dict is not None and len(col_dict) > 0:
-            do_warn = True if size is None else False
+            do_warn = size is None
             self.resize(new_size=size, do_warn=do_warn)
 
         # if no col_dict, just set the size (default to 1024)
@@ -90,7 +90,7 @@ class Table(Struct):
         """Provides ``__len__`` for this array-like class."""
         return self.size
 
-    def resize(self, new_size: int = None, do_warn: bool = False) -> None:
+    def resize(self, new_size: int | None = None, do_warn: bool = False) -> None:
         # if new_size = None, use the size from the first field
         for field, obj in self.items():
             if new_size is None:
@@ -137,7 +137,8 @@ class Table(Struct):
             `use_obj_size` is ``True``.
         """
         if not hasattr(obj, "__len__"):
-            raise TypeError("cannot add field of type", type(obj).__name__)
+            msg = "cannot add field of type"
+            raise TypeError(msg, type(obj).__name__)
 
         super().add_field(name, obj)
 
@@ -157,7 +158,7 @@ class Table(Struct):
         super().remove_field(name, delete)
 
     def join(
-        self, other_table: Table, cols: list[str] = None, do_warn: bool = True
+        self, other_table: Table, cols: list[str] | None = None, do_warn: bool = True
     ) -> None:
         """Add the columns of another table to this table.
 
@@ -187,7 +188,7 @@ class Table(Struct):
             self.add_column(name, other_table[name], do_warn=do_warn)
 
     def get_dataframe(
-        self, cols: list[str] = None, copy: bool = False, prefix: str = ""
+        self, cols: list[str] | None = None, copy: bool = False, prefix: str = ""
     ) -> pd.DataFrame:
         """Get a :class:`pandas.DataFrame` from the data in the table.
 
@@ -219,7 +220,7 @@ class Table(Struct):
     def eval(
         self,
         expr: str,
-        parameters: Mapping[str, str] = None,
+        parameters: Mapping[str, str] | None = None,
     ) -> LGDO:
         """Apply column operations to the table and return a new LGDO.
 
@@ -351,7 +352,7 @@ class Table(Struct):
         self,
         library: str,
         with_units: bool = False,
-        cols: list[str] = None,
+        cols: list[str] | None = None,
         prefix: str = "",
     ) -> pd.DataFrame | np.NDArray | ak.Array:
         r"""View the Table data as a third-party format data structure.
@@ -394,18 +395,12 @@ class Table(Struct):
                     tmp_ser = column.view_as("pd", with_units=with_units).rename(
                         prefix + str(col)
                     )
-                    if df.empty:
-                        df = pd.DataFrame(tmp_ser)
-                    else:
-                        df = df.join(tmp_ser)
+                    df = pd.DataFrame(tmp_ser) if df.empty else df.join(tmp_ser)
                 elif isinstance(column, Table):
                     tmp_df = column.view_as(
                         "pd", with_units=with_units, prefix=f"{prefix}{col}_"
                     )
-                    if df.empty:
-                        df = tmp_df
-                    else:
-                        df = df.join(tmp_df)
+                    df = tmp_df if df.empty else df.join(tmp_df)
                 else:
                     if df.empty:
                         df[prefix + str(col)] = column.view_as(
@@ -418,15 +413,18 @@ class Table(Struct):
             return df
 
         elif library == "np":
-            raise TypeError(f"Format {library} is not supported for Tables.")
+            msg = f"Format {library} is not supported for Tables."
+            raise TypeError(msg)
 
         elif library == "ak":
             if with_units:
+                msg = "Pint does not support Awkward yet, you must view the data with_units=False"
                 raise ValueError(
-                    "Pint does not support Awkward yet, you must view the data with_units=False"
+                    msg
                 )
             else:
                 return ak.Array(self)
 
         else:
-            raise TypeError(f"{library} is not a supported third-party format.")
+            msg = f"{library} is not a supported third-party format."
+            raise TypeError(msg)

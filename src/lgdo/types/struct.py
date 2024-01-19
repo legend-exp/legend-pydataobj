@@ -24,7 +24,7 @@ class Struct(LGDO, dict):
     """
 
     def __init__(
-        self, obj_dict: dict[str, LGDO] = None, attrs: dict[str, Any] = None
+        self, obj_dict: dict[str, LGDO] | None = None, attrs: dict[str, Any] | None = None
     ) -> None:
         """
         Parameters
@@ -134,8 +134,11 @@ class Struct(LGDO, dict):
         --------
         .LGDO.view_as
         """
-        raise NotImplementedError(
+        msg = (
             "Since Struct's fields can have different lengths, "
             "converting to a Numpy, Pandas or Awkward is generally "
             "not possible. Call view_as() on the fields instead."
+        )
+        raise NotImplementedError(
+            msg
         )

@@ -46,16 +46,16 @@ class WaveformTable(Table):
 
     def __init__(
         self,
-        size: int = None,
+        size: int | None = None,
         t0: float | Array | np.ndarray = 0,
-        t0_units: str = None,
+        t0_units: str | None = None,
         dt: float | Array | np.ndarray = 1,
-        dt_units: str = None,
+        dt_units: str | None = None,
         values: ArrayOfEqualSizedArrays | VectorOfVectors | np.ndarray = None,
-        values_units: str = None,
-        wf_len: int = None,
+        values_units: str | None = None,
+        wf_len: int | None = None,
         dtype: np.dtype = None,
-        attrs: dict[str, Any] = None,
+        attrs: dict[str, Any] | None = None,
     ) -> None:
         r"""
         Parameters
@@ -269,7 +269,7 @@ class WaveformTable(Table):
         self,
         library: str,
         with_units: bool = False,
-        cols: list[str] = None,
+        cols: list[str] | None = None,
         prefix: str = "",
     ) -> pd.DataFrame | np.NDArray | ak.Array:
         r"""View the waveform data as a third-party format data structure.
