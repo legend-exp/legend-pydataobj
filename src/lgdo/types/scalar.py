@@ -8,6 +8,7 @@ from typing import Any
 import numpy as np
 
 from .. import utils
+from ..units import default_units_registry as u
 from .lgdo import LGDO
 
 log = logging.getLogger(__name__)
@@ -45,13 +46,15 @@ class Scalar(LGDO):
     def form_datatype(self) -> str:
         return self.datatype_name()
 
-    def view_as(self, library: str, with_units: bool = False):
+    def view_as(self, with_units: bool = False):
         r"""Dummy function, returns the scalar value itself.
 
         See Also
         --------
         .LGDO.view_as
         """
+        if with_units:
+            return self.value * u[self.attrs["units"]]
         return self.value
 
     def __eq__(self, other: Scalar) -> bool:
