@@ -16,7 +16,7 @@ import numpy as np
 import pandas as pd
 from numpy.typing import DTypeLike, NDArray
 
-from .. import utils as utils
+from .. import utils
 from ..utils import numba_defaults_kwargs as nb_kwargs
 from . import arrayofequalsizedarrays as aoesa
 from .array import Array
@@ -38,10 +38,10 @@ class VectorOfVectors(LGDO):
         array: ak.Array | list[list[int | float]] = None,
         flattened_data: Array | NDArray = None,
         cumulative_length: Array | NDArray = None,
-        shape_guess: tuple[int, int] = None,
+        shape_guess: tuple[int, int] | None = None,
         dtype: DTypeLike = None,
-        fill_val: int | float = None,
-        attrs: dict[str, Any] = None,
+        fill_val: int | float | None = None,
+        attrs: dict[str, Any] | None = None,
     ) -> None:
         """
         Parameters
@@ -77,14 +77,15 @@ class VectorOfVectors(LGDO):
         if array is not None:
             if isinstance(array, ak.Array):
                 if array.ndim != 2:
-                    raise ValueError(
+                    msg = (
                         "cannot initialize a VectorOfVectors with "
                         f"{array.ndim}-dimensional data"
                     )
+                    raise ValueError(msg)
 
                 form, length, container = ak.to_buffers(array)
 
-                return self.__init__(
+                self.__init__(
                     flattened_data=container["node1-data"],
                     cumulative_length=container["node0-offsets"][1:],
                 )
@@ -93,12 +94,13 @@ class VectorOfVectors(LGDO):
                 cl_nda = np.cumsum([len(ll) for ll in array])
                 if dtype is None:
                     if len(cl_nda) == 0 or cl_nda[-1] == 0:
-                        raise ValueError("array can't be empty with dtype=None!")
-                    else:
-                        # Set dtype from the first element in the list
-                        # Find it efficiently, allowing for zero-length lists as some of the entries
-                        first_element = next(itertools.chain.from_iterable(array))
-                        dtype = type(first_element)
+                        msg = "array can't be empty with dtype=None!"
+                        raise ValueError(msg)
+
+                    # Set dtype from the first element in the list
+                    # Find it efficiently, allowing for zero-length lists as some of the entries
+                    first_element = next(itertools.chain.from_iterable(array))
+                    dtype = type(first_element)
 
                 self.dtype = np.dtype(dtype)
                 self.cumulative_length = Array(cl_nda)
@@ -111,36 +113,32 @@ class VectorOfVectors(LGDO):
                 if shape_guess is None:
                     # just make an empty vector
                     self.cumulative_length = Array(np.empty((0,), dtype="uint32"))
+                # initialize based on shape_guess
+                elif shape_guess[1] <= 0:
+                    self.cumulative_length = Array(
+                        shape=(shape_guess[0],), dtype="uint32", fill_val=0
+                    )
                 else:
-                    # initialize based on shape_guess
-                    if shape_guess[1] <= 0:
-                        self.cumulative_length = Array(
-                            shape=(shape_guess[0],), dtype="uint32", fill_val=0
+                    self.cumulative_length = Array(
+                        np.arange(
+                            shape_guess[1],
+                            np.prod(shape_guess) + 1,
+                            shape_guess[1],
+                            dtype="uint32",
                         )
-                    else:
-                        self.cumulative_length = Array(
-                            np.arange(
-                                shape_guess[1],
-                                np.prod(shape_guess) + 1,
-                                shape_guess[1],
-                                dtype="uint32",
-                            )
-                        )
+                    )
             else:
                 self.cumulative_length = Array(cumulative_length)
 
             if flattened_data is None:
                 if dtype is None:
-                    raise ValueError("flattened_data and dtype cannot both be None!")
+                    msg = "flattened_data and dtype cannot both be None!"
+                    raise ValueError(msg)
 
                 length = 0
                 if cumulative_length is None:
-                    if shape_guess is None:
-                        # just make an empty vector
-                        length = 0
-                    else:
-                        # use shape_guess
-                        length = np.prod(shape_guess)
+                    # just make an empty vector or use shape_guess
+                    length = 0 if shape_guess is None else np.prod(shape_guess)
                 else:
                     # use cumulative_length
                     length = cumulative_length[-1]
@@ -182,16 +180,15 @@ class VectorOfVectors(LGDO):
                 and self.attrs == other.attrs
             )
 
-        else:
-            return False
+        return False
 
     def __getitem__(self, i: int) -> list:
         """Return vector at index `i`."""
         stop = self.cumulative_length[i]
-        if i == 0 or i == -len(self):
+        if i in (0, -len(self)):
             return self.flattened_data[0:stop]
-        else:
-            return self.flattened_data[self.cumulative_length[i - 1] : stop]
+
+        return self.flattened_data[self.cumulative_length[i - 1] : stop]
 
     def __setitem__(self, i: int, new: NDArray) -> None:
         self.__getitem__(i)[:] = new
@@ -287,9 +284,8 @@ class VectorOfVectors(LGDO):
         is expected to perform poorly on large vectors.
         """
         if i >= len(self):
-            raise IndexError(
-                f"index {i} is out of bounds for vector owith size {len(self)}"
-            )
+            msg = f"index {i} is out of bounds for vector owith size {len(self)}"
+            raise IndexError(msg)
 
         self.flattened_data = Array(
             np.insert(self.flattened_data, self.cumulative_length[i - 1], new)
@@ -321,9 +317,8 @@ class VectorOfVectors(LGDO):
         is expected to perform poorly on large vectors.
         """
         if i >= len(self):
-            raise IndexError(
-                f"index {i} is out of bounds for vector with size {len(self)}"
-            )
+            msg = f"index {i} is out of bounds for vector with size {len(self)}"
+            raise IndexError(msg)
 
         vidx = self.cumulative_length
         dlen = len(new) - len(self[i])
@@ -433,7 +428,7 @@ class VectorOfVectors(LGDO):
 
     def to_aoesa(
         self,
-        max_len: int = None,
+        max_len: int | None = None,
         fill_val: bool | int | float = np.nan,
         preserve_dtype: bool = False,
     ) -> aoesa.ArrayOfEqualSizedArrays:
@@ -521,9 +516,8 @@ class VectorOfVectors(LGDO):
 
         if library == "ak":
             if attach_units:
-                raise ValueError(
-                    "Pint does not support Awkward yet, you must view the data with_units=False"
-                )
+                msg = "Pint does not support Awkward yet, you must view the data with_units=False"
+                raise ValueError(msg)
 
             # cannot avoid making a copy here. we should add the leading 0 to
             # cumulative_length inside VectorOfVectors at some point in the
@@ -545,17 +539,18 @@ class VectorOfVectors(LGDO):
                 return self.to_aoesa(fill_val=fill_val, preserve_dtype=True).view_as(
                     "np", with_units=with_units
                 )
-            else:
-                return self.to_aoesa().view_as("np", with_units=with_units)
+
+            return self.to_aoesa().view_as("np", with_units=with_units)
+
         if library == "pd":
             if attach_units:
-                raise ValueError(
-                    "Pint does not support Awkward yet, you must view the data with_units=False"
-                )
-            else:
-                return akpd.from_awkward(self.view_as("ak"))
-        else:
-            raise ValueError(f"{library} is not a supported third-party format.")
+                msg = "Pint does not support Awkward yet, you must view the data with_units=False"
+                raise ValueError(msg)
+
+            return akpd.from_awkward(self.view_as("ak"))
+
+        msg = f"{library} is not a supported third-party format."
+        raise ValueError(msg)
 
 
 def build_cl(
@@ -598,9 +593,8 @@ def build_cl(
     else:
         cumulative_length_out.fill(0)
     if len(cumulative_length_out) == 0 and len(sorted_array_in) > 0:
-        raise ValueError(
-            "cumulative_length_out too short ({len(cumulative_length_out)})"
-        )
+        msg = "cumulative_length_out too short ({len(cumulative_length_out)})"
+        raise ValueError(msg)
     return _nb_build_cl(sorted_array_in, cumulative_length_out)
 
 
@@ -614,7 +608,8 @@ def _nb_build_cl(sorted_array_in: NDArray, cumulative_length_out: NDArray) -> ND
             ii += 1
             cumulative_length_out[ii] = cumulative_length_out[ii - 1]
             if ii >= len(cumulative_length_out):
-                raise RuntimeError("cumulative_length_out too short")
+                msg = "cumulative_length_out too short"
+                raise RuntimeError(msg)
             last_val = val
         cumulative_length_out[ii] += 1
     ii += 1
@@ -660,12 +655,13 @@ def _nb_fill(aoa_in: NDArray, len_in: NDArray, flattened_array_out: NDArray):
     """
 
     if len(flattened_array_out) < len_in.sum():
-        raise ValueError("flattened array not large enough to hold values")
+        msg = "flattened array not large enough to hold values"
+        raise ValueError(msg)
 
     start = 0
-    for i, l in enumerate(len_in):
-        stop = start + l
-        flattened_array_out[start:stop] = aoa_in[i, :l]
+    for i, ll in enumerate(len_in):
+        stop = start + ll
+        flattened_array_out[start:stop] = aoa_in[i, :ll]
         start = stop
 
 
@@ -699,9 +695,8 @@ def explode_cl(cumulative_length: NDArray, array_out: NDArray = None) -> NDArray
     if array_out is None:
         array_out = np.empty(int(out_len), dtype=np.uint64)
     if len(array_out) != out_len:
-        raise ValueError(
-            f"bad lengths: cl[-1] ({cumulative_length[-1]}) != out ({len(array_out)})"
-        )
+        msg = f"bad lengths: cl[-1] ({cumulative_length[-1]}) != out ({len(array_out)})"
+        raise ValueError(msg)
     return _nb_explode_cl(cumulative_length, array_out)
 
 
@@ -710,7 +705,8 @@ def _nb_explode_cl(cumulative_length: NDArray, array_out: NDArray) -> NDArray:
     """numbified inner loop for explode_cl"""
     out_len = cumulative_length[-1] if len(cumulative_length) > 0 else 0
     if len(array_out) != out_len:
-        raise ValueError("bad lengths")
+        msg = "bad lengths"
+        raise ValueError(msg)
     start = 0
     for ii in range(len(cumulative_length)):
         nn = int(cumulative_length[ii] - start)
@@ -754,10 +750,11 @@ def explode(
     if array_out is None:
         array_out = np.empty(out_len, dtype=array_in.dtype)
     if len(cumulative_length) != len(array_in) or len(array_out) != out_len:
-        raise ValueError(
+        msg = (
             f"bad lengths: cl ({len(cumulative_length)}) != in ({len(array_in)}) "
             f"and cl[-1] ({cumulative_length[-1]}) != out ({len(array_out)})"
         )
+        raise ValueError(msg)
     return nb_explode(cumulative_length, array_in, array_out)
 
 
@@ -768,7 +765,8 @@ def nb_explode(
     """Numbified inner loop for :func:`.explode`."""
     out_len = cumulative_length[-1] if len(cumulative_length) > 0 else 0
     if len(cumulative_length) != len(array_in) or len(array_out) != out_len:
-        raise ValueError("bad lengths")
+        msg = "bad lengths"
+        raise ValueError(msg)
     ii = 0
     for jj in range(len(array_out)):
         while ii < len(cumulative_length) and jj >= cumulative_length[ii]:
@@ -778,7 +776,9 @@ def nb_explode(
 
 
 def explode_arrays(
-    cumulative_length: Array, arrays: list[NDArray], arrays_out: list[NDArray] = None
+    cumulative_length: Array,
+    arrays: list[NDArray],
+    arrays_out: list[NDArray] | None = None,
 ) -> list:
     """Explode a set of arrays using a `cumulative_length` array.
 

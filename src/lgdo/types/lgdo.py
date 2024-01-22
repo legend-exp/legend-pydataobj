@@ -17,22 +17,21 @@ class LGDO(ABC):
 
         if "datatype" in self.attrs:
             if self.attrs["datatype"] != self.form_datatype():
-                raise ValueError(
+                msg = (
                     f"datatype attribute ({self.attrs['datatype']}) does "
                     f"not match class datatype ({self.form_datatype()})!"
                 )
+                raise ValueError(msg)
         else:
             self.attrs["datatype"] = self.form_datatype()
 
     @abstractmethod
     def datatype_name(self) -> str:
         """The name for this LGDO's datatype attribute."""
-        pass
 
     @abstractmethod
     def form_datatype(self) -> str:
         """Return this LGDO's datatype attribute string."""
-        pass
 
     @abstractmethod
     def view_as(
@@ -67,7 +66,6 @@ class LGDO(ABC):
         with_units
             forward physical units to the output data.
         """
-        pass
 
     def getattrs(self, datatype: bool = False) -> dict:
         """Return a copy of the LGDO attributes dictionary.
@@ -87,4 +85,4 @@ class LGDO(ABC):
         return repr(self)
 
     def __repr__(self) -> str:
-        return self.__class__.__name__ + f"(attrs={repr(self.attrs)})"
+        return self.__class__.__name__ + f"(attrs={self.attrs!r})"

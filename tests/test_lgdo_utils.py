@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import numpy as np
 
-import lgdo.utils as utils
+from lgdo import utils
 
 
 def test_get_element_type():
@@ -8,7 +10,7 @@ def test_get_element_type():
         ("hi", "string"),
         (True, "bool"),
         (np.void(0), "blob"),
-        (int(0), "real"),
+        (0, "real"),
         (np.uint8(0), "real"),
         (float(0), "real"),
         (1 + 1j, "complex"),

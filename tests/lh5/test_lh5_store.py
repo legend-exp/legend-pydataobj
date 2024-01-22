@@ -1,3 +1,7 @@
+# ruff: noqa: ARG001
+
+from __future__ import annotations
+
 import logging
 import os
 
@@ -6,9 +10,7 @@ import numpy as np
 import pytest
 
 import lgdo
-import lgdo.lh5 as lh5
-import lgdo.types as types
-from lgdo import compression
+from lgdo import compression, lh5, types
 from lgdo.compression import RadwareSigcompress
 from lgdo.lh5.store import DEFAULT_HDF5_SETTINGS
 

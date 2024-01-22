@@ -1,7 +1,11 @@
+from __future__ import annotations
+
 import numpy as np
 
 from lgdo import ArrayOfEncodedEqualSizedArrays, ArrayOfEqualSizedArrays
 from lgdo.compression import varlen
+
+rng = np.random.default_rng()
 
 
 def _to_bin(array):
@@ -73,7 +77,7 @@ def test_uleb128zzdiff_encode_decode_equality():
 
 
 def test_uleb128zzdiff_encode_decode_2dmatrix_equality():
-    sig_in = np.random.randint(0, 10000, (10, 1000), dtype="uint32")
+    sig_in = rng.integers(0, 10000, (10, 1000), dtype="uint32")
     sig_out = np.empty((10, 1000 * 4), dtype="ubyte")
     nbytes = np.empty(10, dtype="uint32")
 
@@ -87,7 +91,7 @@ def test_uleb128zzdiff_encode_decode_2dmatrix_equality():
 
 
 def test_uleb128zzdiff_encode_decode_wrapper_2dmatrix_equality():
-    sig_in = np.random.randint(0, 10000, (10, 1000), dtype="uint32")
+    sig_in = rng.integers(0, 10000, (10, 1000), dtype="uint32")
     sig_in_dec, siglen = varlen.decode(varlen.encode(sig_in))
     assert np.array_equal(siglen, np.full(10, 1000))
 

@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import os
 
 import pytest
 
-import lgdo.lh5.utils as utils
+from lgdo.lh5 import utils
 
 
 @pytest.fixture(scope="module")

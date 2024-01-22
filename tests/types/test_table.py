@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import warnings
 
 import awkward as ak
@@ -5,7 +7,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-import lgdo as lgdo
+import lgdo
 from lgdo import Table
 
 

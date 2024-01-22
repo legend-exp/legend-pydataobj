@@ -41,7 +41,7 @@ def parse_datatype(datatype: str) -> tuple[str, tuple[int, ...], str | list[str]
     return utils.parse_datatype(datatype)
 
 
-def expand_vars(expr: str, substitute: dict[str, str] = None) -> str:
+def expand_vars(expr: str, substitute: dict[str, str] | None = None) -> str:
     warn(
         "'lgdo.lgdo_utils' has been renamed to 'lgdo.utils'. "
         "Please replace either 'import lgdo.lgdo_utils as utils' with 'import lgdo.utils as utils' "
@@ -55,9 +55,9 @@ def expand_vars(expr: str, substitute: dict[str, str] = None) -> str:
 
 def expand_path(
     path: str,
-    substitute: dict[str, str] = None,
+    substitute: dict[str, str] | None = None,
     list: bool = False,
-    base_path: str = None,
+    base_path: str | None = None,
 ) -> str | list:
     warn(
         "'lgdo.lgdo_utils' has been renamed to 'lgdo.utils'. "

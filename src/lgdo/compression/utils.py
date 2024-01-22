@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import re
 import sys
 
@@ -14,7 +16,8 @@ def str2wfcodec(expr: str) -> WaveformCodec:
     """
     match = re.match(r"(\w+)\((.*)\)", expr.strip())
     if match is None:
-        raise ValueError(f"invalid WaveformCodec expression '{expr}'")
+        msg = f"invalid WaveformCodec expression '{expr}'"
+        raise ValueError(msg)
 
     match = match.groups()
     codec = getattr(sys.modules[__name__], match[0].strip())
@@ -24,7 +27,8 @@ def str2wfcodec(expr: str) -> WaveformCodec:
         for items in match[1].split(","):
             sp = items.split("=")
             if len(sp) != 2:
-                raise ValueError(f"invalid WaveformCodec expression '{expr}'")
+                msg = f"invalid WaveformCodec expression '{expr}'"
+                raise ValueError(msg)
 
             try:
                 args[sp[0].strip()] = float(sp[1].strip())
