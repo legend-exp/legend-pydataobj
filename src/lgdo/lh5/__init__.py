@@ -7,7 +7,8 @@ browsed easily in python like any `HDF5 <https://www.hdfgroup.org>`_ file using
 from __future__ import annotations
 
 from .iterator import LH5Iterator
-from .store import LH5Store, load_dfs, load_nda, ls, read_as, show
+from .store import LH5Store
+from .tools import load_dfs, load_nda, ls, read_as, show
 
 __all__ = [
     "LH5Iterator",
