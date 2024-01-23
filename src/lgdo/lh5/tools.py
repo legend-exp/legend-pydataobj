@@ -246,7 +246,8 @@ def load_nda(
     """
     warn(
         "load_nda() is deprecated. "
-        "Please replace it with LH5Store.read(...).view_as('np'). "
+        "Please replace it with LH5Store.read(...).view_as('np'), "
+        "or just read_as(..., 'np'). "
         "load_nda() will be removed in a future release.",
         DeprecationWarning,
         stacklevel=2,
@@ -307,7 +308,8 @@ def load_dfs(
     """
     warn(
         "load_dfs() is deprecated. "
-        "Please replace it with LH5Store.read(...).view_as('pd'). "
+        "Please replace it with LH5Store.read(...).view_as('pd'), "
+        "or just read_as(..., 'pd'). "
         "load_dfs() will be removed in a future release.",
         DeprecationWarning,
         stacklevel=2,
