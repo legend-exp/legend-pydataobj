@@ -580,6 +580,17 @@ def test_write_with_hdf5_compression(lgnd_file, tmptestdir):
         assert h5f["/geds/raw/waveform/values"].shuffle is False
 
 
+def test_read_as(lh5_file):
+    store = lh5.LH5Store()
+    obj1, _ = store.read("/data/struct/table", lh5_file, start_row=1)
+    obj1 = obj1.view_as("pd", with_units=True)
+
+    obj2 = lh5.read_as(
+        "/data/struct/table", lh5_file, "pd", start_row=1, with_units=True
+    )
+    assert obj1.equals(obj2)
+
+
 # First test that we can overwrite a table with the same name without deleting the original field
 def test_write_object_overwrite_table_no_deletion(caplog, tmptestdir):
     caplog.set_level(logging.DEBUG)

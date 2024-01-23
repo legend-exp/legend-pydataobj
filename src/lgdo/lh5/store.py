@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import fnmatch
 import glob
+import inspect
 import logging
 import os
 import sys
@@ -1441,6 +1442,51 @@ def show(
             break
 
         key = k_new
+
+
+def read_as(
+    name: str,
+    lh5_file: str | h5py.File | list[str | h5py.File],
+    library: str,
+    **kwargs,
+) -> Any:
+    """Read LH5 data from disk straight into a third-party data format view.
+
+    This function is nothing more than a shortcut chained call to
+    :meth:`.LH5Store.read` and to :meth:`.LGDO.view_as`.
+
+    Parameters
+    ----------
+    name
+        LH5 object name on disk.
+    lh5_file
+        LH5 file name.
+    library
+        string ID of the third-party data format library (``np``, ``pd``,
+        ``ak``, etc).
+
+    See Also
+    --------
+    .LH5Store.read, .LGDO.view_as
+    """
+    # determine which keyword arguments should be forwarded to read() and which
+    # should be forwarded to view_as()
+    read_kwargs = inspect.signature(LH5Store.read).parameters.keys()
+
+    kwargs1 = {}
+    kwargs2 = {}
+    for k, v in kwargs.items():
+        if k in read_kwargs:
+            kwargs1[k] = v
+        else:
+            kwargs2[k] = v
+
+    # read the LGDO from disk
+    store = LH5Store()
+    obj, _ = store.read(name, lh5_file, **kwargs1)
+
+    # and finally return a view
+    return obj.view_as(library, **kwargs2)
 
 
 def load_nda(
