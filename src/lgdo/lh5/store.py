@@ -418,7 +418,7 @@ class LH5Store:
         # Below here is all array-like types. So trim idx if needed
         if idx is not None:
             # check if idx is just an ordered list of the integers if so can ignore
-            if (idx[0] == np.arange(0,len(idx[0]),1)).all():
+            if (idx[0] == np.arange(0, len(idx[0]), 1)).all():
                 idx = None
             else:
                 # chop off indices < start_row
