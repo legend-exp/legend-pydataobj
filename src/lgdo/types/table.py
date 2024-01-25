@@ -78,7 +78,7 @@ class Table(Struct):
 
         # if no col_dict, just set the size (default to 1024)
         else:
-            self.size = size if size is not None else 1024
+            self.size = size if size is not None else None
 
         # always start at loc=0
         self.loc = 0
@@ -137,8 +137,19 @@ class Table(Struct):
 
         super().add_field(name, obj)
 
+        if self.size is None:
+            self.size = len(obj)
+
         # check / update sizes
         if self.size != len(obj):
+            warn(
+                f"warning: you are trying to add {name} with length {len(obj)} to a table with size {self.size} and data might be lost. \n"
+                f"With 'use_obj_size' set to:\n"
+                f"  - True, the table will be resized to length {len(obj)} by padding/clipping its columns.\n"
+                f"  - False (default), object {name} will be padded/clipped to length {self.size}.",
+                UserWarning,
+                stacklevel=2,
+            )
             new_size = len(obj) if use_obj_size else self.size
             self.resize(new_size=new_size)
 

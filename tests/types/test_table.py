@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import warnings
+
 import awkward as ak
 import numpy as np
 import pandas as pd
@@ -11,7 +13,7 @@ from lgdo import Table
 
 def test_init():
     tbl = Table()
-    assert tbl.size == 1024
+    assert not tbl.size
     assert tbl.loc == 0
 
     tbl = Table(size=10)
@@ -68,6 +70,11 @@ def test_add_column():
     tbl = Table()
     tbl.add_column("a", lgdo.Array(np.array([1, 2, 3])), use_obj_size=True)
     assert tbl.size == 3
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        tbl.add_column("b", lgdo.Array(np.array([1, 2, 3, 4])))
+        assert len(w) == 1
+        assert issubclass(w[-1].category, UserWarning)
 
 
 def test_join():
@@ -88,7 +95,7 @@ def test_join():
 
 
 def test_view_as():
-    tbl = Table(4)
+    tbl = Table(3)
     tbl.add_column("a", lgdo.Array(np.array([1, 2, 3]), attrs={"units": "m"}))
     tbl.add_column("b", lgdo.Array(np.array([[0, 1, 2], [3, 4, 5], [6, 7, 8]])))
     tbl.add_column(
@@ -102,8 +109,8 @@ def test_view_as():
         "d",
         lgdo.Table(
             col_dict={
-                "a": lgdo.Array(np.array([2, 4, 6, 8]), attrs={"units": "m"}),
-                "b": lgdo.Array(np.array([[1, 1], [2, 4], [3, 9], [4, 16]])),
+                "a": lgdo.Array(np.array([2, 4, 6]), attrs={"units": "m"}),
+                "b": lgdo.Array(np.array([[1, 1], [2, 4], [3, 9]])),
             }
         ),
     )
