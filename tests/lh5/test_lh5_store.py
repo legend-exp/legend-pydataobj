@@ -245,6 +245,10 @@ def test_read_vov(lh5_file):
 
 def test_read_vov_fancy_idx(lh5_file):
     store = lh5.LH5Store()
+
+    lh5_obj, n_rows = store.read("/data/struct_full/vov", lh5_file, idx=[0], n_rows=1)
+    assert isinstance(lh5_obj, types.VectorOfVectors)
+
     lh5_obj, n_rows = store.read("/data/struct_full/vov", lh5_file, idx=[0, 2])
     assert isinstance(lh5_obj, types.VectorOfVectors)
 

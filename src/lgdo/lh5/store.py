@@ -417,11 +417,15 @@ class LH5Store:
 
         # Below here is all array-like types. So trim idx if needed
         if idx is not None:
-            # chop off indices < start_row
-            i_first_valid = bisect_left(idx[0], start_row)
-            idxa = idx[0][i_first_valid:]
-            # don't readout more than n_rows indices
-            idx = (idxa[:n_rows],)  # works even if n_rows > len(idxa)
+            # check if idx is just an ordered list of the integers if so can ignore
+            if (idx[0] == np.arange(0, len(idx[0]), 1)).all():
+                idx = None
+            else:
+                # chop off indices < start_row
+                i_first_valid = bisect_left(idx[0], start_row)
+                idxa = idx[0][i_first_valid:]
+                # don't readout more than n_rows indices
+                idx = (idxa[:n_rows],)  # works even if n_rows > len(idxa)
 
         # Table or WaveformTable
         if datatype == "table":
