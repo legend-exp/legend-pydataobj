@@ -415,6 +415,8 @@ class LH5Store:
         if idx is not None:
             # check if idx is just an ordered list of the integers if so can ignore
             if (idx[0] == np.arange(0, len(idx[0]), 1)).all():
+                if n_rows > len(idx[0]):
+                    n_rows = len(idx[0])
                 idx = None
             else:
                 # chop off indices < start_row
