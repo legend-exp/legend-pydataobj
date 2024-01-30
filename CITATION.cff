@@ -1,7 +1,7 @@
 cff-version: 1.2.0
 title: legend-pydataobj
-doi: FILLME
-date-released: 2024-01-01
+doi: https://doi.org/10.5281/zenodo.10592108
+date-released: 2024-01-30
 url: https://github.com/github-linguist/linguist
 message: "If you use this software, please cite it as below."
 authors:
@@ -22,4 +22,4 @@ authors:
     orcid: https://orcid.org/0009-0003-2539-4333
   - family-names: Neuberger
     given-names: Moritz
-    orcid https://orcid.org/0009-0001-8471-9076:
+    orcid: https://orcid.org/0009-0001-8471-9076

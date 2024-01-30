@@ -98,6 +98,7 @@ Next steps
 
    Source Code <https://github.com/legend-exp/legend-pydataobj>
    License <https://github.com/legend-exp/legend-pydataobj/blob/main/LICENSE>
+   Citation <https://doi.org/10.5281/zenodo.10592107>
    Changelog <https://github.com/legend-exp/legend-pydataobj/releases>
    developer
 
