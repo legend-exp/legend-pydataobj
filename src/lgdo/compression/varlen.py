@@ -333,8 +333,8 @@ def uleb128_decode(encx: NDArray[ubyte]) -> (int, int):
         the decoded value and the number of bytes read from the input array.
     """
     if len(encx) <= 0:
-        msg = "input bytes array is empty"
-        raise ValueError(msg)
+        empty_msg = "input bytes array is empty"
+        raise ValueError(empty_msg)
 
     x = pos = uint32(0)
     for b in encx:
@@ -344,8 +344,8 @@ def uleb128_decode(encx: NDArray[ubyte]) -> (int, int):
         pos += 7
 
         if pos >= 64:
-            msg = "overflow during decoding of varint encoded number"
-            raise OverflowError(msg)
+            overflow_msg = "overflow during decoding of varint encoded number"
+            raise OverflowError(overflow_msg)
 
     msg = "malformed varint"
     raise RuntimeError(msg)

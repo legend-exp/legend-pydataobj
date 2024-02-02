@@ -530,7 +530,7 @@ class VectorOfVectors(LGDO):
 
             layout = ak.contents.ListOffsetArray(
                 offsets=ak.index.Index(offsets),
-                content=ak.contents.NumpyArray(self.flattened_data),
+                content=ak.contents.NumpyArray(self.flattened_data.nda),
             )
             return ak.Array(layout)
 

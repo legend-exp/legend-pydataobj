@@ -18,4 +18,5 @@ compression algorithms for particle detector signals. More documentation is
 available in the
 [LEGEND data format specification](https://legend-exp.github.io/legend-data-format-specs).
 
-If you are using this software, [consider citing](https://doi.org/10.5281/zenodo.10592107)!
+If you are using this software,
+[consider citing](https://doi.org/10.5281/zenodo.10592107)!
