@@ -196,6 +196,7 @@ class Array(LGDO):
                 msg = "Pint does not support Awkward yet, you must view the data with_units=False"
                 raise ValueError(msg)
 
+            # NOTE: this is zero-copy!
             return ak.Array(self.nda)
 
         msg = f"{library} is not a supported third-party format."

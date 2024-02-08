@@ -391,11 +391,11 @@ class Table(Struct):
         --------
         .LGDO.view_as
         """
+        if cols is None:
+            cols = self.keys()
+
         if library == "pd":
             df = pd.DataFrame()
-
-            if cols is None:
-                cols = self.keys()
 
             for col in cols:
                 data = self[col]
@@ -426,7 +426,10 @@ class Table(Struct):
                 msg = "Pint does not support Awkward yet, you must view the data with_units=False"
                 raise ValueError(msg)
 
-            return ak.Array(self)
+            # NOTE: passing the Table directly (which inherits from a dict)
+            # makes it somehow really slow. Not sure why, but this could be due
+            # to extra LGDO fields (like "attrs")
+            return ak.Array({col: self[col].view_as("ak") for col in cols})
 
         msg = f"{library!r} is not a supported third-party format."
         raise TypeError(msg)
