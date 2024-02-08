@@ -182,6 +182,7 @@ class Array(LGDO):
             if self.nda.ndim == 1:
                 return pd.Series(self.nda, copy=False)
 
+            # if array is multi-dim, use awkward
             return akpd.from_awkward(self.view_as("ak"))
 
         if library == "np":
@@ -195,6 +196,7 @@ class Array(LGDO):
                 msg = "Pint does not support Awkward yet, you must view the data with_units=False"
                 raise ValueError(msg)
 
+            # NOTE: this is zero-copy!
             return ak.Array(self.nda)
 
         msg = f"{library} is not a supported third-party format."
