@@ -182,6 +182,7 @@ class Array(LGDO):
             if self.nda.ndim == 1:
                 return pd.Series(self.nda, copy=False)
 
+            # if array is multi-dim, use awkward
             return akpd.from_awkward(self.view_as("ak"))
 
         if library == "np":

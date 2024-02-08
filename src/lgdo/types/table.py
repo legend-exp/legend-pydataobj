@@ -381,10 +381,11 @@ class Table(Struct):
             forward physical units to the output data.
         cols
             a list of column names specifying the subset of the table's columns
-            to be added to the dataframe.
+            to be added to the data view structure.
         prefix
-            The prefix to be added to the column names. Used when recursively getting the
-            dataframe of a table inside this table.
+            The prefix to be added to the column names. Used when recursively
+            getting the dataframe of a :class:`Table` inside this
+            :class:`Table`.
 
         See Also
         --------
@@ -392,30 +393,32 @@ class Table(Struct):
         """
         if library == "pd":
             df = pd.DataFrame()
+
             if cols is None:
                 cols = self.keys()
+
             for col in cols:
-                column = self[col]
-                if isinstance(column, (Array, VectorOfVectors)):
-                    tmp_ser = column.view_as("pd", with_units=with_units).rename(
-                        prefix + str(col)
-                    )
-                    df = pd.DataFrame(tmp_ser) if df.empty else df.join(tmp_ser)
-                elif isinstance(column, Table):
-                    tmp_df = column.view_as(
+                data = self[col]
+
+                if isinstance(data, Table):
+                    log.debug(f"viewing Table {col=!r} recursively")
+
+                    tmp_df = data.view_as(
                         "pd", with_units=with_units, prefix=f"{prefix}{col}_"
                     )
-                    df = tmp_df if df.empty else df.join(tmp_df)
-                elif df.empty:
-                    df[prefix + str(col)] = column.view_as("pd", with_units=with_units)
+                    for k, v in tmp_df.items():
+                        df[k] = v
+
                 else:
-                    df[prefix + str(col)] = df.join(
-                        column.view_as("pd", with_units=with_units)
+                    log.debug(
+                        f"viewing {type(data).__name__} column {col!r} as Pandas Series"
                     )
+                    df[f"{prefix}{col}"] = data.view_as("pd", with_units=with_units)
+
             return df
 
         if library == "np":
-            msg = f"Format {library} is not supported for Tables."
+            msg = f"Format {library!r} is not supported for Tables."
             raise TypeError(msg)
 
         if library == "ak":
@@ -425,5 +428,5 @@ class Table(Struct):
 
             return ak.Array(self)
 
-        msg = f"{library} is not a supported third-party format."
+        msg = f"{library!r} is not a supported third-party format."
         raise TypeError(msg)
