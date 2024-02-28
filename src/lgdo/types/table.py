@@ -199,6 +199,11 @@ class Table(Struct):
     ) -> pd.DataFrame:
         """Get a :class:`pandas.DataFrame` from the data in the table.
 
+        Warning
+        -------
+        This method is deprecated. Use :meth:`.view_as` to view the table as a
+        Pandas dataframe.
+
         Notes
         -----
         The requested data must be array-like, with the ``nda`` attribute.

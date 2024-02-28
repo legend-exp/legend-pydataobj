@@ -1,3 +1,7 @@
+"""
+.. warning::
+    This subpackage is deprecated, use :mod:`lgdo.lh5`.
+"""
 from __future__ import annotations
 
 import sys
@@ -29,6 +33,11 @@ DEFAULT_HDF5_SETTINGS: dict[str, ...] = {"shuffle": True, "compression": "gzip"}
 
 
 class LH5Iterator(lh5.LH5Iterator):
+    """
+    .. warning::
+        This class is deprecated, use :class:`lgdo.lh5.iterator.LH5Iterator`.
+    """
+
     def __init__(
         self,
         lh5_files: str | list[str],
@@ -70,6 +79,10 @@ class LH5Iterator(lh5.LH5Iterator):
         write_start: int = 0,
         **h5py_kwargs,
     ) -> None:
+        """
+        .. warning::
+            This method is deprecated, use :meth:`lgdo.lh5.iterator.LH5Iterator.write`.
+        """
         warn(
             "lgdo.lh5_store has moved to a subfolder lgdo.lh5 containing LH5Iterator. "
             "The object you are calling this function from uses the old LH5Iterator class."
@@ -102,6 +115,10 @@ class LH5Iterator(lh5.LH5Iterator):
         obj_buf_start: int = 0,
         decompress: bool = True,
     ) -> tuple[LGDO, int]:
+        """
+        .. warning::
+            This method is deprecated, use :meth:`lgdo.lh5.iterator.LH5Iterator.read`.
+        """
         warn(
             "lgdo.lh5_store has moved to a subfolder lgdo.lh5 containing LH5Iterator. "
             "The object you are calling this function from uses the old LH5Iterator class."
@@ -124,6 +141,11 @@ class LH5Iterator(lh5.LH5Iterator):
 
 
 class LH5Store(lh5.LH5Store):
+    """
+    .. warning::
+        This class is deprecated, use :class:`lgdo.lh5.iterator.LH5Store`.
+    """
+
     def __init__(self, base_path: str = "", keep_open: bool = False):
         warn(
             "lgdo.lh5_store has moved to a subfolder lgdo.lh5 containing LH5Store. "
@@ -140,6 +162,10 @@ class LH5Store(lh5.LH5Store):
         lh5_file: str | h5py.File | list[str | h5py.File],
         **kwargs,
     ) -> tuple[LGDO, int]:
+        """
+        .. warning::
+            This method is deprecated, use :meth:`lgdo.lh5.store.LH5Store.read`.
+        """
         warn(
             "LH5Store.read_object() has been renamed to LH5Store.read(), "
             "Please update your code."
@@ -156,6 +182,10 @@ class LH5Store(lh5.LH5Store):
         lh5_file: str | h5py.File,
         **kwargs,
     ) -> tuple[LGDO, int]:
+        """
+        .. warning::
+            This method is deprecated, use :meth:`lgdo.lh5.store.LH5Store.write`.
+        """
         warn(
             "LH5Store.write_object() has been renamed to LH5Store.write(), "
             "Please update your code."
@@ -172,6 +202,11 @@ def load_dfs(
     lh5_group: str = "",
     idx_list: list[np.ndarray | list | tuple] | None = None,
 ) -> pd.DataFrame:
+    """
+    .. warning::
+        This function is deprecated, use :meth:`lgdo.types.lgdo.LGDO.view_as` to
+        view LGDO data as a Pandas data structure.
+    """
     warn(
         "lgdo.lh5_store has moved to a subfolder lgdo.lh5. "
         "Please replace 'from lgdo.lh5_store import load_dfs' with 'from lgdo.lh5 import load_dfs'. "
@@ -188,6 +223,11 @@ def load_nda(
     lh5_group: str = "",
     idx_list: list[np.ndarray | list | tuple] | None = None,
 ) -> dict[str, np.ndarray]:
+    """
+    .. warning::
+        This function is deprecated, use :meth:`lgdo.types.lgdo.LGDO.view_as` to
+        view LGDO data as a NumPy data structure.
+    """
     warn(
         "lgdo.lh5_store has moved to a subfolder lgdo.lh5. "
         "Please replace 'from lgdo.lh5_store import load_nda' with 'from lgdo.lh5 import load_nda'. "
@@ -199,6 +239,10 @@ def load_nda(
 
 
 def ls(lh5_file: str | h5py.Group, lh5_group: str = "") -> list[str]:
+    """
+    .. warning::
+        This function is deprecated, import :func:`lgdo.lh5.tools.ls`.
+    """
     warn(
         "lgdo.lh5_store has moved to a subfolder lgdo.lh5. "
         "Please replace 'from lgdo.lh5_store import ls' with 'from lgdo.lh5 import ls'. "
@@ -216,6 +260,10 @@ def show(
     indent: str = "",
     header: bool = True,
 ) -> None:
+    """
+    .. warning::
+        This function is deprecated, import :func:`lgdo.lh5.tools.show`.
+    """
     warn(
         "lgdo.lh5_store has moved to a subfolder lgdo.lh5. "
         "Please replace 'from lgdo.lh5_store import show' with 'from lgdo.lh5 import show'. "
