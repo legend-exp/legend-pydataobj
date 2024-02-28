@@ -144,7 +144,6 @@ isort.required-imports = ["from __future__ import annotations"]
 "tests/**" = ["T20"]
 "noxfile.py" = ["T20"]
 
-
 [tool.pylint]
 py-version = "3.8"
 ignore-paths = [".*/_version.py"]
@@ -157,3 +156,14 @@ messages_control.disable = [
   "missing-module-docstring",
   "wrong-import-position",
 ]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = ["-ra", "--showlocals", "--strict-markers", "--strict-config"]
+xfail_strict = true
+filterwarnings = ["error", 'ignore:\nPyarrow:DeprecationWarning']
+log_cli_level = "info"
+testpaths = "tests"
+
+[tool.codespell]
+ignore-words-list = "nd, unparseable, compiletime"
