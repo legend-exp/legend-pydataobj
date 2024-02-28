@@ -88,9 +88,9 @@ Next steps
    :maxdepth: 1
    :caption: Related projects
 
-   pygama <https://pygama.readthedocs.io>
    Decoding Digitizer Data <https://legend-daq2lh5.readthedocs.io>
    Digital Signal Processing <https://dspeed.readthedocs.io>
+   pygama <https://pygama.readthedocs.io>
 
 .. toctree::
    :maxdepth: 1
