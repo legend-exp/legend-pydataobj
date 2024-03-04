@@ -934,10 +934,11 @@ class LH5Store:
               end of array is the same as ``append``.
             - ``overwrite_file`` or ``of``: delete file if present prior to
               writing to it. `write_start` should be 0 (its ignored).
-            - ``append_column`` or ``ac``: append columns from an :class:`~.lgdo.table.Table`
-              `obj` only if there is an existing :class:`~.lgdo.table.Table` in the `lh5_file` with
-              the same `name` and :class:`~.lgdo.table.Table.size`. If the sizes don't match,
-              or if there are matching fields, it errors out.
+            - ``append_column`` or ``ac``: append columns from an
+              :class:`~.lgdo.table.Table` `obj` only if there is an existing
+              :class:`~.lgdo.table.Table` in the `lh5_file` with the same
+              `name` and :class:`~.lgdo.table.Table.size`. If the sizes don't
+              match, or if there are matching fields, it errors out.
         write_start
             row in the output file (if already existing) to start overwriting
             from.

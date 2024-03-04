@@ -6,6 +6,7 @@ import inspect
 import logging
 import os
 from collections.abc import Iterable
+from copy import copy
 from typing import Any
 from warnings import warn
 
@@ -20,7 +21,11 @@ from .store import LH5Store
 log = logging.getLogger(__name__)
 
 
-def ls(lh5_file: str | h5py.Group, lh5_group: str = "") -> list[str]:
+def ls(
+    lh5_file: str | h5py.Group,
+    lh5_group: str = "",
+    recursive: bool = False,
+) -> list[str]:
     """Return a list of LH5 groups in the input file and group, similar
     to ``ls`` or ``h5ls``. Supports wildcards in group names.
 
@@ -32,6 +37,8 @@ def ls(lh5_file: str | h5py.Group, lh5_group: str = "") -> list[str]:
     lh5_group
         group to search. add a ``/`` to the end of the group name if you want to
         list all objects inside that group.
+    recursive
+        if ``True``, recurse into subgroups.
     """
 
     log.debug(
@@ -49,15 +56,30 @@ def ls(lh5_file: str | h5py.Group, lh5_group: str = "") -> list[str]:
     if lh5_group == "":
         lh5_group = "*"
 
+    # get the first group in the group path
     splitpath = lh5_group.split("/", 1)
+    # filter out objects that don't match lh5_group pattern
     matchingkeys = fnmatch.filter(lh5_file.keys(), splitpath[0])
 
-    if len(splitpath) == 1:
-        return matchingkeys
-
     ret = []
-    for key in matchingkeys:
-        ret.extend([f"{key}/{path}" for path in ls(lh5_file[key], splitpath[1])])
+    # if there were no "/" in lh5_group just return the result
+    if len(splitpath) == 1:
+        ret = matchingkeys
+
+    else:
+        for key in matchingkeys:
+            ret.extend([f"{key}/{path}" for path in ls(lh5_file[key], splitpath[1])])
+
+    if recursive:
+        rec_ret = copy(ret)
+        for obj in ret:
+            try:
+                rec_ret += ls(lh5_file, lh5_group=f"{obj}/", recursive=True)
+            except AttributeError:
+                continue
+
+        return rec_ret
+
     return ret
 
 
