@@ -116,6 +116,13 @@ def lh5concat():
         action="append",
         default=None,
     )
+    parser.add_argument(
+        "--exclude",
+        "-e",
+        help="""List of object names that should be excluded. Takes priority over --include""",
+        action="append",
+        default=None,
+    )
 
     args = parser.parse_args()
 
@@ -134,15 +141,32 @@ def lh5concat():
         msg = "you must provide at least two input files"
         raise RuntimeError(msg)
 
-    # determine list of objects by ls'ing first file
+    # determine list of objects by recursively ls'ing first file
     file0 = args.lh5_file[0]
-    obj_list_full = lh5.ls(file0, recursive=True)
+    obj_list_full = set(lh5.ls(file0, recursive=True))
+
+    # let's remove objects with nested LGDOs in
+    to_remove = set()
+    for name in obj_list_full:
+        if len(fnmatch.filter(obj_list_full, f"{name}/*")) > 1:
+            to_remove.add(name)
+    obj_list_full -= to_remove
+
     obj_list = set()
+    # now first remove excluded stuff
+    if args.exclude is not None:
+        for exc in args.exclude:
+            obj_list_full -= set(fnmatch.filter(obj_list_full, exc.strip("/")))
+
+    # then make list of included, based on latest list
     if args.include is not None:
         for inc in args.include:
             obj_list |= set(fnmatch.filter(obj_list_full, inc.strip("/")))
     else:
-        obj_list = set(obj_list_full)
+        obj_list = obj_list_full
+
+    # sort
+    obj_list = sorted(obj_list)
 
     msg = f"objects matching include patterns {args.include} in {file0}: {obj_list}"
     log.debug(msg)
