@@ -202,29 +202,31 @@ class LH5Store:
             actual number of rows read will be returned as one of the return
             values (see below).
         idx
-            For NumPy-style "fancying indexing" for the read to select only some
-            rows, e.g. after applying some cuts to particular columns.
-            Only selection along the first axis is supported, so tuple arguments
-            must be one-tuples.  If `n_rows` is not false, `idx` will be truncated to
-            `n_rows` before reading. To use with a list of files, can pass in a list of
-            `idx`'s (one for each file) or use a long contiguous list (e.g. built from a previous
-            identical read). If used in conjunction with `start_row` and `n_rows`,
-            will be sliced to obey those constraints, where `n_rows` is
-            interpreted as the (max) number of *selected* values (in `idx`) to be
-            read out. Note that the ``use_h5idx`` parameter controls some behaviour of the
-            read and that the default behavior (``use_h5idx=False``) prioritizes speed over
-            a small memory penalty.
+            For NumPy-style "fancying indexing" for the read to select only
+            some rows, e.g. after applying some cuts to particular columns.
+            Only selection along the first axis is supported, so tuple
+            arguments must be one-tuples.  If `n_rows` is not false, `idx` will
+            be truncated to `n_rows` before reading. To use with a list of
+            files, can pass in a list of `idx`'s (one for each file) or use a
+            long contiguous list (e.g. built from a previous identical read).
+            If used in conjunction with `start_row` and `n_rows`, will be
+            sliced to obey those constraints, where `n_rows` is interpreted as
+            the (max) number of *selected* values (in `idx`) to be read out.
+            Note that the ``use_h5idx`` parameter controls some behaviour of
+            the read and that the default behavior (``use_h5idx=False``)
+            prioritizes speed over a small memory penalty.
         use_h5idx
             ``True`` will directly pass the ``idx`` parameter to the underlying
-            ``h5py`` call such that only the selected rows are read directly into memory,
-            which conserves memory at the cost of speed. There can be a significant penalty
-            to speed for larger files (1 - 2 orders of magnitude longer time).
-            ``False`` (default) will read the entire object into memory before
-            performing the indexing. The default is much faster but requires additional memory,
-            though a relatively small amount in the typical use case. It is recommended to
-            leave this parameter as its default.
+            ``h5py`` call such that only the selected rows are read directly
+            into memory, which conserves memory at the cost of speed. There can
+            be a significant penalty to speed for larger files (1 - 2 orders of
+            magnitude longer time).  ``False`` (default) will read the entire
+            object into memory before performing the indexing. The default is
+            much faster but requires additional memory, though a relatively
+            small amount in the typical use case. It is recommended to leave
+            this parameter as its default.
         field_mask
-            For tables and structs, determines which fields get written out.
+            For tables and structs, determines which fields get read out.
             Only applies to immediate fields of the requested objects. If a dict
             is used, a default dict will be made with the default set to the
             opposite of the first element in the dict. This way if one specifies
@@ -375,7 +377,7 @@ class LH5Store:
             # fields. If implemented, get_buffer() above should probably also
             # (optionally?) prep buffers for each field
             if obj_buf is not None:
-                msg = "obj_buf not implemented for LGOD Structs"
+                msg = "obj_buf not implemented for LGDO Structs"
                 raise NotImplementedError(msg)
 
             # loop over fields and read
@@ -934,10 +936,11 @@ class LH5Store:
               end of array is the same as ``append``.
             - ``overwrite_file`` or ``of``: delete file if present prior to
               writing to it. `write_start` should be 0 (its ignored).
-            - ``append_column`` or ``ac``: append columns from an :class:`~.lgdo.table.Table`
-              `obj` only if there is an existing :class:`~.lgdo.table.Table` in the `lh5_file` with
-              the same `name` and :class:`~.lgdo.table.Table.size`. If the sizes don't match,
-              or if there are matching fields, it errors out.
+            - ``append_column`` or ``ac``: append columns from an
+              :class:`~.lgdo.table.Table` `obj` only if there is an existing
+              :class:`~.lgdo.table.Table` in the `lh5_file` with the same
+              `name` and :class:`~.lgdo.table.Table.size`. If the sizes don't
+              match, or if there are matching fields, it errors out.
         write_start
             row in the output file (if already existing) to start overwriting
             from.
@@ -982,8 +985,11 @@ class LH5Store:
 
         # struct or table or waveform table
         if isinstance(obj, Struct):
-            # In order to append a column, we need to update the `table{old_fields}` value in `group.attrs['datatype"]` to include the new fields.
-            # One way to do this is to override `obj.attrs["datatype"]` to include old and new fields. Then we can write the fields to the table as normal.
+            # In order to append a column, we need to update the
+            # `table{old_fields}` value in `group.attrs['datatype"]` to include
+            # the new fields.  One way to do this is to override
+            # `obj.attrs["datatype"]` to include old and new fields. Then we
+            # can write the fields to the table as normal.
             if wo_mode == "ac":
                 old_group = self.gimme_group(name, group)
                 datatype, shape, fields = parse_datatype(old_group.attrs["datatype"])
@@ -991,8 +997,10 @@ class LH5Store:
                     msg = f"Trying to append columns to an object of type {datatype}"
                     raise RuntimeError(msg)
 
-                # If the mode is `append_column`, make sure we aren't appending a table that has a column of the same name as in the existing table
-                # Also make sure that the field we are adding has the same size
+                # If the mode is `append_column`, make sure we aren't appending
+                # a table that has a column of the same name as in the existing
+                # table. Also make sure that the field we are adding has the
+                # same size
                 if len(list(set(fields).intersection(set(obj.keys())))) != 0:
                     msg = f"Can't append {list(set(fields).intersection(set(obj.keys())))} column(s) to a table with the same field(s)"
                     raise ValueError(msg)
@@ -1012,10 +1020,13 @@ class LH5Store:
                 grp_attrs=obj.attrs,
                 overwrite=(wo_mode in ["o", "ac"]),
             )
-            # If the mode is overwrite, then we need to peek into the file's table's existing fields
-            # If we are writing a new table to the group that does not contain an old field, we should delete that old field from the file
+            # If the mode is overwrite, then we need to peek into the file's
+            # table's existing fields.  If we are writing a new table to the
+            # group that does not contain an old field, we should delete that
+            # old field from the file
             if wo_mode == "o":
-                # Find the old keys in the group that are not present in the new table's keys, then delete them
+                # Find the old keys in the group that are not present in the
+                # new table's keys, then delete them
                 for key in list(set(group.keys()) - set(obj.keys())):
                     log.debug(f"{key} is not present in new table, deleting field")
                     del group[key]

@@ -2,15 +2,17 @@
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import logging
 import sys
 
-import lgdo
-import lgdo.logging
-from lgdo.lh5 import show
+from . import Array, Table, VectorOfVectors, __version__, lh5
+from . import logging as lgdogging  # eheheh
+
+log = logging.getLogger(__name__)
 
 
-def lh5ls():
+def lh5ls(args=None):
     """:func:`.lh5.show` command line interface."""
     parser = argparse.ArgumentParser(
         prog="lh5ls", description="Inspect LEGEND HDF5 (LH5) file contents"
@@ -18,7 +20,9 @@ def lh5ls():
 
     # global options
     parser.add_argument(
-        "--version", action="store_true", help="""Print lgdo version and exit"""
+        "--version",
+        action="store_true",
+        help="""Print legend-pydataobj version and exit""",
     )
     parser.add_argument(
         "--verbose",
@@ -34,7 +38,7 @@ def lh5ls():
 
     parser.add_argument(
         "lh5_file",
-        help="""Input LH5 file.""",
+        help="""Input LH5 file""",
     )
     parser.add_argument("lh5_group", nargs="?", help="""LH5 group.""", default="/")
     parser.add_argument(
@@ -48,17 +52,204 @@ def lh5ls():
         help="""Maximum tree depth of groups to print""",
     )
 
-    args = parser.parse_args()
+    args = parser.parse_args(args)
 
     if args.verbose:
-        lgdo.logging.setup(logging.DEBUG)
+        lgdogging.setup(logging.DEBUG)
     elif args.debug:
-        lgdo.logging.setup(logging.DEBUG, logging.root)
+        lgdogging.setup(logging.DEBUG, logging.root)
     else:
-        lgdo.logging.setup()
+        lgdogging.setup()
 
     if args.version:
-        print(lgdo.__version__)  # noqa: T201
+        print(__version__)  # noqa: T201
         sys.exit()
 
-    show(args.lh5_file, args.lh5_group, attrs=args.attributes, depth=args.depth)
+    lh5.show(args.lh5_file, args.lh5_group, attrs=args.attributes, depth=args.depth)
+
+
+def lh5concat(args=None):
+    """Command line interface for concatenating array-like LGDOs in LH5 files."""
+    parser = argparse.ArgumentParser(
+        prog="lh5concat", description="Concatenate LGDO Arrays and Tables in LH5 files"
+    )
+
+    # global options
+    parser.add_argument(
+        "--version",
+        action="store_true",
+        help="""Print legend-pydataobj version and exit""",
+    )
+    parser.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="""Increase the program verbosity""",
+    )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="""Increase the program verbosity to maximum""",
+    )
+
+    parser.add_argument(
+        "lh5_file",
+        nargs="+",
+        help="""Input LH5 files""",
+    )
+    parser.add_argument(
+        "--output",
+        "-o",
+        help="""Output file""",
+        required=True,
+    )
+    parser.add_argument(
+        "--overwrite",
+        "-w",
+        action="store_true",
+        help="""Overwrite output file""",
+    )
+    parser.add_argument(
+        "--include",
+        "-i",
+        help="""Regular expression (fnmatch style) for object names that should
+        be concatenated. The option can be passed multiple times to pass a list
+        of patterns.
+        """,
+        action="append",
+        default=None,
+    )
+    parser.add_argument(
+        "--exclude",
+        "-e",
+        help="""List of object names that should be excluded. Takes priority over --include""",
+        action="append",
+        default=None,
+    )
+
+    args = parser.parse_args(args)
+
+    if args.verbose:
+        lgdogging.setup(logging.DEBUG, log)
+    elif args.debug:
+        lgdogging.setup(logging.DEBUG, logging.root)
+    else:
+        lgdogging.setup()
+
+    if args.version:
+        print(__version__)  # noqa: T201
+        sys.exit()
+
+    if len(args.lh5_file) < 2:
+        msg = "you must provide at least two input files"
+        raise RuntimeError(msg)
+
+    # determine list of objects by recursively ls'ing first file
+    file0 = args.lh5_file[0]
+    obj_list_full = set(lh5.ls(file0, recursive=True))
+
+    # let's remove objects with nested LGDOs inside
+    to_remove = set()
+    for name in obj_list_full:
+        if len(fnmatch.filter(obj_list_full, f"{name}/*")) > 1:
+            to_remove.add(name)
+    obj_list_full -= to_remove
+
+    obj_list = set()
+    # now first remove excluded stuff
+    if args.exclude is not None:
+        for exc in args.exclude:
+            obj_list_full -= set(fnmatch.filter(obj_list_full, exc.strip("/")))
+
+    # then make list of included, based on latest list
+    if args.include is not None:
+        for inc in args.include:
+            obj_list |= set(fnmatch.filter(obj_list_full, inc.strip("/")))
+    else:
+        obj_list = obj_list_full
+
+    # sort
+    obj_list = sorted(obj_list)
+
+    msg = f"objects matching include patterns {args.include} in {file0}: {obj_list}"
+    log.debug(msg)
+
+    # 1. read first valid lgdo from left to right
+    store = lh5.LH5Store()
+    h5f0 = store.gimme_file(file0)
+    lgdos = {}
+    # loop over object list in the first file
+    for name in obj_list:
+        # now loop over groups starting from root
+        current = ""
+        for item in name.split("/"):
+            current = f"{current}/{item}".strip("/")
+
+            if current in lgdos:
+                break
+
+            # not even an LGDO!
+            if "datatype" not in h5f0[current].attrs:
+                continue
+
+            # read as little as possible
+            obj, _ = store.read(current, h5f0, n_rows=1)
+            if isinstance(obj, (Table, Array, VectorOfVectors)):
+                # read all!
+                obj, _ = store.read(current, h5f0)
+                lgdos[current] = obj
+
+            break
+
+    msg = f"first-level, array-like objects: {lgdos.keys()}"
+    log.debug(msg)
+
+    h5f0.close()
+
+    # 2. remove (nested) table fields based on obj_list
+
+    def _inplace_table_filter(name, table):
+        # filter objects nested in this LGDO
+        skm = fnmatch.filter(obj_list, f"{name}/*")
+        kept = {it.removeprefix(name).strip("/").split("/")[0] for it in skm}
+
+        # now remove fields
+        for k in list(table.keys()):
+            if k not in kept:
+                table.pop(k)
+
+        msg = f"fields left in table '{name}': {table.keys()}"
+        log.debug(msg)
+
+        # recurse!
+        for k2, v2 in table.items():
+            if not isinstance(v2, Table):
+                continue
+
+            _inplace_table_filter(f"{name}/{k2}", v2)
+
+    for key, val in lgdos.items():
+        if not isinstance(val, Table):
+            continue
+
+        _inplace_table_filter(key, val)
+
+    # 3. write to output file
+
+    for name, obj in lgdos.items():
+        store.write(
+            obj,
+            name,
+            args.output,
+            wo_mode="overwrite_file" if args.overwrite else "write_safe",
+        )
+
+    # 4. loop over rest of files/names and write-append
+
+    for file in args.lh5_file[1:]:
+        msg = f"chaining file {file}"
+        log.debug(msg)
+
+        for name in obj_list:
+            obj, _ = store.read(name, file)
+            store.write(obj, name, args.output, wo_mode="append")
