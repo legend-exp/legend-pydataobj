@@ -112,7 +112,10 @@ def lh5concat(args=None):
     parser.add_argument(
         "--include",
         "-i",
-        help="""List of object names that should be concatenated""",
+        help="""Regular expression (fnmatch style) for object names that should
+        be concatenated. The option can be passed multiple times to pass a list
+        of patterns.
+        """,
         action="append",
         default=None,
     )
@@ -191,7 +194,7 @@ def lh5concat(args=None):
 
             # read as little as possible
             obj, _ = store.read(current, h5f0, n_rows=1)
-            if isinstance(obj, Table | Array | VectorOfVectors):
+            if isinstance(obj, (Table, Array, VectorOfVectors)):
                 # read all!
                 obj, _ = store.read(current, h5f0)
                 lgdos[current] = obj
