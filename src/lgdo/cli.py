@@ -12,7 +12,7 @@ from . import logging as lgdogging  # eheheh
 log = logging.getLogger(__name__)
 
 
-def lh5ls():
+def lh5ls(args=None):
     """:func:`.lh5.show` command line interface."""
     parser = argparse.ArgumentParser(
         prog="lh5ls", description="Inspect LEGEND HDF5 (LH5) file contents"
@@ -52,7 +52,7 @@ def lh5ls():
         help="""Maximum tree depth of groups to print""",
     )
 
-    args = parser.parse_args()
+    args = parser.parse_args(args)
 
     if args.verbose:
         lgdogging.setup(logging.DEBUG)
@@ -68,7 +68,7 @@ def lh5ls():
     lh5.show(args.lh5_file, args.lh5_group, attrs=args.attributes, depth=args.depth)
 
 
-def lh5concat():
+def lh5concat(args=None):
     """Command line interface for concatenating array-like LGDOs in LH5 files."""
     parser = argparse.ArgumentParser(
         prog="lh5concat", description="Concatenate LGDO Arrays and Tables in LH5 files"
@@ -124,7 +124,7 @@ def lh5concat():
         default=None,
     )
 
-    args = parser.parse_args()
+    args = parser.parse_args(args)
 
     if args.verbose:
         lgdogging.setup(logging.DEBUG, log)
@@ -145,7 +145,7 @@ def lh5concat():
     file0 = args.lh5_file[0]
     obj_list_full = set(lh5.ls(file0, recursive=True))
 
-    # let's remove objects with nested LGDOs in
+    # let's remove objects with nested LGDOs inside
     to_remove = set()
     for name in obj_list_full:
         if len(fnmatch.filter(obj_list_full, f"{name}/*")) > 1:
