@@ -78,7 +78,7 @@ Concatenate LGDO Arrays, VectorOfVectors and Tables in LH5 files.
 Examples
 --------
 
-Concatenate all eligible objects in file{1,2].lh5 into concat.lh5:
+Concatenate all eligible objects in file{1,2}.lh5 into concat.lh5:
 
   $ lh5concat -o concat.lh5 file1.lh5 file2.lh5
 
