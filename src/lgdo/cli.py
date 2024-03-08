@@ -71,7 +71,26 @@ def lh5ls(args=None):
 def lh5concat(args=None):
     """Command line interface for concatenating array-like LGDOs in LH5 files."""
     parser = argparse.ArgumentParser(
-        prog="lh5concat", description="Concatenate LGDO Arrays and Tables in LH5 files"
+        prog="lh5concat",
+        description="""
+Concatenate LGDO Arrays, VectorOfVectors and Tables in LH5 files.
+
+Examples
+--------
+
+Concatenate all eligible objects in file{1,2].lh5 into concat.lh5:
+
+  $ lh5concat -o concat.lh5 file1.lh5 file2.lh5
+
+Include only the /data/table1 Table:
+
+  $ lh5concat -o concat.lh5 -i /data/table1/* file1.lh5 file2.lh5
+
+Exclude the /data/table1/col1 Table column:
+
+  $ lh5concat -o concat.lh5 -e /data/table1/col1 file1.lh5 file2.lh5
+        """,
+        formatter_class=argparse.RawTextHelpFormatter,
     )
 
     # global options
@@ -113,8 +132,9 @@ def lh5concat(args=None):
         "--include",
         "-i",
         help="""Regular expression (fnmatch style) for object names that should
-        be concatenated. The option can be passed multiple times to pass a list
-        of patterns.
+        be concatenated. To include full tables, you need to explicitly include
+        all its columns with e.g. '/path/to/table/*'. The option can be passed
+        multiple times to provide a list of patterns.
         """,
         action="append",
         default=None,
@@ -122,7 +142,9 @@ def lh5concat(args=None):
     parser.add_argument(
         "--exclude",
         "-e",
-        help="""List of object names that should be excluded. Takes priority over --include""",
+        help="""List of object names that should be excluded. Takes priority
+        over --include. See --include help for more details.
+        """,
         action="append",
         default=None,
     )
