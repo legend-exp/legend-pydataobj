@@ -1,7 +1,12 @@
-import numpy as np
+from __future__ import annotations
 
-import lgdo.lgdo_utils as utils
-from lgdo import Array
+import awkward as ak
+import numpy as np
+import pandas as pd
+import pint
+import pytest
+
+from lgdo import Array, utils
 
 
 def test_datatype_name():
@@ -37,3 +42,28 @@ def test_insert():
     a = Array(np.array([1, 2, 3, 4]))
     a.insert(2, [-1, -1])
     assert a == Array([1, 2, -1, -1, 3, 4])
+
+
+def test_view():
+    a = Array(np.array([1, 2, 3, 4]), attrs={"units": "m"})
+
+    v = a.view_as("np", with_units=True)
+    assert isinstance(v, pint.Quantity)
+    assert v.u == "meter"
+    assert np.array_equal(v.m, a.nda)
+
+    v = a.view_as("np", with_units=False)
+    assert isinstance(v, np.ndarray)
+
+    v = a.view_as("pd", with_units=True)
+    assert isinstance(v, pd.Series)
+    assert v.dtype == "meter"
+
+    v = a.view_as("pd", with_units=False)
+    assert v.dtype == "int64"
+
+    v = a.view_as("ak", with_units=False)
+    assert isinstance(v, ak.Array)
+
+    with pytest.raises(ValueError):
+        a.view_as("ak", with_units=True)

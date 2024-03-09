@@ -21,10 +21,10 @@ class Struct(LGDO, dict):
     datatype updated, or call :meth:`update_datatype` after adding.
     """
 
-    # TODO: overload setattr to require add_field for setting?
-
     def __init__(
-        self, obj_dict: dict[str, LGDO] = None, attrs: dict[str, Any] = None
+        self,
+        obj_dict: dict[str, LGDO] | None = None,
+        attrs: dict[str, Any] | None = None,
     ) -> None:
         """
         Parameters
@@ -53,8 +53,20 @@ class Struct(LGDO, dict):
 
     def add_field(self, name: str | int, obj: LGDO) -> None:
         """Add a field to the table."""
-        self[name] = obj
+        super().__setitem__(name, obj)
         self.update_datatype()
+
+    def __setitem__(self, name: str, obj: LGDO) -> None:
+        return self.add_field(name, obj)
+
+    def __getattr__(self, name: str) -> LGDO:
+        if hasattr(super(), name):
+            return super().__getattr__(name)
+
+        if name in self.keys():
+            return super().__getitem__(name)
+
+        raise AttributeError(name)
 
     def remove_field(self, name: str | int, delete: bool = False) -> None:
         """Remove a field from the table.
@@ -102,7 +114,27 @@ class Struct(LGDO, dict):
             self.__class__.__name__
             + "(dict="
             + dict.__repr__(self)
-            + f", attrs={repr(self.attrs)})"
+            + f", attrs={self.attrs!r})"
         )
         np.set_printoptions(**npopt)
         return " ".join(out.replace("\n", " ").split())
+
+    def view_as(self) -> None:
+        r"""View the Struct data as a third-party format data structure.
+
+        Error
+        -----
+        Not implemented. Since Struct's fields can have different lengths,
+        converting to a NumPy, Pandas or Awkward is generally not possible.
+        Call :meth:`.LGDO.view_as` on the fields instead.
+
+        See Also
+        --------
+        .LGDO.view_as
+        """
+        msg = (
+            "Since Struct's fields can have different lengths, "
+            "converting to a NumPy, Pandas or Awkward is generally "
+            "not possible. Call view_as() on the fields instead."
+        )
+        raise NotImplementedError(msg)

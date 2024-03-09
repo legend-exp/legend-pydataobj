@@ -1,4 +1,10 @@
+from __future__ import annotations
+
+import awkward as ak
+import awkward_pandas as akpd
 import numpy as np
+import pandas as pd
+import pytest
 
 from lgdo import (
     Array,
@@ -110,3 +116,75 @@ def test_aoeesa_iteration():
 
     for i, v in enumerate(voev):
         assert np.array_equal(v, desired[i])
+
+
+def test_voev_view_as():
+    voev = VectorOfEncodedVectors(
+        encoded_data=VectorOfVectors(
+            flattened_data=Array(nda=np.array([1, 2, 3, 4, 5, 2, 4, 8, 9, 7, 5, 3, 1])),
+            cumulative_length=Array(nda=np.array([2, 5, 6, 10, 13])),
+        ),
+        decoded_size=Array(shape=5, fill_val=6),
+        attrs={"units": "s"},
+    )
+
+    ak_arr = voev.view_as("ak", with_units=False)
+    assert ak_arr.fields == ["encoded_data", "decoded_size"]
+    assert ak.all(
+        ak_arr.encoded_data
+        == [
+            [1, 2],
+            [3, 4, 5],
+            [2],
+            [4, 8, 9, 7],
+            [5, 3, 1],
+        ]
+    )
+    assert ak.all(ak_arr.decoded_size == [6, 6, 6, 6, 6])
+
+    df = voev.view_as("pd", with_units=False)
+    assert isinstance(df, pd.DataFrame)
+    assert isinstance(df.encoded_data.ak, akpd.accessor.AwkwardAccessor)
+    assert isinstance(df.decoded_size, pd.Series)
+
+    with pytest.raises(ValueError):
+        df = voev.view_as("pd", with_units=True)
+
+    with pytest.raises(TypeError):
+        df = voev.view_as("np")
+
+
+def test_aoeesa_view_as():
+    voev = ArrayOfEncodedEqualSizedArrays(
+        encoded_data=VectorOfVectors(
+            flattened_data=Array(nda=np.array([1, 2, 3, 4, 5, 2, 4, 8, 9, 7, 5, 3, 1])),
+            cumulative_length=Array(nda=np.array([2, 5, 6, 10, 13])),
+        ),
+        decoded_size=99,
+        attrs={"units": "s"},
+    )
+
+    ak_arr = voev.view_as("ak", with_units=False)
+    assert ak_arr.fields == ["encoded_data", "decoded_size"]
+    assert ak.all(
+        ak_arr.encoded_data
+        == [
+            [1, 2],
+            [3, 4, 5],
+            [2],
+            [4, 8, 9, 7],
+            [5, 3, 1],
+        ]
+    )
+    assert ak.all(ak_arr.decoded_size == [99, 99, 99, 99, 99])
+
+    df = voev.view_as("pd", with_units=False)
+    assert isinstance(df, pd.DataFrame)
+    assert isinstance(df.encoded_data.ak, akpd.accessor.AwkwardAccessor)
+    assert isinstance(df.decoded_size, pd.Series)
+
+    with pytest.raises(ValueError):
+        df = voev.view_as("pd", with_units=True)
+
+    with pytest.raises(TypeError):
+        df = voev.view_as("np")

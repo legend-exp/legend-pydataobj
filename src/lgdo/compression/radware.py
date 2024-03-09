@@ -9,7 +9,8 @@ from numpy import int16, int32, ubyte, uint16, uint32
 from numpy.typing import NDArray
 
 from .. import types as lgdo
-from .base import WaveformCodec, numba_defaults
+from ..utils import numba_defaults_kwargs as nb_kwargs
+from .base import WaveformCodec
 
 log = logging.getLogger(__name__)
 
@@ -103,7 +104,8 @@ def encode(
             sig_out = np.empty(s[:-1] + (s[-1] * 2,), dtype=ubyte)
 
         if sig_out.dtype != ubyte:
-            raise ValueError("sig_out must be of type ubyte")
+            msg = "sig_out must be of type ubyte"
+            raise ValueError(msg)
 
         # nbytes has one dimension less (the last one)
         nbytes = np.empty(s[:-1], dtype=uint32)
@@ -119,7 +121,7 @@ def encode(
         # return without resizing
         return sig_out, nbytes
 
-    elif isinstance(sig_in, lgdo.VectorOfVectors):
+    if isinstance(sig_in, lgdo.VectorOfVectors):
         if sig_out is not None:
             log.warning(
                 "a pre-allocated VectorOfEncodedVectors was given "
@@ -129,7 +131,9 @@ def encode(
             )
         # convert VectorOfVectors to ArrayOfEqualSizedArrays so it can be
         # directly passed to the low-level encoding routine
-        sig_out_nda, nbytes = encode(sig_in.to_aoesa(), shift=shift)
+        sig_out_nda, nbytes = encode(
+            sig_in.to_aoesa(fill_val=0, preserve_dtype=True), shift=shift
+        )
 
         # build the encoded LGDO
         encoded_data = lgdo.ArrayOfEqualSizedArrays(nda=sig_out_nda).to_vov(
@@ -138,11 +142,9 @@ def encode(
         # decoded_size is an array, compute it by diff'ing the original VOV
         decoded_size = np.diff(sig_in.cumulative_length, prepend=uint32(0))
 
-        sig_out = lgdo.VectorOfEncodedVectors(encoded_data, decoded_size)
+        return lgdo.VectorOfEncodedVectors(encoded_data, decoded_size)
 
-        return sig_out
-
-    elif isinstance(sig_in, lgdo.ArrayOfEqualSizedArrays):
+    if isinstance(sig_in, lgdo.ArrayOfEqualSizedArrays):
         if sig_out is not None:
             log.warning(
                 "a pre-allocated ArrayOfEncodedEqualSizedArrays was given "
@@ -158,19 +160,17 @@ def encode(
         encoded_data = lgdo.ArrayOfEqualSizedArrays(nda=sig_out_nda).to_vov(
             cumulative_length=np.cumsum(nbytes, dtype=uint32)
         )
-        sig_out = lgdo.ArrayOfEncodedEqualSizedArrays(
+        return lgdo.ArrayOfEncodedEqualSizedArrays(
             encoded_data, decoded_size=sig_in.nda.shape[1]
         )
 
-        return sig_out
-
-    elif isinstance(sig_in, lgdo.Array):
+    if isinstance(sig_in, lgdo.Array):
         # encode the internal numpy array
         sig_out_nda, nbytes = encode(sig_in.nda, sig_out, shift=shift)
         return lgdo.Array(sig_out_nda), nbytes
 
-    else:
-        raise ValueError(f"unsupported input signal type ({type(sig_in)})")
+    msg = f"unsupported input signal type ({type(sig_in)})"
+    raise ValueError(msg)
 
 
 def decode(
@@ -242,7 +242,7 @@ def decode(
 
         return sig_out, siglen
 
-    elif isinstance(sig_in, lgdo.ArrayOfEncodedEqualSizedArrays):
+    if isinstance(sig_in, lgdo.ArrayOfEncodedEqualSizedArrays):
         if sig_out is None:
             # initialize output structure with decoded_size
             sig_out = lgdo.ArrayOfEqualSizedArrays(
@@ -262,7 +262,7 @@ def decode(
         # convert vector of vectors to array of equal sized arrays
         # can now decode on the 2D matrix together with number of bytes to read per row
         _, siglen = decode(
-            (sig_in.encoded_data.to_aoesa(preserve_dtype=True).nda, nbytes),
+            (sig_in.encoded_data.to_aoesa(fill_val=0, preserve_dtype=True).nda, nbytes),
             sig_out if isinstance(sig_out, np.ndarray) else sig_out.nda,
             shift=shift,
         )
@@ -272,7 +272,7 @@ def decode(
 
         return sig_out
 
-    elif isinstance(sig_in, lgdo.VectorOfEncodedVectors):
+    if isinstance(sig_in, lgdo.VectorOfEncodedVectors):
         if sig_out:
             log.warning(
                 "a pre-allocated VectorOfVectors was given "
@@ -288,7 +288,8 @@ def decode(
         # convert vector of vectors to array of equal sized arrays
         # can now decode on the 2D matrix together with number of bytes to read per row
         sig_out, siglen = decode(
-            (sig_in.encoded_data.to_aoesa(preserve_dtype=True).nda, nbytes), shift=shift
+            (sig_in.encoded_data.to_aoesa(fill_val=0, preserve_dtype=True).nda, nbytes),
+            shift=shift,
         )
 
         # sanity check
@@ -297,11 +298,11 @@ def decode(
         # converto to VOV before returning
         return sig_out.to_vov(np.cumsum(siglen, dtype=uint32))
 
-    else:
-        raise ValueError("unsupported input signal type")
+    msg = "unsupported input signal type"
+    raise ValueError(msg)
 
 
-@numba.jit(**numba_defaults)
+@numba.jit(**nb_kwargs(nopython=True))
 def _set_hton_u16(a: NDArray[ubyte], i: int, x: int) -> int:
     """Store an unsigned 16-bit integer value in an array of unsigned 8-bit integers.
 
@@ -316,7 +317,7 @@ def _set_hton_u16(a: NDArray[ubyte], i: int, x: int) -> int:
     return x
 
 
-@numba.jit(**numba_defaults)
+@numba.jit(**nb_kwargs(nopython=True))
 def _get_hton_u16(a: NDArray[ubyte], i: int) -> uint16:
     """Read unsigned 16-bit integer values from an array of unsigned 8-bit integers.
 
@@ -327,26 +328,26 @@ def _get_hton_u16(a: NDArray[ubyte], i: int) -> uint16:
     i_2 = i_1 + 1
     if a.ndim == 1:
         return uint16(a[i_1] << 8 | a[i_2])
-    else:
-        return a[..., i_1].astype("uint16") << 8 | a[..., i_2]
+
+    return a[..., i_1].astype("uint16") << 8 | a[..., i_2]
 
 
-@numba.jit("uint16(uint32)", **numba_defaults)
+@numba.jit("uint16(uint32)", **nb_kwargs(nopython=True))
 def _get_high_u16(x: uint32) -> uint16:
     return uint16(x >> 16)
 
 
-@numba.jit("uint32(uint32, uint16)", **numba_defaults)
+@numba.jit("uint32(uint32, uint16)", **nb_kwargs(nopython=True))
 def _set_high_u16(x: uint32, y: uint16) -> uint32:
     return uint32(x & 0x0000FFFF | (y << 16))
 
 
-@numba.jit("uint16(uint32)", **numba_defaults)
+@numba.jit("uint16(uint32)", **nb_kwargs(nopython=True))
 def _get_low_u16(x: uint32) -> uint16:
     return uint16(x >> 0)
 
 
-@numba.jit("uint32(uint32, uint16)", **numba_defaults)
+@numba.jit("uint32(uint32, uint16)", **nb_kwargs(nopython=True))
 def _set_low_u16(x: uint32, y: uint16) -> uint32:
     return uint32(x & 0xFFFF0000 | (y << 0))
 
@@ -361,7 +362,7 @@ def _set_low_u16(x: uint32, y: uint16) -> uint32:
         "void( int64[:], byte[:], int32[:], uint32[:], uint16[:])",
     ],
     "(n),(m),(),(),(o)",
-    **numba_defaults,
+    **nb_kwargs(nopython=True),
 )
 def _radware_sigcompress_encode(
     sig_in: NDArray,
@@ -574,7 +575,7 @@ def _radware_sigcompress_encode(
         "void(byte[:],  int64[:], int32[:], uint32[:], uint16[:])",
     ],
     "(n),(m),(),(),(o)",
-    **numba_defaults,
+    **nb_kwargs(nopython=True),
 )
 def _radware_sigcompress_decode(
     sig_in: NDArray[ubyte],
@@ -688,6 +689,7 @@ def _radware_sigcompress_decode(
         j += nw
 
     if _siglen != iso:
-        raise RuntimeError("failure: unexpected signal length after decompression")
+        msg = "failure: unexpected signal length after decompression"
+        raise RuntimeError(msg)
 
     siglen[0] = _siglen  # number of shorts in decompressed signal data

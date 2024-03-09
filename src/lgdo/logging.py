@@ -1,4 +1,6 @@
 """This module implements some helpers for setting up logging."""
+from __future__ import annotations
+
 import logging
 
 import colorlog
@@ -11,10 +13,10 @@ FATAL = logging.FATAL
 CRITICAL = logging.CRITICAL
 
 
-def setup(level: int = logging.INFO, logger: logging.Logger = None) -> None:
+def setup(level: int = logging.INFO, logger: logging.Logger | None = None) -> None:
     """Setup a colorful logging output.
 
-    If `logger` is None, sets up only the ``pygama`` logger.
+    If `logger` is None, sets up only the ``lgdo`` logger.
 
     Parameters
     ----------
@@ -25,7 +27,7 @@ def setup(level: int = logging.INFO, logger: logging.Logger = None) -> None:
 
     Examples
     --------
-    >>> from pygama import logging
+    >>> from lgdo import logging
     >>> logging.setup(level=logging.DEBUG)
     """
     handler = colorlog.StreamHandler()
@@ -34,7 +36,7 @@ def setup(level: int = logging.INFO, logger: logging.Logger = None) -> None:
     )
 
     if logger is None:
-        logger = colorlog.getLogger("pygama")
+        logger = colorlog.getLogger("lgdo")
 
     logger.setLevel(level)
     logger.addHandler(handler)

@@ -7,9 +7,11 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import Any
 
+import awkward as ak
 import numpy as np
+import pandas as pd
 
-from .. import lgdo_utils as utils
+from .. import utils
 from . import vectorofvectors as vov
 from .array import Array
 
@@ -23,12 +25,12 @@ class ArrayOfEqualSizedArrays(Array):
 
     def __init__(
         self,
-        dims: tuple[int, ...] = None,
+        dims: tuple[int, ...] | None = None,
         nda: np.ndarray = None,
         shape: tuple[int, ...] = (),
         dtype: np.dtype = None,
-        fill_val: int | float = None,
-        attrs: dict[str, Any] = None,
+        fill_val: int | float | None = None,
+        attrs: dict[str, Any] | None = None,
     ) -> None:
         """
         Parameters
@@ -68,6 +70,8 @@ class ArrayOfEqualSizedArrays(Array):
             if nda is None:
                 s = shape
             else:
+                if not isinstance(nda, np.ndarray):
+                    nda = np.array(nda)
                 s = nda.shape
             self.dims = (1, len(s) - 1)
         else:
@@ -131,3 +135,14 @@ class ArrayOfEqualSizedArrays(Array):
             cumulative_length=cumulative_length,
             attrs=attrs,
         )
+
+    def view_as(
+        self, library: str, with_units: bool = False
+    ) -> pd.DataFrame | np.NDArray | ak.Array:
+        """View the array as a third-party format data structure.
+
+        See Also
+        --------
+        .LGDO.view_as
+        """
+        return super().view_as(library, with_units=with_units)

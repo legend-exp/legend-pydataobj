@@ -1,14 +1,19 @@
+from __future__ import annotations
+
+import warnings
+
+import awkward as ak
 import numpy as np
 import pandas as pd
 import pytest
 
-import lgdo as lgdo
+import lgdo
 from lgdo import Table
 
 
 def test_init():
     tbl = Table()
-    assert tbl.size == 1024
+    assert not tbl.size
     assert tbl.loc == 0
 
     tbl = Table(size=10)
@@ -65,6 +70,11 @@ def test_add_column():
     tbl = Table()
     tbl.add_column("a", lgdo.Array(np.array([1, 2, 3])), use_obj_size=True)
     assert tbl.size == 3
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        tbl.add_column("b", lgdo.Array(np.array([1, 2, 3, 4])))
+        assert len(w) == 1
+        assert issubclass(w[-1].category, UserWarning)
 
 
 def test_join():
@@ -84,9 +94,9 @@ def test_join():
     assert list(tbl2.keys()) == ["c", "d", "a"]
 
 
-def test_get_dataframe():
+def test_view_as():
     tbl = Table(3)
-    tbl.add_column("a", lgdo.Array(np.array([1, 2, 3])))
+    tbl.add_column("a", lgdo.Array(np.array([1, 2, 3]), attrs={"units": "m"}))
     tbl.add_column("b", lgdo.Array(np.array([[0, 1, 2], [3, 4, 5], [6, 7, 8]])))
     tbl.add_column(
         "c",
@@ -99,14 +109,43 @@ def test_get_dataframe():
         "d",
         lgdo.Table(
             col_dict={
-                "a": lgdo.Array(np.array([2, 4, 6])),
+                "a": lgdo.Array(np.array([2, 4, 6]), attrs={"units": "m"}),
                 "b": lgdo.Array(np.array([[1, 1], [2, 4], [3, 9]])),
             }
         ),
     )
-    df = tbl.get_dataframe()
+
+    df = tbl.view_as("pd", with_units=False)
     assert isinstance(df, pd.DataFrame)
     assert list(df.keys()) == ["a", "b", "c", "d_a", "d_b"]
+
+    df = tbl.view_as("pd", with_units=True)
+    assert isinstance(df, pd.DataFrame)
+    assert list(df.keys()) == ["a", "b", "c", "d_a", "d_b"]
+    assert df["a"].dtype == "meter"
+    assert df["d_a"].dtype == "meter"
+
+    ak_arr = tbl.view_as("ak", with_units=False)
+    assert isinstance(ak_arr, ak.Array)
+    assert list(ak_arr.fields) == ["a", "b", "c", "d"]
+
+    with pytest.raises(ValueError):
+        tbl.view_as("ak", with_units=True)
+
+    with pytest.raises(TypeError):
+        tbl.view_as("np")
+
+    tbl.add_column(
+        "e",
+        lgdo.VectorOfVectors(
+            flattened_data=lgdo.Array(np.array([0, 1, 2, 3, 4, 5, 6])),
+            cumulative_length=lgdo.Array(np.array([3, 4, 7])),
+            attrs={"units": "m"},
+        ),
+    )
+
+    with pytest.raises(ValueError):
+        tbl.view_as("pd", with_units=True)
 
 
 def test_remove_column():

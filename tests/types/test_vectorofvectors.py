@@ -1,4 +1,10 @@
+from __future__ import annotations
+
+import awkward as ak
+import awkward_pandas as akpd
 import numpy as np
+import pandas as pd
+import pint
 import pytest
 
 import lgdo
@@ -35,6 +41,9 @@ def test_init(lgdo_vov):
     assert v.cumulative_length.dtype == "uint32"
     assert len(v.flattened_data) == 15
     assert len(v[-1]) == 5
+
+    v = VectorOfVectors(ak.Array([[1, 2], [3, 4, 5], [2], [4, 8, 9, 7], [5, 3, 1]]))
+    assert v == test
 
 
 def test_datatype_name(lgdo_vov):
@@ -88,7 +97,7 @@ def test_aoesa(lgdo_vov):
         ]
     )
     assert isinstance(arr, lgdo.ArrayOfEqualSizedArrays)
-    assert arr.dtype == np.float64
+    assert np.issubdtype(arr.dtype, np.floating)
     assert np.array_equal(arr.nda, desired, True)
 
     v = VectorOfVectors(
@@ -98,20 +107,21 @@ def test_aoesa(lgdo_vov):
         cumulative_length=lgdo.Array(nda=np.array([2, 5, 6, 10, 13])),
     )
     aoesa = v.to_aoesa()
-    assert aoesa.dtype == np.float64
 
-    aoesa = v.to_aoesa(preserve_dtype=True)
-    assert aoesa.dtype == np.int16
+    assert np.issubdtype(aoesa.dtype, np.floating)
+
+    aoesa = v.to_aoesa(fill_val=-999.9)
+    assert np.issubdtype(aoesa.nda.dtype, np.floating)
+
+    aoesa = v.to_aoesa(fill_val=-999)
+    assert np.issubdtype(aoesa.nda.dtype, np.integer)
+
+    aoesa = v.to_aoesa(fill_val=-999, preserve_dtype=True)
+    assert aoesa.nda.dtype == np.int16
 
 
 def test_iter(lgdo_vov):
-    desired = [
-        [1, 2],
-        [3, 4, 5],
-        [2],
-        [4, 8, 9, 7],
-        [5, 3, 1],
-    ]
+    desired = [[1, 2], [3, 4, 5], [2], [4, 8, 9, 7], [5, 3, 1]]
 
     c = 0
     for v in lgdo_vov:
@@ -152,3 +162,31 @@ def test_build_cl_and_explodes():
     assert len(arrays_out) == 2
     assert (arrays_out[0] == array_exp).all()
     assert (arrays_out[1] == exp).all()
+
+
+def test_view(lgdo_vov):
+    lgdo_vov.attrs["units"] = "s"
+    with pytest.raises(ValueError):
+        lgdo_vov.view_as("ak", with_units=True)
+
+    ak_arr = lgdo_vov.view_as("ak", with_units=False)
+
+    assert isinstance(ak_arr, ak.Array)
+    assert len(ak_arr) == len(lgdo_vov)
+    assert ak.all(ak_arr == [[1, 2], [3, 4, 5], [2], [4, 8, 9, 7], [5, 3, 1]])
+
+    np_arr = lgdo_vov.view_as("np", with_units=True)
+    assert isinstance(np_arr, pint.Quantity)
+    assert np_arr.u == "second"
+    assert isinstance(np_arr.m, np.ndarray)
+
+    np_arr = lgdo_vov.view_as("np", with_units=False)
+    assert isinstance(np_arr, np.ndarray)
+    assert np.issubdtype(np_arr.dtype, np.floating)
+
+    np_arr = lgdo_vov.view_as("np", with_units=False, fill_val=0, preserve_dtype=True)
+    assert np.issubdtype(np_arr.dtype, np.integer)
+
+    np_arr = lgdo_vov.view_as("pd", with_units=False)
+    assert isinstance(np_arr, pd.Series)
+    assert isinstance(np_arr.ak, akpd.accessor.AwkwardAccessor)

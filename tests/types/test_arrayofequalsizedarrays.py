@@ -1,4 +1,10 @@
+from __future__ import annotations
+
+import awkward as ak
 import numpy as np
+import pandas as pd
+import pint
+import pytest
 
 import lgdo
 
@@ -37,3 +43,30 @@ def test_to_vov():
     assert np.array_equal(vov[0], [53, 91])
     assert np.array_equal(vov[1], [78, 57, 66])
     assert np.array_equal(vov[2], [85])
+
+
+def test_view():
+    aoesa = lgdo.ArrayOfEqualSizedArrays(
+        nda=np.array([[53, 91, 66, 58, 8], [78, 57, 66, 88, 73], [85, 99, 86, 68, 53]]),
+        attrs={"units": "m"},
+    )
+
+    v = aoesa.view_as("np", with_units=True)
+    assert isinstance(v, pint.Quantity)
+    assert v.u == "meter"
+    assert np.array_equal(v.m, aoesa.nda)
+
+    v = aoesa.view_as("np", with_units=False)
+    assert isinstance(v, np.ndarray)
+
+    v = aoesa.view_as("pd", with_units=False)
+    assert isinstance(v, pd.Series)
+
+    v = aoesa.view_as("ak", with_units=False)
+    assert isinstance(v, ak.Array)
+
+    with pytest.raises(ValueError):
+        aoesa.view_as("pd", with_units=True)
+
+    with pytest.raises(ValueError):
+        aoesa.view_as("ak", with_units=True)

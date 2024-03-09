@@ -1,4 +1,5 @@
 """LEGEND Data Objects (LGDO) types."""
+from __future__ import annotations
 
 from .array import Array
 from .arrayofequalsizedarrays import ArrayOfEqualSizedArrays
@@ -9,7 +10,7 @@ from .scalar import Scalar
 from .struct import Struct
 from .table import Table
 from .vectorofvectors import VectorOfVectors
-from .waveform_table import WaveformTable
+from .waveformtable import WaveformTable
 
 __all__ = [
     "Array",

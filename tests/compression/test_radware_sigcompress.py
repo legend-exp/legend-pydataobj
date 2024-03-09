@@ -1,15 +1,19 @@
+from __future__ import annotations
+
 from pathlib import Path
 
 import numpy as np
 
-from lgdo import ArrayOfEncodedEqualSizedArrays, ArrayOfEqualSizedArrays, LH5Store
+from lgdo import ArrayOfEncodedEqualSizedArrays, ArrayOfEqualSizedArrays, lh5
 from lgdo.compression.radware import (
     _get_hton_u16,
     _radware_sigcompress_decode,
     _radware_sigcompress_encode,
+    _set_hton_u16,
+    decode,
+    encode,
 )
 from lgdo.compression.radware import _radware_sigcompress_mask as _mask
-from lgdo.compression.radware import _set_hton_u16, decode, encode
 
 config_dir = Path(__file__).parent / "sigcompress"
 
@@ -177,8 +181,8 @@ def test_aoesa(wftable):
 
 
 def test_performance(lgnd_test_data):
-    store = LH5Store()
-    obj, _ = store.read_object(
+    store = lh5.LH5Store()
+    obj, _ = store.read(
         "/geds/raw/waveform",
         lgnd_test_data.get_path("lh5/LDQTA_r117_20200110T105115Z_cal_geds_raw.lh5"),
     )
@@ -188,7 +192,7 @@ def test_performance(lgnd_test_data):
         comp_wf, comp_len = encode(wf, shift=-32768)
         sum += comp_len / len(wf) / 2
 
-    print(  # noqa: T201
+    print(
         "number of bytes in compressed wf:",
         100 * sum / len(obj),
         "% of the original",

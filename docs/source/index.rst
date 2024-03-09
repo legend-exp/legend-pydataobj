@@ -3,6 +3,7 @@ LEGEND Data Objects
 
 |legend-pydataobj| is a Python implementation of the `LEGEND Data Format Specification <1_>`_.
 
+
 Getting started
 ---------------
 
@@ -28,40 +29,15 @@ local systems with `pip <3_>`_:
     instructions on the `LEGEND wiki
     <https://legend-exp.atlassian.net/l/cp/nF1ww5KH>`_.
 
-Inspecting LH5 files from the command line
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+If you plan to develop |legend-pydataobj|, refer to the :doc:`developer's guide
+<developer>`.
 
-The ``lh5ls`` shell command uses :func:`.lh5_store.show` to print a pretty
-representation of a LH5 file's contents
+.. attention::
 
-.. code-block:: console
+    If installing in a user directory (typically when invoking pip as a normal
+    user), make sure ``~/.local/bin`` is appended to ``PATH``. The ``lh5ls``
+    executable is installed there.
 
-    $ lh5ls -a legend-testdata/data/lh5/LDQTA_r117_20200110T105115Z_cal_geds_raw.lh5
-    /
-    └── geds · HDF5 group
-        └── raw · table{packet_id,ievt,timestamp,numtraces,tracelist,baseline,energy,channel,wf_max,wf_std,waveform}
-            ├── baseline · array<1>{real}
-            ├── channel · array<1>{real}
-            ├── energy · array<1>{real}
-            ├── ievt · array<1>{real}
-            ├── numtraces · array<1>{real}
-            ├── packet_id · array<1>{real}
-            ├── timestamp · array<1>{real} ── {'units': 's'}
-            ├── tracelist · array<1>{array<1>{real}}
-            │   ├── cumulative_length · array<1>{real}
-            │   └── flattened_data · array<1>{real}
-            ├── waveform · table{t0,dt,values}
-            │   ├── dt · array<1>{real} ── {'units': 'ns'}
-            │   ├── t0 · array<1>{real} ── {'units': 'ns'}
-            │   └── values · array_of_equalsized_arrays<1,1>{real}
-            ├── wf_max · array<1>{real}
-            └── wf_std · array<1>{real}
-
-For more information, have a look at the command's help section:
-
-.. code-block:: console
-
-    $ lh5ls --help
 
 Next steps
 ----------
@@ -69,8 +45,28 @@ Next steps
 .. toctree::
    :maxdepth: 1
 
+   manual/index
    tutorials
    Package API reference <api/modules>
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Related projects
+
+   Decoding Digitizer Data <https://legend-daq2lh5.readthedocs.io>
+   Digital Signal Processing <https://dspeed.readthedocs.io>
+   pygama <https://pygama.readthedocs.io>
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Development
+
+   Source Code <https://github.com/legend-exp/legend-pydataobj>
+   License <https://github.com/legend-exp/legend-pydataobj/blob/main/LICENSE>
+   Citation <https://doi.org/10.5281/zenodo.10592107>
+   Changelog <https://github.com/legend-exp/legend-pydataobj/releases>
+   developer
+
 
 .. _1: https://legend-exp.github.io/legend-data-format-specs
 .. _2: https://pypi.org/project/legend-pydataobj

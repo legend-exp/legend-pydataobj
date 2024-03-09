@@ -1,96 +1,64 @@
+from __future__ import annotations
+
 import numpy as np
 
-from lgdo import Array, ArrayOfEqualSizedArrays, Table
+import lgdo
 
 
 def test_eval_dependency():
-    obj = Table(
+    obj = lgdo.Table(
         col_dict={
-            "a": Array(nda=np.array([1, 2, 3, 4], dtype=np.float32)),
-            "b": Array(nda=np.array([5, 6, 7, 8], dtype=np.float32)),
-            "c": ArrayOfEqualSizedArrays(
-                nda=np.array(
-                    [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]],
-                    dtype=np.float32,
-                )
+            "a": lgdo.Array([1, 2, 3, 4], attrs={"units": "s"}),
+            "b": lgdo.Array([5, 6, 7, 8]),
+            "c": lgdo.ArrayOfEqualSizedArrays(
+                nda=[[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]
             ),
-            "d": ArrayOfEqualSizedArrays(
-                nda=np.array(
-                    [
-                        [21, 22, 23, 24],
-                        [25, 26, 27, 8],
-                        [29, 210, 211, 212],
-                        [213, 214, 215, 216],
-                    ],
-                    dtype=np.float32,
-                )
+            "d": lgdo.ArrayOfEqualSizedArrays(
+                nda=[
+                    [21, 22, 23, 24],
+                    [25, 26, 27, 8],
+                    [29, 210, 211, 212],
+                    [213, 214, 215, 216],
+                ],
             ),
+            "e": lgdo.VectorOfVectors([[1, 2, 3], [4], [], [8, 6]]),
         }
     )
+    r = obj.eval("sum(a)")
+    assert isinstance(r, lgdo.Scalar)
 
-    expr_config = {
-        "O1": {"expression": "p1 + p2 * a**2", "parameters": {"p1": 2, "p2": 3}},
-        "O2": {"expression": "O1 - b"},
-        "O3": {"expression": "p1 + p2 * c", "parameters": {"p1": 2, "p2": 3}},
-        "O4": {"expression": "O3 - d", "parameters": {"p1": 2, "p2": 3}},
-        "O5": {"expression": "sum(c,axis=1)"},
-        "O6": {"expression": "a>p1", "parameters": {"p1": 2}},
-        "O7": {"expression": "c>p1", "parameters": {"p1": 2}},
-    }
+    r = obj.eval("a + b")
+    assert isinstance(r, lgdo.Array)
+    assert np.array_equal(r.nda, obj.a.nda + obj.b.nda)
 
-    out_tbl = obj.eval(expr_config)
-    assert list(out_tbl.keys()) == ["O1", "O2", "O3", "O4", "O5", "O6", "O7"]
-    assert (out_tbl["O1"].nda == [5, 14, 29, 50]).all()
-    assert (out_tbl["O2"].nda == [0, 8, 22, 42]).all()
-    assert (
-        out_tbl["O3"].nda
-        == [[5, 8, 11, 14], [17, 20, 23, 26], [29, 32, 35, 38], [41, 44, 47, 50]]
-    ).all()
-    assert (
-        out_tbl["O4"].nda
-        == [
-            [-16.0, -14.0, -12.0, -10.0],
-            [-8.0, -6.0, -4.0, 18.0],
-            [0.0, -178.0, -176.0, -174.0],
-            [-172.0, -170.0, -168.0, -166.0],
-        ]
-    ).all()
-    assert (out_tbl["O5"].nda == [10.0, 26.0, 42.0, 58.0]).all()
-    assert (out_tbl["O6"].nda == [False, False, True, True]).all()
-    assert (
-        out_tbl["O7"].nda
-        == [
-            [False, False, True, True],
-            [True, True, True, True],
-            [True, True, True, True],
-            [True, True, True, True],
-        ]
-    ).all()
+    r = obj.eval("((a - b) > 1) & ((b - a) < -1)")
+    assert isinstance(r, lgdo.Array)
+    assert r.dtype == "bool"
 
+    r = obj.eval("a + d")
+    assert isinstance(r, lgdo.ArrayOfEqualSizedArrays)
 
-def test_eval_math_functions():
-    obj = Table(
-        col_dict={
-            "a": Array(nda=np.array([1, 2, 3, 4], dtype=np.float32)),
-            "b": Array(nda=np.array([5, 6, 7, 8], dtype=np.float32)),
-            "c": ArrayOfEqualSizedArrays(
-                nda=np.array(
-                    [[1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4]],
-                    dtype=np.float32,
-                )
-            ),
-        }
-    )
+    assert obj.eval("a**2")
+    assert obj.eval("sin(a)")
+    assert obj.eval("log(d)")
 
-    expr_config = {
-        "O1": {"expression": "exp(log(a))"},
-        "O2": {"expression": "exp(log(c))"},
-    }
+    r = obj.eval("a + e")
+    assert isinstance(r, lgdo.VectorOfVectors)
+    assert r == lgdo.VectorOfVectors([[2, 3, 4], [6], [], [12, 10]])
 
-    out_tbl = obj.eval(expr_config)
-    assert list(out_tbl.keys()) == ["O1", "O2"]
-    assert (out_tbl["O1"].nda == [1, 2, 3, 4]).all()
-    assert (
-        out_tbl["O2"].nda
-        == np.array([[1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4]])
-    ).all()
+    r = obj.eval("2*e + 1")
+    assert isinstance(r, lgdo.VectorOfVectors)
+    assert r == lgdo.VectorOfVectors([[3, 5, 7], [9], [], [17, 13]])
+
+    r = obj.eval("e > 2")
+    assert isinstance(r, lgdo.VectorOfVectors)
+    assert r == lgdo.VectorOfVectors([[False, False, True], [True], [], [True, True]])
+    assert r.dtype == "bool"
+
+    r = obj.eval("ak.sum(e, axis=-1)")
+    assert isinstance(r, lgdo.Array)
+
+    r = obj.eval("ak.sum(e)")
+    assert isinstance(r, lgdo.Scalar)
+
+    assert obj.eval("np.sum(a) + ak.sum(e)")

@@ -8,9 +8,14 @@ import logging
 from collections.abc import Iterator
 from typing import Any
 
+import awkward as ak
+import awkward_pandas as akpd
 import numpy as np
+import pandas as pd
+import pint_pandas  # noqa: F401
 
-from .. import lgdo_utils as utils
+from .. import utils
+from ..units import default_units_registry as u
 from .lgdo import LGDO
 
 log = logging.getLogger(__name__)
@@ -37,8 +42,8 @@ class Array(LGDO):
         nda: np.ndarray = None,
         shape: tuple[int, ...] = (),
         dtype: np.dtype = None,
-        fill_val: float | int = None,
-        attrs: dict[str, Any] = None,
+        fill_val: float | int | None = None,
+        attrs: dict[str, Any] | None = None,
     ) -> None:
         """
         Parameters
@@ -112,8 +117,8 @@ class Array(LGDO):
     def __eq__(self, other: Array) -> bool:
         if isinstance(other, Array):
             return self.attrs == other.attrs and np.array_equal(self.nda, other.nda)
-        else:
-            return False
+
+        return False
 
     def __iter__(self) -> Iterator:
         yield from self.nda
@@ -136,5 +141,63 @@ class Array(LGDO):
                     "int": lambda x: f"0x{x:02x}" if self.dtype == np.ubyte else str(x)
                 },
             )
-            + f", attrs={repr(self.attrs)})"
+            + f", attrs={self.attrs!r})"
         )
+
+    def view_as(
+        self, library: str, with_units: bool = False
+    ) -> pd.DataFrame | np.NDArray | ak.Array:
+        """View the Array data as a third-party format data structure.
+
+        This is a zero-copy operation. Supported third-party formats are:
+
+        - ``pd``: returns a :class:`pandas.Series`
+        - ``np``: returns the internal `nda` attribute (:class:`numpy.ndarray`)
+        - ``ak``: returns an :class:`ak.Array` initialized with `self.nda`
+
+        Parameters
+        ----------
+        library
+            format of the returned data view.
+        with_units
+            forward physical units to the output data.
+
+        See Also
+        --------
+        .LGDO.view_as
+        """
+        # TODO: does attaching units imply a copy?
+        attach_units = with_units and "units" in self.attrs
+
+        if library == "pd":
+            if attach_units:
+                if self.nda.ndim == 1:
+                    return pd.Series(
+                        self.nda, dtype=f"pint[{self.attrs['units']}]", copy=False
+                    )
+
+                msg = "Pint does not support Awkward yet, you must view the data with_units=False"
+                raise ValueError(msg)
+
+            if self.nda.ndim == 1:
+                return pd.Series(self.nda, copy=False)
+
+            # if array is multi-dim, use awkward
+            return akpd.from_awkward(self.view_as("ak"))
+
+        if library == "np":
+            if attach_units:
+                return self.nda * u(self.attrs["units"])
+
+            return self.nda
+
+        if library == "ak":
+            if attach_units:
+                msg = "Pint does not support Awkward yet, you must view the data with_units=False"
+                raise ValueError(msg)
+
+            # NOTE: this is zero-copy!
+            return ak.Array(self.nda)
+
+        msg = f"{library} is not a supported third-party format."
+        raise ValueError(msg)

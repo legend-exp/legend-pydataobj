@@ -11,7 +11,8 @@ from numpy import int32, ubyte, uint32
 from numpy.typing import NDArray
 
 from .. import types as lgdo
-from .base import WaveformCodec, numba_defaults
+from ..utils import numba_defaults_kwargs as nb_kwargs
+from .base import WaveformCodec
 
 log = logging.getLogger(__name__)
 
@@ -83,7 +84,8 @@ def encode(
             sig_out = np.empty(s[:-1] + (s[-1] * max_b,), dtype=ubyte)
 
         if sig_out.dtype != ubyte:
-            raise ValueError("sig_out must be of type ubyte")
+            msg = "sig_out must be of type ubyte"
+            raise ValueError(msg)
 
         # nbytes has one dimension less (the last one)
         nbytes = np.empty(s[:-1], dtype=uint32)
@@ -93,7 +95,7 @@ def encode(
         # return without resizing
         return sig_out, nbytes
 
-    elif isinstance(sig_in, lgdo.VectorOfVectors):
+    if isinstance(sig_in, lgdo.VectorOfVectors):
         if sig_out is not None:
             log.warning(
                 "a pre-allocated VectorOfEncodedVectors was given "
@@ -103,7 +105,7 @@ def encode(
             )
         # convert VectorOfVectors to ArrayOfEqualSizedArrays so it can be
         # directly passed to the low-level encoding routine
-        sig_out_nda, nbytes = encode(sig_in.to_aoesa())
+        sig_out_nda, nbytes = encode(sig_in.to_aoesa(fill_val=0, preserve_dtype=True))
 
         # build the encoded LGDO
         encoded_data = lgdo.ArrayOfEqualSizedArrays(nda=sig_out_nda).to_vov(
@@ -112,11 +114,9 @@ def encode(
         # decoded_size is an array, compute it by diff'ing the original VOV
         decoded_size = np.diff(sig_in.cumulative_length, prepend=uint32(0))
 
-        sig_out = lgdo.VectorOfEncodedVectors(encoded_data, decoded_size)
+        return lgdo.VectorOfEncodedVectors(encoded_data, decoded_size)
 
-        return sig_out
-
-    elif isinstance(sig_in, lgdo.ArrayOfEqualSizedArrays):
+    if isinstance(sig_in, lgdo.ArrayOfEqualSizedArrays):
         if sig_out:
             log.warning(
                 "a pre-allocated VectorOfEncodedVectors was given "
@@ -132,19 +132,17 @@ def encode(
         encoded_data = lgdo.ArrayOfEqualSizedArrays(nda=sig_out_nda).to_vov(
             cumulative_length=np.cumsum(nbytes, dtype=uint32)
         )
-        sig_out = lgdo.ArrayOfEncodedEqualSizedArrays(
+        return lgdo.ArrayOfEncodedEqualSizedArrays(
             encoded_data, decoded_size=sig_in.nda.shape[1]
         )
 
-        return sig_out
-
-    elif isinstance(sig_in, lgdo.Array):
+    if isinstance(sig_in, lgdo.Array):
         # encode the internal numpy array
         sig_out_nda, nbytes = encode(sig_in.nda, sig_out)
         return lgdo.Array(sig_out_nda), nbytes
 
-    else:
-        raise ValueError(f"unsupported input signal type ({type(sig_in)})")
+    msg = f"unsupported input signal type ({type(sig_in)})"
+    raise ValueError(msg)
 
 
 def decode(
@@ -207,7 +205,7 @@ def decode(
 
         return sig_out, siglen
 
-    elif isinstance(sig_in, lgdo.ArrayOfEncodedEqualSizedArrays):
+    if isinstance(sig_in, lgdo.ArrayOfEncodedEqualSizedArrays):
         if sig_out is None:
             # initialize output structure with decoded_size
             sig_out = lgdo.ArrayOfEqualSizedArrays(
@@ -227,7 +225,7 @@ def decode(
         # convert vector of vectors to array of equal sized arrays
         # can now decode on the 2D matrix together with number of bytes to read per row
         _, siglen = decode(
-            (sig_in.encoded_data.to_aoesa(preserve_dtype=True).nda, nbytes),
+            (sig_in.encoded_data.to_aoesa(fill_val=0, preserve_dtype=True).nda, nbytes),
             sig_out if isinstance(sig_out, np.ndarray) else sig_out.nda,
         )
 
@@ -236,7 +234,7 @@ def decode(
 
         return sig_out
 
-    elif isinstance(sig_in, lgdo.VectorOfEncodedVectors):
+    if isinstance(sig_in, lgdo.VectorOfEncodedVectors):
         if sig_out:
             log.warning(
                 "a pre-allocated VectorOfVectors was given "
@@ -252,7 +250,7 @@ def decode(
         # convert vector of vectors to array of equal sized arrays
         # can now decode on the 2D matrix together with number of bytes to read per row
         sig_out, siglen = decode(
-            (sig_in.encoded_data.to_aoesa(preserve_dtype=True).nda, nbytes)
+            (sig_in.encoded_data.to_aoesa(fill_val=0, preserve_dtype=True).nda, nbytes)
         )
 
         # sanity check
@@ -261,13 +259,13 @@ def decode(
         # converto to VOV before returning
         return sig_out.to_vov(np.cumsum(siglen, dtype=uint32))
 
-    else:
-        raise ValueError("unsupported input signal type")
+    msg = "unsupported input signal type"
+    raise ValueError(msg)
 
 
 @numba.vectorize(
     ["uint64(int64)", "uint32(int32)", "uint16(int16)"],
-    **numba_defaults,
+    **nb_kwargs(nopython=True),
 )
 def zigzag_encode(x: int | NDArray[int]) -> int | NDArray[int]:
     """ZigZag-encode [#WikiZZ]_ signed integer numbers."""
@@ -276,19 +274,19 @@ def zigzag_encode(x: int | NDArray[int]) -> int | NDArray[int]:
 
 @numba.vectorize(
     ["int64(uint64)", "int32(uint32)", "int16(uint16)"],
-    **numba_defaults,
+    **nb_kwargs(nopython=True),
 )
 def zigzag_decode(x: int | NDArray[int]) -> int | NDArray[int]:
     """ZigZag-decode [#WikiZZ]_ signed integer numbers."""
     return (x >> 1) ^ -(x & 1)
 
 
-@numba.jit(["uint32(int64, byte[:])"], **numba_defaults)
+@numba.jit(["uint32(int64, byte[:])"], **nb_kwargs(nopython=True))
 def uleb128_encode(x: int, encx: NDArray[ubyte]) -> int:
     """Compute a variable-length representation of an unsigned integer.
 
     Implements the Unsigned Little Endian Base-128 encoding [#WikiULEB128]_.
-    Only positive numbers are expected, as no *two’s complement* is applied.
+    Only positive numbers are expected, as no *two's complement* is applied.
 
     Parameters
     ----------
@@ -316,12 +314,12 @@ def uleb128_encode(x: int, encx: NDArray[ubyte]) -> int:
     return i + 1
 
 
-@numba.jit(["UniTuple(uint32, 2)(byte[:])"], **numba_defaults)
+@numba.jit(["UniTuple(uint32, 2)(byte[:])"], **nb_kwargs(nopython=True))
 def uleb128_decode(encx: NDArray[ubyte]) -> (int, int):
     """Decode a variable-length integer into an unsigned integer.
 
     Implements the Unsigned Little Endian Base-128 decoding [#WikiULEB128]_.
-    Only encoded positive numbers are expected, as no *two’s complement* is
+    Only encoded positive numbers are expected, as no *two's complement* is
     applied.
 
     Parameters
@@ -335,20 +333,22 @@ def uleb128_decode(encx: NDArray[ubyte]) -> (int, int):
         the decoded value and the number of bytes read from the input array.
     """
     if len(encx) <= 0:
-        raise ValueError("input bytes array is empty")
+        empty_msg = "input bytes array is empty"
+        raise ValueError(empty_msg)
 
     x = pos = uint32(0)
     for b in encx:
         x = x | ((b & 0x7F) << pos)
         if (b & 0x80) == 0:
             return (x, int(pos / 7 + 1))
-        else:
-            pos += 7
+        pos += 7
 
         if pos >= 64:
-            raise OverflowError("overflow during decoding of varint encoded number")
+            overflow_msg = "overflow during decoding of varint encoded number"
+            raise OverflowError(overflow_msg)
 
-    raise RuntimeError("malformed varint")
+    msg = "malformed varint"
+    raise RuntimeError(msg)
 
 
 @numba.guvectorize(
@@ -361,7 +361,7 @@ def uleb128_decode(encx: NDArray[ubyte]) -> (int, int):
         "void(int64[:], byte[:], uint32[:])",
     ],
     "(n),(m),()",
-    **numba_defaults,
+    **nb_kwargs(nopython=True),
 )
 def uleb128_zigzag_diff_array_encode(
     sig_in: NDArray[int], sig_out: NDArray[ubyte], nbytes: int
@@ -411,7 +411,7 @@ def uleb128_zigzag_diff_array_encode(
         "void(byte[:], uint32[:], int64[:], uint32[:])",
     ],
     "(n),(),(m),()",
-    **numba_defaults,
+    **nb_kwargs(nopython=True),
 )
 def uleb128_zigzag_diff_array_decode(
     sig_in: NDArray[ubyte],
@@ -445,7 +445,8 @@ def uleb128_zigzag_diff_array_decode(
     .uleb128_zigzag_diff_array_encode
     """
     if len(sig_in) <= 0:
-        raise ValueError("input bytes array is empty")
+        msg = "input bytes array is empty"
+        raise ValueError(msg)
 
     _nbytes = min(nbytes[0], len(sig_in))
     pos = i = uint32(0)

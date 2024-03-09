@@ -8,7 +8,9 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+import awkward as ak
 import numpy as np
+import pandas as pd
 
 from .array import Array
 from .arrayofequalsizedarrays import ArrayOfEqualSizedArrays
@@ -44,16 +46,16 @@ class WaveformTable(Table):
 
     def __init__(
         self,
-        size: int = None,
+        size: int | None = None,
         t0: float | Array | np.ndarray = 0,
-        t0_units: str = None,
+        t0_units: str | None = None,
         dt: float | Array | np.ndarray = 1,
-        dt_units: str = None,
+        dt_units: str | None = None,
         values: ArrayOfEqualSizedArrays | VectorOfVectors | np.ndarray = None,
-        values_units: str = None,
-        wf_len: int = None,
+        values_units: str | None = None,
+        wf_len: int | None = None,
         dtype: np.dtype = None,
-        attrs: dict[str, Any] = None,
+        attrs: dict[str, Any] | None = None,
     ) -> None:
         r"""
         Parameters
@@ -262,3 +264,18 @@ class WaveformTable(Table):
 
         np.set_printoptions(**npopt)
         return string
+
+    def view_as(
+        self,
+        library: str,
+        with_units: bool = False,
+        cols: list[str] | None = None,
+        prefix: str = "",
+    ) -> pd.DataFrame | np.NDArray | ak.Array:
+        r"""View the waveform data as a third-party format data structure.
+
+        See Also
+        --------
+        .LGDO.view_as
+        """
+        return super().view_as(library, with_units, cols, prefix)

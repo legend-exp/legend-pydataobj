@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+title: legend-pydataobj
+doi: https://doi.org/10.5281/zenodo.10592108
+date-released: 2024-01-30
+url: https://github.com/github-linguist/linguist
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: Detwiler
+    given-names: Jason
+    orcid: https://orcid.org/0000-0002-9050-4610
+  - family-names: Pertoldi
+    given-names: Luigi
+    orcid: https://orcid.org/0000-0002-0467-2571
+  - family-names: Guinn
+    given-names: Ian
+    orcid: https://orcid.org/0000-0002-2424-3272
+  - family-names: Song
+    given-names: Grace
+    email: grsong@uw.edu
+  - family-names: Borden
+    given-names: Sam
+    orcid: https://orcid.org/0009-0003-2539-4333
+  - family-names: Neuberger
+    given-names: Moritz
+    orcid: https://orcid.org/0009-0001-8471-9076
+  - family-names: Krause
+    given-names: Patrick
+    orcid: https://orcid.org/0000-0002-9603-7865
