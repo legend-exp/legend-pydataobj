@@ -357,9 +357,9 @@ class VectorOfVectors(LGDO):
         behavior. This method is typically used for fast sequential fill of a
         pre-allocated vector of vectors.
 
-        If vec is 1D array and lens is None, set using full array. If vec
-        is 2D, require lens to be included, and fill each array only up to
-        lengths in lens.
+        If i`vec` is 1D array and `lens` is ``None``, set using full array. If
+        `vec` is 2D, require `lens` to be included, and fill each array only up
+        to lengths in `lens`.
 
         Danger
         ------
@@ -370,15 +370,27 @@ class VectorOfVectors(LGDO):
         --------
         append, replace, insert
         """
+        # check if current vector is empty and get the start index in
+        # flattened_data
         start = 0 if i == 0 else self.cumulative_length[i - 1]
+
+        # if the new element is 1D, convert to dummy 2D
         if len(vec.shape) == 1:
             vec = np.expand_dims(vec, axis=0)
             if lens is None:
                 lens = np.array([vec.shape[1]], dtype="u4")
+
+        # this in case lens is 02, convert to 1D
         if not isinstance(lens, np.ndarray):
             lens = np.array([lens], dtype="u4")
+
+        # calculate stop index in flattened_data
         cum_lens = start + lens.cumsum()
+
+        # fill with fast vectorized routine
         _nb_fill(vec, lens, self.flattened_data.nda[start : cum_lens[-1]])
+
+        # add new vector(s) length to cumulative_length
         self.cumulative_length[i : i + len(lens)] = cum_lens
 
     def __iter__(self) -> Iterator[NDArray]:
