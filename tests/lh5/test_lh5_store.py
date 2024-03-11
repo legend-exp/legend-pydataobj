@@ -282,13 +282,10 @@ def test_read_vov(lh5_file):
     lh5_obj, n_rows = store.read("/data/struct/vov", lh5_file)
     assert isinstance(lh5_obj, types.VectorOfVectors)
 
-    desired = [np.array([3, 4, 5]), np.array([2]), np.array([4, 8, 9, 7])]
-
-    for i in range(len(desired)):
-        assert (desired[i] == list(lh5_obj)[i]).all()
-
+    assert lh5_obj == types.VectorOfVectors(
+        [[3, 4, 5], [2], [4, 8, 9, 7]], attrs={"myattr": 2}
+    )
     assert n_rows == 3
-    assert lh5_obj.attrs["myattr"] == 2
 
     with h5py.File(lh5_file) as h5f:
         assert (
@@ -310,11 +307,7 @@ def test_read_vov_fancy_idx(lh5_file):
     lh5_obj, n_rows = store.read("/data/struct_full/vov", lh5_file, idx=[0, 2])
     assert isinstance(lh5_obj, types.VectorOfVectors)
 
-    desired = [np.array([1, 2]), np.array([2])]
-
-    for i in range(len(desired)):
-        assert (desired[i] == list(lh5_obj)[i]).all()
-
+    assert lh5_obj == types.VectorOfVectors([[1, 2], [2]], attrs={"myattr": 2})
     assert n_rows == 2
 
 
@@ -323,11 +316,10 @@ def test_read_voev(lh5_file):
     lh5_obj, n_rows = store.read("/data/struct/voev", lh5_file, decompress=False)
     assert isinstance(lh5_obj, types.VectorOfEncodedVectors)
 
-    desired = [np.array([3, 4, 5]), np.array([2]), np.array([4, 8, 9, 7])]
-
-    for i in range(len(desired)):
-        assert (desired[i] == lh5_obj[i][0]).all()
-
+    assert lh5_obj == types.VectorOfEncodedVectors(
+        encoded_data=types.VectorOfVectors([[3, 4, 5], [2], [4, 8, 9, 7]]),
+        decoded_size=[6, 6, 6],
+    )
     assert n_rows == 3
 
     lh5_obj, n_rows = store.read(
@@ -355,11 +347,9 @@ def test_read_voev_fancy_idx(lh5_file):
     )
     assert isinstance(lh5_obj, types.VectorOfEncodedVectors)
 
-    desired = [np.array([1, 2]), np.array([2])]
-
-    for i in range(len(desired)):
-        assert (desired[i] == lh5_obj[i][0]).all()
-
+    assert lh5_obj == types.VectorOfEncodedVectors(
+        encoded_data=types.VectorOfVectors([[1, 2], [2]]), decoded_size=[6, 6]
+    )
     assert n_rows == 2
 
 
