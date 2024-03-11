@@ -4,7 +4,6 @@ variable-length arrays and corresponding utilities.
 """
 from __future__ import annotations
 
-import itertools
 import logging
 from collections.abc import Iterator
 from typing import Any
@@ -35,9 +34,9 @@ class VectorOfVectors(LGDO):
 
     def __init__(
         self,
-        array: ak.Array | list[list[int | float]] = None,
+        data: Any = None,
         flattened_data: Array | NDArray = None,
-        cumulative_length: Array | NDArray = None,
+        cumulative_length: Array | NDArray | VectorOfVectors = None,
         shape_guess: tuple[int, int] | None = None,
         dtype: DTypeLike = None,
         fill_val: int | float | None = None,
@@ -74,39 +73,24 @@ class VectorOfVectors(LGDO):
         attrs
             a set of user attributes to be carried along with this LGDO.
         """
-        if array is not None:
-            if isinstance(array, ak.Array):
-                if array.ndim != 2:
-                    msg = (
-                        "cannot initialize a VectorOfVectors with "
-                        f"{array.ndim}-dimensional data"
-                    )
-                    raise ValueError(msg)
+        if data is not None:
+            if not isinstance(data, ak.Array):
+                data = ak.Array(data)
 
-                form, length, container = ak.to_buffers(array)
-
-                self.__init__(
-                    flattened_data=container["node1-data"],
-                    cumulative_length=container["node0-offsets"][1:],
+            if data.ndim != 2:
+                msg = (
+                    "cannot initialize a VectorOfVectors with "
+                    f"{data.ndim}-dimensional data"
                 )
+                raise ValueError(msg)
 
-            else:
-                cl_nda = np.cumsum([len(ll) for ll in array])
-                if dtype is None:
-                    if len(cl_nda) == 0 or cl_nda[-1] == 0:
-                        msg = "array can't be empty with dtype=None!"
-                        raise ValueError(msg)
+            form, length, container = ak.to_buffers(data)
 
-                    # Set dtype from the first element in the list
-                    # Find it efficiently, allowing for zero-length lists as some of the entries
-                    first_element = next(itertools.chain.from_iterable(array))
-                    dtype = type(first_element)
-
-                self.dtype = np.dtype(dtype)
-                self.cumulative_length = Array(cl_nda)
-                self.flattened_data = Array(
-                    np.fromiter(itertools.chain.from_iterable(array), dtype=self.dtype)
-                )
+            node1_data = container.get("node1-data", np.empty(0, dtype=dtype))
+            self.__init__(
+                flattened_data=node1_data,
+                cumulative_length=container["node0-offsets"][1:],
+            )
 
         else:
             if cumulative_length is None:
