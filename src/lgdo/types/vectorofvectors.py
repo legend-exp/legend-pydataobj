@@ -34,11 +34,11 @@ class VectorOfVectors(LGDO):
 
     def __init__(
         self,
-        data: Any = None,
-        flattened_data: Array | NDArray = None,
-        cumulative_length: Array | NDArray | VectorOfVectors = None,
+        data: Any | None = None,
+        flattened_data: Array | NDArray | None = None,
+        cumulative_length: Array | NDArray | VectorOfVectors | None = None,
         shape_guess: tuple[int, int] | None = None,
-        dtype: DTypeLike = None,
+        dtype: DTypeLike | None = None,
         fill_val: int | float | None = None,
         attrs: dict[str, Any] | None = None,
     ) -> None:
@@ -46,7 +46,7 @@ class VectorOfVectors(LGDO):
         Parameters
         ----------
         array
-            create a ``VectorOfVectors`` out of a Python list of lists or an
+            create a :class:`VectorOfVectors` out of a Python list of lists or an
             :class:`ak.Array`. Takes priority over `flattened_data` and
             `cumulative_length`.
         flattened_data
@@ -73,68 +73,128 @@ class VectorOfVectors(LGDO):
         attrs
             a set of user attributes to be carried along with this LGDO.
         """
+        # sanitize
+        if cumulative_length is not None and not isinstance(cumulative_length, Array):
+            cumulative_length = Array(cumulative_length)
+        if flattened_data is not None and not isinstance(
+            flattened_data, (Array, VectorOfVectors)
+        ):
+            flattened_data = Array(flattened_data)
+
         if data is not None:
             if not isinstance(data, ak.Array):
                 data = ak.Array(data)
 
-            if data.ndim != 2:
+            if data.ndim < 2:
                 msg = (
                     "cannot initialize a VectorOfVectors with "
                     f"{data.ndim}-dimensional data"
                 )
                 raise ValueError(msg)
 
-            form, length, container = ak.to_buffers(data)
+            # make sure it's not a record array
+            if not _ak_is_valid(data):
+                msg = "input array type is not supported!"
+                raise ValueError(msg)
 
-            node1_data = container.get("node1-data", np.empty(0, dtype=dtype))
-            self.__init__(
-                flattened_data=node1_data,
-                cumulative_length=container["node0-offsets"][1:],
+            # array might be non-jagged! ('container' will hold a ndim NumPy array)
+            if not _ak_is_jagged(data):
+                data = ak.from_regular(data, axis=None)
+
+            # ak.to_buffer helps in de-serialization
+            # NOTE: ak.to_packed() needed?
+            form, length, container = ak.to_buffers(ak.to_packed(data))
+
+            # NOTE: node#-data is not even in the dict if the awkward array is empty
+            # NOTE: if the data arg was a numpy array, to_buffers() preserves
+            # the original dtype
+            # FIXME: have to copy the buffers, otherwise self will not own the
+            # data and self.resize() will fail. Is it possible to avoid this?
+            flattened_data = np.copy(
+                container.pop(f"node{data.ndim-1}-data", np.empty(0, dtype=dtype))
             )
 
+            # if user-provided dtype is different than dtype from Awkward, cast
+            # NOTE: makes a copy only if needed
+            flattened_data = np.asarray(flattened_data, dtype=dtype)
+
+            # start from innermost VoV and build nested structure
+            for i in range(data.ndim - 2, -1, -1):
+                # NOTE: remember, omit the leading 0 from ak.Array offsets
+                cumulative_length = np.copy(container[f"node{i}-offsets"][1:])
+
+                if i != 0:
+                    # at the beginning of the loop: initialize innermost
+                    # flattened_data and replace current flattened_data
+                    # reference. in the following iterations flattened_data is
+                    # a VectorOfVectors
+                    flattened_data = VectorOfVectors(
+                        flattened_data=flattened_data,
+                        cumulative_length=cumulative_length,
+                    )
+
+                else:
+                    # at end we need to initialize self with the latest flattened_data
+                    self.__init__(
+                        flattened_data=flattened_data,
+                        cumulative_length=cumulative_length,
+                    )
+
         else:
+            self.flattened_data = None
+            self.cumulative_length = None
+
+            # let's first setup cumulative_length...
             if cumulative_length is None:
-                if shape_guess is None:
-                    # just make an empty vector
-                    self.cumulative_length = Array(np.empty((0,), dtype="uint32"))
                 # initialize based on shape_guess
-                elif shape_guess[1] <= 0:
-                    self.cumulative_length = Array(
-                        shape=(shape_guess[0],), dtype="uint32", fill_val=0
+                if shape_guess is None:
+                    # just make an empty 2D vector
+                    shape_guess = (0, 0)
+
+                # sanity check
+                if len(shape_guess) < 2:
+                    msg = "shape_guess must be a sequence of 2 integers or more"
+                    raise ValueError(msg)
+
+                # let's Awkward do the job here, we're lazy
+                if fill_val is not None:
+                    self.__init__(
+                        np.full(shape=shape_guess, fill_value=fill_val, dtype=dtype)
                     )
                 else:
-                    self.cumulative_length = Array(
-                        np.arange(
-                            shape_guess[1],
-                            np.prod(shape_guess) + 1,
-                            shape_guess[1],
-                            dtype="uint32",
-                        )
-                    )
+                    self.__init__(np.empty(shape=shape_guess, dtype=dtype))
             else:
-                self.cumulative_length = Array(cumulative_length)
+                # if it's user provided just use it
+                self.cumulative_length = cumulative_length
 
-            if flattened_data is None:
+            # ...then flattened_data
+            # NOTE: self.flattened_data might have already been initialized
+            # above
+            if flattened_data is None and self.flattened_data is None:
+                # this happens when the cumulative_length arg is not None
                 if dtype is None:
                     msg = "flattened_data and dtype cannot both be None!"
                     raise ValueError(msg)
 
-                length = 0
-                if cumulative_length is None:
-                    # just make an empty vector or use shape_guess
-                    length = 0 if shape_guess is None else np.prod(shape_guess)
-                else:
-                    # use cumulative_length
-                    length = cumulative_length[-1]
-
+                # now ready to initialize the object!
                 self.flattened_data = Array(
-                    shape=(length,), dtype=dtype, fill_val=fill_val
+                    shape=(self.cumulative_length[-1],), dtype=dtype, fill_val=fill_val
                 )
-            else:
-                self.flattened_data = Array(flattened_data)
+            elif self.flattened_data is None:
+                self.flattened_data = flattened_data
 
             # finally set dtype
             self.dtype = self.flattened_data.dtype
+
+        # set ndim
+        self.ndim = 2
+        pointer = self.flattened_data
+        while True:
+            if isinstance(pointer, Array):
+                break
+
+            self.ndim += 1
+            pointer = pointer.flattened_data
 
         super().__init__(attrs)
 
@@ -142,8 +202,12 @@ class VectorOfVectors(LGDO):
         return "array"
 
     def form_datatype(self) -> str:
-        et = utils.get_element_type(self)
-        return "array<1>{array<1>{" + et + "}}"
+        eltype = (
+            "array<1>{" + utils.get_element_type(self) + "}"
+            if self.ndim == 2
+            else self.flattened_data.form_datatype()
+        )
+        return "array<1>{" + eltype + "}"
 
     def __len__(self) -> int:
         """Return the number of stored vectors."""
@@ -151,15 +215,17 @@ class VectorOfVectors(LGDO):
 
     def __eq__(self, other: VectorOfVectors) -> bool:
         if isinstance(other, VectorOfVectors):
+            if self.ndim == 2 and len(self.cumulative_length) != 0:
+                fldata_eq = np.all(
+                    self.flattened_data[: self.cumulative_length[-1]]
+                    == other.flattened_data[: other.cumulative_length[-1]]
+                )
+            else:
+                fldata_eq = self.flattened_data == other.flattened_data
+
             return (
                 self.cumulative_length == other.cumulative_length
-                and (
-                    len(self.cumulative_length) == 0
-                    or np.all(
-                        self.flattened_data[: self.cumulative_length[-1]]
-                        == other.flattened_data[: other.cumulative_length[-1]]
-                    )
-                )
+                and fldata_eq
                 and self.dtype == other.dtype
                 and self.attrs == other.attrs
             )
@@ -167,15 +233,21 @@ class VectorOfVectors(LGDO):
         return False
 
     def __getitem__(self, i: int) -> list:
-        """Return vector at index `i`."""
-        stop = self.cumulative_length[i]
-        if i in (0, -len(self)):
-            return self.flattened_data[0:stop]
+        """Return a view of the vector at index `i`."""
+        if self.ndim == 2:
+            stop = self.cumulative_length[i]
+            if i in (0, -len(self)):
+                return self.flattened_data[0:stop]
 
-        return self.flattened_data[self.cumulative_length[i - 1] : stop]
+            return self.flattened_data[self.cumulative_length[i - 1] : stop]
+
+        raise NotImplementedError
 
     def __setitem__(self, i: int, new: NDArray) -> None:
-        self.__getitem__(i)[:] = new
+        if self.ndim == 2:
+            self.__getitem__(i)[:] = new
+        else:
+            raise NotImplementedError
 
     def resize(self, new_size: int) -> None:
         """Resize vector along the first axis.
@@ -204,24 +276,26 @@ class VectorOfVectors(LGDO):
          [3],
         ]
         """
+        if self.ndim == 2:
+            vidx = self.cumulative_length
+            old_s = len(self)
+            dlen = new_size - old_s
+            csum = vidx[-1] if len(self) > 0 else 0
 
-        vidx = self.cumulative_length
-        old_s = len(self)
-        dlen = new_size - old_s
-        csum = vidx[-1] if len(self) > 0 else 0
+            # first resize the cumulative length
+            self.cumulative_length.resize(new_size)
 
-        # first resize the cumulative length
-        self.cumulative_length.resize(new_size)
+            # if new_size > size, new elements are filled with zeros, let's fix
+            # that
+            if dlen > 0:
+                self.cumulative_length[old_s:] = csum
 
-        # if new_size > size, new elements are filled with zeros, let's fix
-        # that
-        if dlen > 0:
-            self.cumulative_length[old_s:] = csum
-
-        # then resize the data array
-        # if dlen > 0 this has no effect
-        if len(self.cumulative_length) > 0:
-            self.flattened_data.resize(self.cumulative_length[-1])
+            # then resize the data array
+            # if dlen > 0 this has no effect
+            if len(self.cumulative_length) > 0:
+                self.flattened_data.resize(self.cumulative_length[-1])
+        else:
+            raise NotImplementedError
 
     def append(self, new: NDArray) -> None:
         """Append a 1D vector `new` at the end.
@@ -236,15 +310,20 @@ class VectorOfVectors(LGDO):
          [8 9],
         ]
         """
-        # first extend cumulative_length by +1
-        self.cumulative_length.resize(len(self) + 1)
-        # set it at the right value
-        newlen = self.cumulative_length[-2] + len(new) if len(self) > 1 else len(new)
-        self.cumulative_length[-1] = newlen
-        # then resize flattened_data to accommodate the new vector
-        self.flattened_data.resize(len(self.flattened_data) + len(new))
-        # finally set it
-        self[-1] = new
+        if self.ndim == 2:
+            # first extend cumulative_length by +1
+            self.cumulative_length.resize(len(self) + 1)
+            # set it at the right value
+            newlen = (
+                self.cumulative_length[-2] + len(new) if len(self) > 1 else len(new)
+            )
+            self.cumulative_length[-1] = newlen
+            # then resize flattened_data to accommodate the new vector
+            self.flattened_data.resize(len(self.flattened_data) + len(new))
+            # finally set it
+            self[-1] = new
+        else:
+            raise NotImplementedError
 
     def insert(self, i: int, new: NDArray) -> None:
         """Insert a vector at index `i`.
@@ -267,17 +346,20 @@ class VectorOfVectors(LGDO):
         This method involves a significant amount of memory re-allocation and
         is expected to perform poorly on large vectors.
         """
-        if i >= len(self):
-            msg = f"index {i} is out of bounds for vector owith size {len(self)}"
-            raise IndexError(msg)
+        if self.ndim == 2:
+            if i >= len(self):
+                msg = f"index {i} is out of bounds for vector owith size {len(self)}"
+                raise IndexError(msg)
 
-        self.flattened_data = Array(
-            np.insert(self.flattened_data, self.cumulative_length[i - 1], new)
-        )
-        self.cumulative_length = Array(
-            np.insert(self.cumulative_length, i, self.cumulative_length[i - 1])
-        )
-        self.cumulative_length[i:] += np.uint32(len(new))
+            self.flattened_data = Array(
+                np.insert(self.flattened_data, self.cumulative_length[i - 1], new)
+            )
+            self.cumulative_length = Array(
+                np.insert(self.cumulative_length, i, self.cumulative_length[i - 1])
+            )
+            self.cumulative_length[i:] += np.uint32(len(new))
+        else:
+            raise NotImplementedError
 
     def replace(self, i: int, new: NDArray) -> None:
         """Replace the vector at index `i` with `new`.
@@ -300,34 +382,37 @@ class VectorOfVectors(LGDO):
         This method involves a significant amount of memory re-allocation and
         is expected to perform poorly on large vectors.
         """
-        if i >= len(self):
-            msg = f"index {i} is out of bounds for vector with size {len(self)}"
-            raise IndexError(msg)
+        if self.ndim == 2:
+            if i >= len(self):
+                msg = f"index {i} is out of bounds for vector with size {len(self)}"
+                raise IndexError(msg)
 
-        vidx = self.cumulative_length
-        dlen = len(new) - len(self[i])
+            vidx = self.cumulative_length
+            dlen = len(new) - len(self[i])
 
-        if dlen == 0:
-            # don't waste resources
-            self[i] = new
-        elif dlen < 0:
-            start = vidx[i - 1]
-            stop = start + len(new)
-            # set the already allocated indices
-            self.flattened_data[start:stop] = new
-            # then delete the extra indices
-            self.flattened_data = Array(
-                np.delete(self.flattened_data, np.s_[stop : vidx[i]])
-            )
+            if dlen == 0:
+                # don't waste resources
+                self[i] = new
+            elif dlen < 0:
+                start = vidx[i - 1]
+                stop = start + len(new)
+                # set the already allocated indices
+                self.flattened_data[start:stop] = new
+                # then delete the extra indices
+                self.flattened_data = Array(
+                    np.delete(self.flattened_data, np.s_[stop : vidx[i]])
+                )
+            else:
+                # set the already allocated indices
+                self.flattened_data[vidx[i - 1] : vidx[i]] = new[: len(self[i])]
+                # then insert the remaining
+                self.flattened_data = Array(
+                    np.insert(self.flattened_data, vidx[i], new[len(self[i]) :])
+                )
+
+            vidx[i:] = vidx[i:] + dlen
         else:
-            # set the already allocated indices
-            self.flattened_data[vidx[i - 1] : vidx[i]] = new[: len(self[i])]
-            # then insert the remaining
-            self.flattened_data = Array(
-                np.insert(self.flattened_data, vidx[i], new[len(self[i]) :])
-            )
-
-        vidx[i:] = vidx[i:] + dlen
+            raise NotImplementedError
 
     def _set_vector_unsafe(self, i: int, vec: NDArray, lens: NDArray = None) -> None:
         r"""Insert vector `vec` at position `i`.
@@ -354,51 +439,47 @@ class VectorOfVectors(LGDO):
         --------
         append, replace, insert
         """
-        # check if current vector is empty and get the start index in
-        # flattened_data
-        start = 0 if i == 0 else self.cumulative_length[i - 1]
+        if self.ndim == 2:
+            # check if current vector is empty and get the start index in
+            # flattened_data
+            start = 0 if i == 0 else self.cumulative_length[i - 1]
 
-        # if the new element is 1D, convert to dummy 2D
-        if len(vec.shape) == 1:
-            vec = np.expand_dims(vec, axis=0)
-            if lens is None:
-                lens = np.array([vec.shape[1]], dtype="u4")
+            # if the new element is 1D, convert to dummy 2D
+            if len(vec.shape) == 1:
+                vec = np.expand_dims(vec, axis=0)
+                if lens is None:
+                    lens = np.array([vec.shape[1]], dtype="u4")
 
-        # this in case lens is 02, convert to 1D
-        if not isinstance(lens, np.ndarray):
-            lens = np.array([lens], dtype="u4")
+            # this in case lens is 02, convert to 1D
+            if not isinstance(lens, np.ndarray):
+                lens = np.array([lens], dtype="u4")
 
-        # calculate stop index in flattened_data
-        cum_lens = start + lens.cumsum()
+            # calculate stop index in flattened_data
+            cum_lens = start + lens.cumsum()
 
-        # fill with fast vectorized routine
-        _nb_fill(vec, lens, self.flattened_data.nda[start : cum_lens[-1]])
+            # fill with fast vectorized routine
+            _nb_fill(vec, lens, self.flattened_data.nda[start : cum_lens[-1]])
 
-        # add new vector(s) length to cumulative_length
-        self.cumulative_length[i : i + len(lens)] = cum_lens
+            # add new vector(s) length to cumulative_length
+            self.cumulative_length[i : i + len(lens)] = cum_lens
+        else:
+            raise NotImplementedError
 
     def __iter__(self) -> Iterator[NDArray]:
-        for j, stop in enumerate(self.cumulative_length):
-            if j == 0:
-                yield self.flattened_data[0:stop]
-            else:
-                yield self.flattened_data[self.cumulative_length[j - 1] : stop]
+        if self.ndim == 2:
+            for j, stop in enumerate(self.cumulative_length):
+                if j == 0:
+                    yield self.flattened_data[0:stop]
+                else:
+                    yield self.flattened_data[self.cumulative_length[j - 1] : stop]
+        else:
+            raise NotImplementedError
 
     def __str__(self) -> str:
-        string = ""
-        pos = 0
-        for vec in self:
-            if pos != 0:
-                string += " "
+        string = self.view_as("ak").show(stream=None)
 
-            string += np.array2string(vec, prefix=" ")
-
-            if pos < len(self.cumulative_length):
-                string += ",\n"
-
-            pos += 1
-
-        string = f"[{string}]"
+        string = string.strip().removesuffix("]")
+        string += "\n]"
 
         tmp_attrs = self.attrs.copy()
         tmp_attrs.pop("datatype")
@@ -453,19 +534,22 @@ class VectorOfVectors(LGDO):
             original vector of vectors. The type `fill_val` must be a
             compatible one.
         """
-        ak_arr = self.view_as("ak")
+        if self.ndim == 2:
+            ak_arr = self.view_as("ak")
 
-        if max_len is None:
-            max_len = int(ak.max(ak.count(ak_arr, axis=-1)))
+            if max_len is None:
+                max_len = int(ak.max(ak.count(ak_arr, axis=-1)))
 
-        nda = ak.fill_none(ak.pad_none(ak_arr, max_len, clip=True), fill_val).to_numpy(
-            allow_missing=False
-        )
+            nda = ak.fill_none(
+                ak.pad_none(ak_arr, max_len, clip=True), fill_val
+            ).to_numpy(allow_missing=False)
 
-        if preserve_dtype:
-            nda = nda.astype(self.flattened_data.dtype, copy=False)
+            if preserve_dtype:
+                nda = nda.astype(self.flattened_data.dtype, copy=False)
 
-        return aoesa.ArrayOfEqualSizedArrays(nda=nda, attrs=self.getattrs())
+            return aoesa.ArrayOfEqualSizedArrays(nda=nda, attrs=self.getattrs())
+
+        raise NotImplementedError
 
     def view_as(
         self,
@@ -515,6 +599,8 @@ class VectorOfVectors(LGDO):
                 msg = "Pint does not support Awkward yet, you must view the data with_units=False"
                 raise ValueError(msg)
 
+            # see https://github.com/scikit-hep/awkward/discussions/2848
+
             # cannot avoid making a copy here. we should add the leading 0 to
             # cumulative_length inside VectorOfVectors at some point in the
             # future
@@ -524,9 +610,15 @@ class VectorOfVectors(LGDO):
             offsets[1:] = self.cumulative_length
             offsets[0] = 0
 
+            content = (
+                ak.contents.NumpyArray(self.flattened_data.nda)
+                if self.ndim == 2
+                else self.flattened_data.view_as(library, with_units=with_units).layout
+            )
+
             layout = ak.contents.ListOffsetArray(
                 offsets=ak.index.Index(offsets),
-                content=ak.contents.NumpyArray(self.flattened_data.nda),
+                content=content,
             )
             return ak.Array(layout)
 
@@ -751,11 +843,11 @@ def explode(
             f"and cl[-1] ({cumulative_length[-1]}) != out ({len(array_out)})"
         )
         raise ValueError(msg)
-    return nb_explode(cumulative_length, array_in, array_out)
+    return _nb_explode(cumulative_length, array_in, array_out)
 
 
 @numba.njit(**nb_kwargs)
-def nb_explode(
+def _nb_explode(
     cumulative_length: NDArray, array_in: NDArray, array_out: NDArray
 ) -> NDArray:
     """Numbified inner loop for :func:`.explode`."""
@@ -807,3 +899,47 @@ def explode_arrays(
     for ii in range(len(arrays)):
         explode(cumulative_length, arrays[ii], arrays_out[ii])
     return arrays_out
+
+
+def _ak_is_jagged(type_):
+    """Returns ``True`` if :class:`ak.Array` is jagged at all axes.
+
+    This assures that :func:`ak.to_buffers` returns the expected data
+    structures.
+    """
+    if isinstance(type_, ak.Array):
+        return _ak_is_jagged(type_.type)
+
+    if isinstance(type_, (ak.types.ArrayType, ak.types.ListType)):
+        return _ak_is_jagged(type_.content)
+
+    if isinstance(type_, ak.types.ScalarType):
+        msg = "Expected ArrayType or its content"
+        raise TypeError(msg)
+
+    return not isinstance(type_, ak.types.RegularType)
+
+
+# https://github.com/scikit-hep/awkward/discussions/3049
+def _ak_is_valid(type_):
+    """Returns ``True`` if :class:`ak.Array` contains only elements we can serialize to LH5."""
+    if isinstance(type_, ak.Array):
+        return _ak_is_valid(type_.type)
+
+    if isinstance(type_, (ak.types.ArrayType, ak.types.ListType)):
+        return _ak_is_valid(type_.content)
+
+    if isinstance(type_, ak.types.ScalarType):
+        msg = "Expected ArrayType or its content"
+        raise TypeError(msg)
+
+    return not isinstance(
+        type_,
+        (
+            ak.types.OptionType,
+            ak.types.UnionType,
+            ak.types.RecordType,
+        ),
+    )
+
+    return isinstance(type_, ak.types.NumpyType)
