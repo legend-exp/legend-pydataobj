@@ -32,6 +32,21 @@ class VectorOfVectors(LGDO):
     each vector (:attr:`cumulative_length`). When the dimension is more than 2,
     :attr:`flattened_data` is a :class:`VectorOfVectors` itself.
 
+    Examples
+    --------
+    >>> from lgdo import VectorOfVectors
+    >>> data = VectorOfVectors(
+    ...   [[[1, 2], [3, 4, 5]], [[2], [4, 8, 9, 7]], [[5, 3, 1]]],
+    ...   attrs={"units": "m"}
+    ... )
+    >>> print(data)
+    [[[1, 2], [3, 4, 5]],
+     [[2], [4, 8, 9, 7]],
+     [[5, 3, 1]]
+    ] with attrs={'units': 'm'}
+    >>> data.view_as("ak")
+    <Array [[[1, 2], [3, 4, 5]], ..., [[5, ..., 1]]] type='3 * var * var * int64'>
+
     Note
     ----
     Many class methods are currently implemented only for 2D vectors and will
