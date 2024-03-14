@@ -634,9 +634,10 @@ class LH5Store:
             ]
 
             if idx is not None and n_rows_read > 0:
-                # get the starting indices for each array in flattended data:
+                # get the starting indices for each array in flattened data:
                 # the starting index for array[i] is cumulative_length[i-1]
                 idx2 = (np.asarray(idx[0]).copy() - 1,)
+
                 # re-read cumulative_length with these indices
                 # note this will allocate memory for fd_starts!
                 fd_start = None
@@ -662,7 +663,7 @@ class LH5Store:
                     fd_n_rows += this_cumulen_nda[0]
 
                 # now make fd_idx
-                fd_idx = np.empty(fd_n_rows, dtype="uint32")
+                fd_idx = np.empty(fd_n_rows, dtype="int32")
                 fd_idx = _make_fd_idx(fd_starts, this_cumulen_nda, fd_idx)
 
                 # Now clean up this_cumulen_nda, to be ready
