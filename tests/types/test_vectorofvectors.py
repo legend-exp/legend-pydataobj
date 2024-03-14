@@ -87,6 +87,28 @@ def test_init(testvov):
     )
 
 
+def test_eq(testvov):
+    assert testvov.v2d == VectorOfVectors(
+        [[1, 2], [3, 4, 5], [2], [4, 8, 9, 7], [5, 3, 1]]
+    )
+    assert testvov.v3d == VectorOfVectors(
+        [[[1, 2], [3, 4, 5]], [[2], [4, 8, 9, 7]], [[5, 3, 1]]]
+    )
+    assert testvov.v4d == VectorOfVectors(
+        [
+            [[[1], [2]], [[3, 4], [5]]],
+            [[[2, 6]], [[4, 8, 9, 7], [8, 3]]],
+            [[[5, 3], [1]]],
+        ]
+    )
+
+    assert VectorOfVectors(
+        [[1, 2], [3, 4, 5], [2], [4, 8, 9, 7], [5, 3, 1]], attrs={"ciao": "bello"}
+    ) == VectorOfVectors(
+        [[1, 2], [3, 4, 5], [2], [4, 8, 9, 7], [5, 3, 1]], attrs={"ciao": "bello"}
+    )
+
+
 def test_len(testvov):
     assert len(testvov.v2d) == 5
     assert len(testvov.v3d) == 3

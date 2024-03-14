@@ -149,6 +149,12 @@ def lh5_file(tmptestdir):
             attrs={"myattr": 2},
         ),
     )
+    struct.add_field(
+        "vov3d",
+        types.VectorOfVectors(
+            [[[1, 2], [3, 4, 5]], [[2], [4, 8, 9, 7]], [[5, 3, 1]], [[3], []], [[3, 4]]]
+        ),
+    )
 
     struct.add_field(
         "voev",
@@ -235,6 +241,7 @@ def test_read_n_rows(lh5_file):
     assert store.read_n_rows("/data/struct_full/table", lh5_file) == 4
     assert store.read_n_rows("/data/struct_full/voev", lh5_file) == 5
     assert store.read_n_rows("/data/struct_full/vov", lh5_file) == 5
+    assert store.read_n_rows("/data/struct_full/vov3d", lh5_file) == 3
     assert store.read_n_rows("/data/struct_full/wftable", lh5_file) == 10
     assert store.read_n_rows("/data/struct_full/wftable_enc/values", lh5_file) == 10
 
@@ -282,10 +289,9 @@ def test_read_vov(lh5_file):
     lh5_obj, n_rows = store.read("/data/struct/vov", lh5_file)
     assert isinstance(lh5_obj, types.VectorOfVectors)
 
-    desired = [np.array([3, 4, 5]), np.array([2]), np.array([4, 8, 9, 7])]
-
-    for i in range(len(desired)):
-        assert (desired[i] == list(lh5_obj)[i]).all()
+    assert lh5_obj == lgdo.VectorOfVectors(
+        [[3, 4, 5], [2], [4, 8, 9, 7]], attrs={"myattr": 2}
+    )
 
     assert n_rows == 3
     assert lh5_obj.attrs["myattr"] == 2
@@ -300,6 +306,13 @@ def test_read_vov(lh5_file):
             is DEFAULT_HDF5_SETTINGS["compression"]
         )
 
+    lh5_obj, n_rows = store.read("/data/struct/vov3d", lh5_file)
+    assert isinstance(lh5_obj, types.VectorOfVectors)
+
+    assert lh5_obj == types.VectorOfVectors(
+        [[[2], [4, 8, 9, 7]], [[5, 3, 1]], [[3], []]]
+    )
+
 
 def test_read_vov_fancy_idx(lh5_file):
     store = lh5.LH5Store()
@@ -310,11 +323,14 @@ def test_read_vov_fancy_idx(lh5_file):
     lh5_obj, n_rows = store.read("/data/struct_full/vov", lh5_file, idx=[0, 2])
     assert isinstance(lh5_obj, types.VectorOfVectors)
 
-    desired = [np.array([1, 2]), np.array([2])]
+    assert lh5_obj == types.VectorOfVectors([[1, 2], [2]], attrs={"myattr": 2})
+    assert n_rows == 2
 
-    for i in range(len(desired)):
-        assert (desired[i] == list(lh5_obj)[i]).all()
+    lh5_obj, n_rows = store.read("/data/struct_full/vov3d", lh5_file, idx=[0, 2])
+    assert isinstance(lh5_obj, types.VectorOfVectors)
 
+    print(lh5_obj)
+    assert lh5_obj == types.VectorOfVectors([[[1, 2], [3, 4, 5]], [[5, 3, 1]]])
     assert n_rows == 2
 
 
