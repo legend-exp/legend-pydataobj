@@ -5,7 +5,8 @@ variable-length arrays and corresponding utilities.
 from __future__ import annotations
 
 import logging
-from collections.abc import Any, Iterator, Mapping, Sequence
+from collections.abc import Iterator, Mapping, Sequence
+from typing import Any
 
 import awkward as ak
 import awkward_pandas as akpd
