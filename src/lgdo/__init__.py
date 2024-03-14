@@ -15,10 +15,12 @@ basic data object classes are:
   :attr:`nda` attribute.
 * :class:`.ArrayOfEqualSizedArrays`: multi-dimensional :class:`numpy.ndarray`.
   Access data via the :attr:`nda` attribute.
-* :class:`.VectorOfVectors`: a variable length array of variable length arrays.
-  Implemented as a pair of :class:`.Array`: :attr:`flattened_data` holding the
-  raw data, and :attr:`cumulative_length` whose ith element is the sum of the
-  lengths of the vectors with ``index <= i``
+* :class:`.VectorOfVectors`: an n-dimensional variable length array of variable
+  length arrays.  Implemented as a pair of datasets: :attr:`flattened_data`
+  holding the raw data (:class:`.Array` or :class:`.VectorOfVectors`, if the
+  vector dimension is greater than 2), and :attr:`cumulative_length` (always an
+  :class:`.Array`) whose i-th element is the sum of the lengths of the vectors
+  with ``index <= i``
 * :class:`.VectorOfEncodedVectors`: an array of variable length *encoded*
   arrays. Implemented as a :class:`.VectorOfVectors` :attr:`encoded_data`
   holding the encoded vectors and an :class:`.Array` :attr:`decoded_size`
