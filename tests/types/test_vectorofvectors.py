@@ -11,7 +11,6 @@ import pytest
 
 import lgdo
 from lgdo import Array, VectorOfVectors, utils
-from lgdo.types import vectorofvectors as vov
 
 VovColl = namedtuple("VovColl", ["v2d", "v3d", "v4d"])
 
@@ -29,20 +28,6 @@ def testvov():
     )
 
     return VovColl(v2d, v3d, v4d)
-
-
-def test_ak_input_validity(testvov):
-    for v in testvov:
-        assert vov._ak_is_jagged(v) is True
-        assert vov._ak_is_valid(v) is True
-
-    assert vov._ak_is_jagged(ak.Array([[1], [1, 2], [1, 3, 4]])) is True
-    assert vov._ak_is_jagged(ak.Array(np.empty(shape=(2, 3, 4)))) is False
-
-    assert vov._ak_is_valid(ak.Array([[1], [1, 2], [1, 3, 4]])) is True
-    assert vov._ak_is_valid(ak.Array(np.empty(shape=(2, 3, 4)))) is True
-    assert vov._ak_is_valid(ak.Array([[1, None], [1, 2], [1, 3, 4]])) is False
-    assert vov._ak_is_valid(ak.Array({"a": [1, 2], "b": [3, 4]})) is False
 
 
 def test_init(testvov):
@@ -359,41 +344,6 @@ def test_iter(testvov):
     for v in testvov:
         assert np.array_equal(v, desired[c])
         c += 1
-
-
-def test_build_cl_and_explodes():
-    cl = np.array([3, 4], dtype=np.uint64)
-    exp = np.array([0, 0, 0, 1], dtype=np.uint64)
-    array = np.array([5, 7], dtype=np.uint64)
-    array_exp = np.array([5, 5, 5, 7], dtype=np.uint64)
-    # build_cl
-    assert (vov.build_cl(exp, cl) == cl).all()
-    assert (vov.build_cl(exp) == cl).all()
-    assert (vov.build_cl([0, 0, 0, 1]) == cl).all()
-    assert (vov.build_cl(array_exp, cl) == cl).all()
-    assert (vov.build_cl(array_exp) == cl).all()
-    assert (vov.build_cl([5, 5, 5, 7]) == cl).all()
-    # explode_cl
-    assert (vov.explode_cl(cl, exp) == exp).all()
-    assert (vov.explode_cl(cl) == exp).all()
-    assert (vov.explode_cl([3, 4]) == exp).all()
-    # inverse functionality
-    assert (vov.build_cl(vov.explode_cl(cl)) == cl).all()
-    assert (vov.explode_cl(vov.build_cl(array_exp)) == exp).all()
-    # explode
-    assert (vov.explode(cl, array, array_exp) == array_exp).all()
-    assert (vov.explode(cl, array) == array_exp).all()
-    assert (vov.explode([3, 4], [5, 7]) == array_exp).all()
-    assert (vov.explode(cl, range(len(cl))) == exp).all()
-    # explode_arrays
-    arrays_out = vov.explode_arrays(cl, [array, range(len(cl))])
-    assert len(arrays_out) == 2
-    assert (arrays_out[0] == array_exp).all()
-    assert (arrays_out[1] == exp).all()
-    arrays_out = vov.explode_arrays(cl, [array, range(len(cl))], arrays_out=arrays_out)
-    assert len(arrays_out) == 2
-    assert (arrays_out[0] == array_exp).all()
-    assert (arrays_out[1] == exp).all()
 
 
 def test_copy(testvov):
