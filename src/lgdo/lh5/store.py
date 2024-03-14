@@ -9,7 +9,7 @@ import os
 import sys
 from bisect import bisect_left
 from collections import defaultdict
-from typing import Any, Union
+from typing import Any
 
 import h5py
 import numba as nb
@@ -18,6 +18,7 @@ import numpy as np
 from .. import compression as compress
 from ..compression import WaveformCodec
 from ..types import (
+    LGDO,
     Array,
     ArrayOfEncodedEqualSizedArrays,
     ArrayOfEqualSizedArrays,
@@ -30,8 +31,6 @@ from ..types import (
     WaveformTable,
 )
 from .utils import expand_path, parse_datatype
-
-LGDO = Union[Array, Scalar, Struct, VectorOfVectors]
 
 log = logging.getLogger(__name__)
 
@@ -178,13 +177,15 @@ class LH5Store:
     ) -> tuple[LGDO, int]:
         """Read LH5 object data from a file.
 
-        Use the ``idx`` parameter to read out particular rows of the data. The ``use_h5idx`` flag
-        controls whether *only* those rows are read from disk or if the rows are indexed after reading
-        the entire object. Reading individual rows can be orders of magnitude slower than reading
-        the whole object and then indexing the desired rows. The default behavior (``use_h5idx=False``)
-        is to use slightly more memory for a much faster read. See
-        `legend-pydataobj #29 <https://github.com/legend-exp/legend-pydataobj/issues/29>`_
-        for additional information.
+        Use the ``idx`` parameter to read out particular rows of the data. The
+        ``use_h5idx`` flag controls whether *only* those rows are read from
+        disk or if the rows are indexed after reading the entire object.
+        Reading individual rows can be orders of magnitude slower than reading
+        the whole object and then indexing the desired rows. The default
+        behavior (``use_h5idx=False``) is to use slightly more memory for a
+        much faster read. See `legend-pydataobj #29
+        <https://github.com/legend-exp/legend-pydataobj/issues/29>`_ for
+        additional information.
 
         Parameters
         ----------
