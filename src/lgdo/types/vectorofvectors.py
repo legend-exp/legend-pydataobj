@@ -241,9 +241,9 @@ class VectorOfVectors(LGDO):
     def __eq__(self, other: VectorOfVectors) -> bool:
         if isinstance(other, VectorOfVectors):
             if self.ndim == 2 and len(self.cumulative_length) != 0:
-                fldata_eq = np.all(
-                    self.flattened_data[: self.cumulative_length[-1]]
-                    == other.flattened_data[: other.cumulative_length[-1]]
+                fldata_eq = np.array_equal(
+                    self.flattened_data[: self.cumulative_length[-1]],
+                    other.flattened_data[: other.cumulative_length[-1]],
                 )
             else:
                 fldata_eq = self.flattened_data == other.flattened_data
