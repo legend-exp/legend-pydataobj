@@ -5,15 +5,14 @@ variable-length arrays and corresponding utilities.
 from __future__ import annotations
 
 import logging
-from collections.abc import Iterator
-from typing import Any
+from collections.abc import Any, Iterator, Mapping, Sequence
 
 import awkward as ak
 import awkward_pandas as akpd
 import numba
 import numpy as np
 import pandas as pd
-from numpy.typing import DTypeLike, NDArray
+from numpy.typing import ArrayLike, DTypeLike, NDArray
 
 from .. import utils
 from ..utils import numba_defaults_kwargs as nb_kwargs
@@ -25,30 +24,41 @@ log = logging.getLogger(__name__)
 
 
 class VectorOfVectors(LGDO):
-    """A variable-length array of variable-length arrays.
+    """A n-dimensional variable-length 1D array of variable-length 1D arrays.
 
-    For now only a 1D vector of 1D vectors is supported. Internal representation
-    is as two NumPy arrays, one to store the flattened data contiguosly and one
-    to store the cumulative sum of lengths of each vector.
+    If the vector is 2-dimensional, the internal representation is as two NumPy
+    arrays, one to store the flattened data contiguosly
+    (:attr:`flattened_data`) and one to store the cumulative sum of lengths of
+    each vector (:attr:`cumulative_length`). When the dimension is more than 2,
+    :attr:`flattened_data` is a :class:`VectorOfVectors` itself.
+
+    Note
+    ----
+    Many class methods are currently implemented only for 2D vectors and will
+    raise an exception on higher dimensional data.
     """
 
     def __init__(
         self,
-        data: Any | None = None,
-        flattened_data: Array | NDArray | None = None,
-        cumulative_length: Array | NDArray | VectorOfVectors | None = None,
-        shape_guess: tuple[int, int] | None = None,
+        data: ArrayLike | None = None,
+        flattened_data: ArrayLike | None = None,
+        cumulative_length: ArrayLike | VectorOfVectors | None = None,
+        shape_guess: Sequence[int, ...] | None = None,
         dtype: DTypeLike | None = None,
         fill_val: int | float | None = None,
-        attrs: dict[str, Any] | None = None,
+        attrs: Mapping[str, Any] | None = None,
     ) -> None:
         """
         Parameters
         ----------
-        array
-            create a :class:`VectorOfVectors` out of a Python list of lists or an
-            :class:`ak.Array`. Takes priority over `flattened_data` and
-            `cumulative_length`.
+        data
+            Any array-like structure accepted by the :class:`ak.Array`
+            constructor, with the exception that elements cannot be of type
+            ``OptionType``, ``UnionType`` or ``RecordType``.  Takes priority
+            over `flattened_data` and `cumulative_length`. The serialization of
+            the :class:`ak.Array` is performed through :func:`ak.to_buffers`.
+            Since the latter returns non-data-owning NumPy arrays, which would
+            prevent later modifications like resizing, a copy is performed.
         flattened_data
             if not ``None``, used as the internal array for
             `self.flattened_data`.  Otherwise, an internal `flattened_data` is
@@ -210,7 +220,7 @@ class VectorOfVectors(LGDO):
         return "array<1>{" + eltype + "}"
 
     def __len__(self) -> int:
-        """Return the number of stored vectors."""
+        """Return the number of stored vectors along the first axis (0)."""
         return len(self.cumulative_length)
 
     def __eq__(self, other: VectorOfVectors) -> bool:
@@ -232,8 +242,8 @@ class VectorOfVectors(LGDO):
 
         return False
 
-    def __getitem__(self, i: int) -> list:
-        """Return a view of the vector at index `i`."""
+    def __getitem__(self, i: int) -> NDArray:
+        """Return a view of the vector at index `i` along the first axis."""
         if self.ndim == 2:
             stop = self.cumulative_length[i]
             if i in (0, -len(self)):
@@ -414,7 +424,9 @@ class VectorOfVectors(LGDO):
         else:
             raise NotImplementedError
 
-    def _set_vector_unsafe(self, i: int, vec: NDArray, lens: NDArray = None) -> None:
+    def _set_vector_unsafe(
+        self, i: int, vec: NDArray, lens: ArrayLike | None = None
+    ) -> None:
         r"""Insert vector `vec` at position `i`.
 
         Assumes that ``j = self.cumulative_length[i-1]`` is the index (in
@@ -642,7 +654,7 @@ class VectorOfVectors(LGDO):
 
 
 def build_cl(
-    sorted_array_in: NDArray, cumulative_length_out: NDArray = None
+    sorted_array_in: NDArray, cumulative_length_out: NDArray | None = None
 ) -> NDArray:
     """Build a cumulative length array from an array of sorted data.
 
@@ -753,7 +765,7 @@ def _nb_fill(aoa_in: NDArray, len_in: NDArray, flattened_array_out: NDArray):
         start = stop
 
 
-def explode_cl(cumulative_length: NDArray, array_out: NDArray = None) -> NDArray:
+def explode_cl(cumulative_length: NDArray, array_out: NDArray | None = None) -> NDArray:
     """Explode a `cumulative_length` array.
 
     Examples
@@ -805,7 +817,7 @@ def _nb_explode_cl(cumulative_length: NDArray, array_out: NDArray) -> NDArray:
 
 
 def explode(
-    cumulative_length: NDArray, array_in: NDArray, array_out: NDArray = None
+    cumulative_length: NDArray, array_in: NDArray, array_out: NDArray | None = None
 ) -> NDArray:
     """Explode a data array using a `cumulative_length` array.
 
@@ -865,8 +877,8 @@ def _nb_explode(
 
 def explode_arrays(
     cumulative_length: Array,
-    arrays: list[NDArray],
-    arrays_out: list[NDArray] | None = None,
+    arrays: Sequence[NDArray],
+    arrays_out: Sequence[NDArray] | None = None,
 ) -> list:
     """Explode a set of arrays using a `cumulative_length` array.
 
@@ -901,7 +913,7 @@ def explode_arrays(
     return arrays_out
 
 
-def _ak_is_jagged(type_):
+def _ak_is_jagged(type_: ak.types.Type) -> bool:
     """Returns ``True`` if :class:`ak.Array` is jagged at all axes.
 
     This assures that :func:`ak.to_buffers` returns the expected data
@@ -921,7 +933,7 @@ def _ak_is_jagged(type_):
 
 
 # https://github.com/scikit-hep/awkward/discussions/3049
-def _ak_is_valid(type_):
+def _ak_is_valid(type_: ak.types.Type) -> bool:
     """Returns ``True`` if :class:`ak.Array` contains only elements we can serialize to LH5."""
     if isinstance(type_, ak.Array):
         return _ak_is_valid(type_.type)
