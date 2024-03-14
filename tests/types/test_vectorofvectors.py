@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 from collections import namedtuple
 
 import awkward as ak
@@ -10,7 +11,7 @@ import pint
 import pytest
 
 import lgdo
-from lgdo import Array, VectorOfVectors, utils
+from lgdo import Array, VectorOfVectors
 
 VovColl = namedtuple("VovColl", ["v2d", "v3d", "v4d"])
 
@@ -272,7 +273,7 @@ def test_insert(testvov):
 def test_replace(testvov):
     testvov = testvov.v2d
 
-    v = utils.copy(testvov)
+    v = copy.deepcopy(testvov)
     v.replace(1, np.zeros(3))
     assert v == VectorOfVectors(
         [
@@ -284,7 +285,7 @@ def test_replace(testvov):
         ]
     )
 
-    v = utils.copy(testvov)
+    v = copy.deepcopy(testvov)
     v.replace(1, np.zeros(2))
     assert v == VectorOfVectors(
         [
@@ -296,7 +297,7 @@ def test_replace(testvov):
         ]
     )
 
-    v = utils.copy(testvov)
+    v = copy.deepcopy(testvov)
     v.replace(1, np.zeros(4))
     assert v == VectorOfVectors(
         [
@@ -344,11 +345,6 @@ def test_iter(testvov):
     for v in testvov:
         assert np.array_equal(v, desired[c])
         c += 1
-
-
-def test_copy(testvov):
-    for v in testvov:
-        assert v == utils.copy(v)
 
 
 def test_view_as(testvov):

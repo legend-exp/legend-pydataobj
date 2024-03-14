@@ -6,7 +6,7 @@ import pandas as pd
 import pint
 import pytest
 
-from lgdo import Array, utils
+from lgdo import Array
 
 
 def test_datatype_name():
@@ -30,12 +30,6 @@ def test_resize():
     array = Array(nda=np.array([1, 2, 3, 4]))
     array.resize(3)
     assert (array.nda == np.array([1, 2, 3])).all()
-
-
-def test_copy():
-    a1 = Array(np.array([1, 2, 3, 4]))
-    a2 = utils.copy(a1)
-    assert a1 == a2
 
 
 def test_insert():
