@@ -241,7 +241,7 @@ def test_read_n_rows(lh5_file):
     assert store.read_n_rows("/data/struct_full/table", lh5_file) == 4
     assert store.read_n_rows("/data/struct_full/voev", lh5_file) == 5
     assert store.read_n_rows("/data/struct_full/vov", lh5_file) == 5
-    assert store.read_n_rows("/data/struct_full/vov3d", lh5_file) == 3
+    assert store.read_n_rows("/data/struct_full/vov3d", lh5_file) == 5
     assert store.read_n_rows("/data/struct_full/wftable", lh5_file) == 10
     assert store.read_n_rows("/data/struct_full/wftable_enc/values", lh5_file) == 10
 
@@ -512,6 +512,7 @@ def test_read_with_field_mask(lh5_file):
         "scalar",
         "array",
         "aoesa",
+        "vov3d",
         "table",
         "wftable",
         "wftable_enc",
