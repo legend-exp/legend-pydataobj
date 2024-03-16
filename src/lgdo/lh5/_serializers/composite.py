@@ -362,38 +362,38 @@ def _h5_read_struct(
     field_mask=None,
     decompress=True,
 ):
-    # modify datatype in attrs if a field_mask was used
+    # TODO: it's strange to pass start_row, n_rows, idx to struct
+    # fields. If they all had shared indexing, they should be in a
+    # table... Maybe should emit a warning? Or allow them to be
+    # dicts keyed by field name?
+
     attrs = dict(h5f[name].attrs)
-    if field_mask is not None:
-        selected_fields = []
-        for field in utils.get_struct_fields(attrs["datatype"]):
-            if field_mask[field]:
-                selected_fields.append(field)
-        attrs["datatype"] = "struct{" + ",".join(selected_fields) + "}"
-    else:
-        selected_fields = utils.get_struct_fields(attrs["datatype"])
+
+    # determine fields to be read out
+    all_fields = utils.get_struct_fields(attrs["datatype"])
+    selected_fields = (
+        [field for field in all_fields if field_mask[field]]
+        if field_mask is not None
+        else all_fields
+    )
+
+    # modify datatype in attrs if a field_mask was used
+    attrs["datatype"] = "struct{" + ",".join(selected_fields) + "}"
 
     # loop over fields and read
     obj_dict = {}
     for field in selected_fields:
-        # TODO: it's strange to pass start_row, n_rows, idx to struct
-        # fields. If they all had shared indexing, they should be in a
-        # table... Maybe should emit a warning? Or allow them to be
-        # dicts keyed by field name?
-        if "int_keys" in h5f[name].attrs:
-            if dict(h5f[name].attrs)["int_keys"]:
-                f = int(field)
-        else:
-            f = str(field)
-
-        obj_dict[f], _ = _h5_read_lgdo(
+        # support for integer keys
+        field_key = (
+            int(field) if "int_keys" in attrs and attrs["int_keys"] else str(field)
+        )
+        obj_dict[field_key], _ = _h5_read_lgdo(
             f"{name}/{field}",
             h5f,
             start_row=start_row,
             n_rows=n_rows,
             idx=idx,
             use_h5idx=use_h5idx,
-            # field_mask=field_mask,
             decompress=decompress,
         )
 
