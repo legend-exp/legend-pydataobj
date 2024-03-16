@@ -29,7 +29,7 @@ def datatype(expr: str) -> type:
         if re.search(regex, expr):
             return type_
 
-    msg = f"Unknown datatype '{expr}'"
+    msg = f"unknown datatype '{expr}'"
     raise TypeError(msg)
 
 

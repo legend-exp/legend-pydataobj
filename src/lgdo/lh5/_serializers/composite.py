@@ -54,12 +54,10 @@ def _h5_read_lgdo(
         idx = (idx,)
 
     try:
-        datatype = h5f[name].attrs["datatype"]
+        lgdotype = utils.datatype(h5f[name].attrs["datatype"])
     except KeyError as e:
         msg = f"dataset '{name}' not in {h5f.filename}"
         raise KeyError(msg) from e
-
-    lgdotype = utils.datatype(h5f[name].attrs["datatype"])
 
     if lgdotype is Scalar:
         return _h5_read_scalar(
@@ -69,22 +67,18 @@ def _h5_read_lgdo(
         )
 
     # check field_mask and make it a default dict
-    if lgdotype in (Struct, Table):
-        if field_mask is None:
-            field_mask = defaultdict(lambda: True)
-        elif isinstance(field_mask, dict):
-            default = True
-            if len(field_mask) > 0:
-                default = not field_mask[next(iter(field_mask.keys()))]
-            field_mask = defaultdict(lambda: default, field_mask)
-        elif isinstance(field_mask, (list, tuple)):
-            field_mask = defaultdict(bool, {field: True for field in field_mask})
-        elif not isinstance(field_mask, defaultdict):
-            msg = "bad field_mask of type"
-            raise RuntimeError(msg, type(field_mask).__name__)
-    elif field_mask is not None:
-        msg = f"datatype {datatype} does not accept a field_mask"
-        raise RuntimeError(msg)
+    if field_mask is None:
+        field_mask = defaultdict(lambda: True)
+    elif isinstance(field_mask, dict):
+        default = True
+        if len(field_mask) > 0:
+            default = not field_mask[next(iter(field_mask.keys()))]
+        field_mask = defaultdict(lambda: default, field_mask)
+    elif isinstance(field_mask, (list, tuple)):
+        field_mask = defaultdict(bool, {field: True for field in field_mask})
+    elif not isinstance(field_mask, defaultdict):
+        msg = "bad field_mask type"
+        raise ValueError(msg, type(field_mask).__name__)
 
     if lgdotype is Struct:
         return _h5_read_struct(
@@ -151,7 +145,6 @@ def _h5_read_lgdo(
             obj_buf_start=obj_buf_start,
         )
 
-    # FixedSizeArray
     if lgdotype is FixedSizeArray:
         return _h5_read_fixedsize_array(
             name,
@@ -164,7 +157,6 @@ def _h5_read_lgdo(
             obj_buf_start=obj_buf_start,
         )
 
-    # ArrayOfEqualSizedArrays
     if lgdotype is ArrayOfEqualSizedArrays:
         return _h5_read_array_of_equalsized_arrays(
             name,
@@ -177,7 +169,6 @@ def _h5_read_lgdo(
             obj_buf_start=obj_buf_start,
         )
 
-    # Array
     if lgdotype is Array:
         return _h5_read_array(
             name,
@@ -190,7 +181,7 @@ def _h5_read_lgdo(
             obj_buf_start=obj_buf_start,
         )
 
-    msg = f"don't know how to read datatype {datatype}"
+    msg = f"no rule to read {lgdotype.__name__} from LH5"
     raise RuntimeError(msg)
 
 
