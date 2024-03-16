@@ -201,7 +201,7 @@ def _h5_read_vector_of_vectors(
 
     # read out cumulative_length
     cumulen_buf = None if obj_buf is None else obj_buf.cumulative_length
-    cumulative_length, n_rows_read = _h5_read_lgdo(
+    cumulative_length, n_rows_read = _h5_read_array(
         f"{name}/cumulative_length",
         h5f,
         start_row=start_row,
@@ -228,13 +228,14 @@ def _h5_read_vector_of_vectors(
             idx2 = (idx2[0][1:],)
             fd_start = 0  # this variable avoids an ndarray append
 
-        fd_starts, fds_n_rows_read = _h5_read_lgdo(
+        fd_starts, fds_n_rows_read = _h5_read_array(
             f"{name}/cumulative_length",
             h5f,
             start_row=start_row,
             n_rows=n_rows,
             idx=idx2,
             use_h5idx=use_h5idx,
+            obj_buf=None,
         )
         fd_starts = fd_starts.nda  # we just need the nda
         if fd_start is None:
@@ -322,8 +323,10 @@ def _h5_read_vector_of_vectors(
         obj_buf=fd_buf,
         obj_buf_start=fd_buf_start,
     )
+
     if obj_buf is not None:
         return obj_buf, n_rows_read
+
     return (
         VectorOfVectors(
             flattened_data=flattened_data,

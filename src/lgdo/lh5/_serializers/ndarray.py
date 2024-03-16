@@ -29,7 +29,11 @@ def _h5_read_ndarray(
     # compute the number of rows to read
     # we culled idx above for start_row and n_rows, now we have to apply
     # the constraint of the length of the dataset
-    ds_n_rows = h5f[name].shape[0]
+    try:
+        ds_n_rows = h5f[name].shape[0]
+    except AttributeError as e:
+        msg = f"'{name!r}' in {h5f.filename} does not seem to be an HDF5 dataset"
+        raise RuntimeError(msg) from e
 
     if idx is not None:
         if len(idx[0]) > 0 and idx[0][-1] >= ds_n_rows:
