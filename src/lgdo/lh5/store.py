@@ -8,7 +8,6 @@ import logging
 import os
 import sys
 from bisect import bisect_left
-from collections import defaultdict
 from typing import Any
 
 import h5py
@@ -21,15 +20,13 @@ from ..types import (
     LGDO,
     Array,
     ArrayOfEncodedEqualSizedArrays,
-    ArrayOfEqualSizedArrays,
-    FixedSizeArray,
     Scalar,
     Struct,
-    Table,
     VectorOfEncodedVectors,
     VectorOfVectors,
     WaveformTable,
 )
+from . import _serializers
 from .utils import expand_path, parse_datatype
 
 log = logging.getLogger(__name__)
@@ -267,7 +264,7 @@ class LH5Store:
             # (see https://github.com/legend-exp/legend-pydataobj/issues/29)
             # so that we only make a copy of the data if absolutely necessary
             # or if we can read the data from file without having to make a copy
-            self.in_file_loop = True
+            in_file_loop = True
 
             for i, h5f in enumerate(lh5_file):
                 if isinstance(idx, list) and len(idx) > 0 and not np.isscalar(idx[0]):
@@ -291,11 +288,11 @@ class LH5Store:
 
                 # maybe someone passed in a list of len==1?
                 if i == (len(lh5_file) - 1):
-                    self.in_file_loop = False
+                    in_file_loop = False
 
-                obj_buf, n_rows_read_i = self.read(
+                obj_buf, n_rows_read_i = _serializers._h5_read_lgdo(
                     name,
-                    lh5_file[i],
+                    self.gimme_file(lh5_file[i], "r"),
                     start_row=start_row,
                     n_rows=n_rows_i,
                     idx=idx_i,
@@ -304,6 +301,7 @@ class LH5Store:
                     obj_buf=obj_buf,
                     obj_buf_start=obj_buf_start,
                     decompress=decompress,
+                    copy_read_nda=in_file_loop,
                 )
 
                 n_rows_read += n_rows_read_i
@@ -312,7 +310,7 @@ class LH5Store:
                 start_row = 0
                 obj_buf_start += n_rows_read_i
 
-            self.in_file_loop = False
+            in_file_loop = False
 
             return obj_buf, n_rows_read
 
@@ -322,544 +320,18 @@ class LH5Store:
             msg = f"'{name}' not in {h5f.filename}"
             raise KeyError(msg)
 
-        log.debug(
-            f"reading {h5f.filename}:{name}[{start_row}:{n_rows}], decompress = {decompress}, "
-            + (f" with field mask {field_mask}" if field_mask else "")
+        return _serializers._h5_read_lgdo(
+            name,
+            h5f,
+            start_row=start_row,
+            n_rows=n_rows,
+            idx=idx,
+            use_h5idx=use_h5idx,
+            field_mask=field_mask,
+            obj_buf=obj_buf,
+            obj_buf_start=obj_buf_start,
+            decompress=decompress,
         )
-
-        # make idx a proper tuple if it's not one already
-        if not (isinstance(idx, tuple) and len(idx) == 1) and idx is not None:
-            idx = (idx,)
-
-        # get the object's datatype
-        if "datatype" not in h5f[name].attrs:
-            msg = f"'{name}' in file {lh5_file} is missing the datatype attribute"
-            raise RuntimeError(msg)
-
-        datatype = h5f[name].attrs["datatype"]
-        datatype, shape, elements = parse_datatype(datatype)
-
-        # check field_mask and make it a default dict
-        if datatype in ("struct", "table"):
-            if field_mask is None:
-                field_mask = defaultdict(lambda: True)
-            elif isinstance(field_mask, dict):
-                default = True
-                if len(field_mask) > 0:
-                    default = not field_mask[next(iter(field_mask.keys()))]
-                field_mask = defaultdict(lambda: default, field_mask)
-            elif isinstance(field_mask, (list, tuple)):
-                field_mask = defaultdict(bool, {field: True for field in field_mask})
-            elif not isinstance(field_mask, defaultdict):
-                msg = "bad field_mask of type"
-                raise RuntimeError(msg, type(field_mask).__name__)
-        elif field_mask is not None:
-            msg = f"datatype {datatype} does not accept a field_mask"
-            raise RuntimeError(msg)
-
-        # Scalar
-        # scalars are dim-0 datasets
-        if datatype == "scalar":
-            value = h5f[name][()]
-            if elements == "bool":
-                value = np.bool_(value)
-            if obj_buf is not None:
-                obj_buf.value = value
-                obj_buf.attrs.update(h5f[name].attrs)
-                return obj_buf, 1
-
-            return Scalar(value=value, attrs=h5f[name].attrs), 1
-
-        # Struct
-        # recursively build a struct, return as a dictionary
-        if datatype == "struct":
-            # ignore obj_buf.
-            # TODO: could append new fields or overwrite/concat to existing
-            # fields. If implemented, get_buffer() above should probably also
-            # (optionally?) prep buffers for each field
-            if obj_buf is not None:
-                msg = "obj_buf not implemented for LGDO Structs"
-                raise NotImplementedError(msg)
-
-            # loop over fields and read
-            obj_dict = {}
-            for field in elements:
-                if not field_mask[field]:
-                    continue
-                # TODO: it's strange to pass start_row, n_rows, idx to struct
-                # fields. If they all had shared indexing, they should be in a
-                # table... Maybe should emit a warning? Or allow them to be
-                # dicts keyed by field name?
-                if "int_keys" in h5f[name].attrs:
-                    if dict(h5f[name].attrs)["int_keys"]:
-                        f = int(field)
-                else:
-                    f = str(field)
-                obj_dict[f], _ = self.read(
-                    name + "/" + field,
-                    h5f,
-                    start_row=start_row,
-                    n_rows=n_rows,
-                    idx=idx,
-                    use_h5idx=use_h5idx,
-                    decompress=decompress,
-                )
-            # modify datatype in attrs if a field_mask was used
-            attrs = dict(h5f[name].attrs)
-            if field_mask is not None:
-                selected_fields = []
-                for field in elements:
-                    if field_mask[field]:
-                        selected_fields.append(field)
-                attrs["datatype"] = "struct" + "{" + ",".join(selected_fields) + "}"
-            return Struct(obj_dict=obj_dict, attrs=attrs), 1
-
-        # Below here is all array-like types. So trim idx if needed
-        if idx is not None:
-            # check if idx is just an ordered list of the integers if so can ignore
-            if (idx[0] == np.arange(0, len(idx[0]), 1)).all():
-                if n_rows > len(idx[0]):
-                    n_rows = len(idx[0])
-                idx = None
-            else:
-                # chop off indices < start_row
-                i_first_valid = bisect_left(idx[0], start_row)
-                idxa = idx[0][i_first_valid:]
-                # don't readout more than n_rows indices
-                idx = (idxa[:n_rows],)  # works even if n_rows > len(idxa)
-
-        # Table or WaveformTable
-        if datatype == "table":
-            col_dict = {}
-
-            # read out each of the fields
-            rows_read = []
-            for field in elements:
-                if not field_mask[field]:
-                    continue
-
-                fld_buf = None
-                if obj_buf is not None:
-                    if not isinstance(obj_buf, Table) or field not in obj_buf:
-                        msg = f"obj_buf for LGDO Table '{name}' not formatted correctly"
-                        raise ValueError(msg)
-
-                    fld_buf = obj_buf[field]
-
-                col_dict[field], n_rows_read = self.read(
-                    name + "/" + field,
-                    h5f,
-                    start_row=start_row,
-                    n_rows=n_rows,
-                    idx=idx,
-                    use_h5idx=use_h5idx,
-                    obj_buf=fld_buf,
-                    obj_buf_start=obj_buf_start,
-                    decompress=decompress,
-                )
-                if obj_buf is not None and obj_buf_start + n_rows_read > len(obj_buf):
-                    obj_buf.resize(obj_buf_start + n_rows_read)
-
-                rows_read.append(n_rows_read)
-
-            # warn if all columns don't read in the same number of rows
-            if len(rows_read) > 0:
-                n_rows_read = rows_read[0]
-            else:
-                n_rows_read = 0
-                log.warning(f"Table '{name}' has no subgroups accepted by field mask")
-
-            for n in rows_read[1:]:
-                if n != n_rows_read:
-                    log.warning(
-                        f"Table '{name}' got strange n_rows_read = {n}, {n_rows_read} was expected ({rows_read})"
-                    )
-
-            # modify datatype in attrs if a field_mask was used
-            attrs = dict(h5f[name].attrs)
-            if field_mask is not None:
-                selected_fields = []
-                for field in elements:
-                    if field_mask[field]:
-                        selected_fields.append(field)
-                attrs["datatype"] = "table" + "{" + ",".join(selected_fields) + "}"
-
-            # fields have been read out, now return a table
-            if obj_buf is None:
-                # if col_dict contains just 3 objects called t0, dt, and values,
-                # return a WaveformTable
-                if (
-                    len(col_dict) == 3
-                    and "t0" in col_dict
-                    and "dt" in col_dict
-                    and "values" in col_dict
-                ):
-                    table = WaveformTable(
-                        t0=col_dict["t0"], dt=col_dict["dt"], values=col_dict["values"]
-                    )
-                else:
-                    table = Table(col_dict=col_dict, attrs=attrs)
-
-                # set (write) loc to end of tree
-                table.loc = n_rows_read
-                return table, n_rows_read
-
-            # We have read all fields into the object buffer. Run
-            # checks: All columns should be the same size. So update
-            # table's size as necessary, warn if any mismatches are found
-            obj_buf.resize(do_warn=True)
-            # set (write) loc to end of tree
-            obj_buf.loc = obj_buf_start + n_rows_read
-            # check attributes
-            if set(obj_buf.attrs.keys()) != set(attrs.keys()):
-                msg = (
-                    f"attrs mismatch. obj_buf.attrs: "
-                    f"{obj_buf.attrs}, h5f[{name}].attrs: {attrs}"
-                )
-                raise RuntimeError(msg)
-            return obj_buf, n_rows_read
-
-        # ArrayOfEncodedEqualSizedArrays and VectorOfEncodedVectors
-        for cond, enc_lgdo in [
-            (
-                datatype == "array_of_encoded_equalsized_arrays",
-                ArrayOfEncodedEqualSizedArrays,
-            ),
-            (elements.startswith("encoded_array"), VectorOfEncodedVectors),
-        ]:
-            if cond:
-                if (
-                    not decompress
-                    and obj_buf is not None
-                    and not isinstance(obj_buf, enc_lgdo)
-                ):
-                    msg = f"obj_buf for '{name}' not a {enc_lgdo}"
-                    raise ValueError(msg)
-
-                # read out decoded_size, either a Scalar or an Array
-                decoded_size_buf = encoded_data_buf = None
-                if obj_buf is not None and not decompress:
-                    decoded_size_buf = obj_buf.decoded_size
-                    encoded_data_buf = obj_buf.encoded_data
-
-                decoded_size, _ = self.read(
-                    f"{name}/decoded_size",
-                    h5f,
-                    start_row=start_row,
-                    n_rows=n_rows,
-                    idx=idx,
-                    use_h5idx=use_h5idx,
-                    obj_buf=None if decompress else decoded_size_buf,
-                    obj_buf_start=0 if decompress else obj_buf_start,
-                )
-
-                # read out encoded_data, a VectorOfVectors
-                encoded_data, n_rows_read = self.read(
-                    f"{name}/encoded_data",
-                    h5f,
-                    start_row=start_row,
-                    n_rows=n_rows,
-                    idx=idx,
-                    use_h5idx=use_h5idx,
-                    obj_buf=None if decompress else encoded_data_buf,
-                    obj_buf_start=0 if decompress else obj_buf_start,
-                )
-
-                # return the still encoded data in the buffer object, if there
-                if obj_buf is not None and not decompress:
-                    return obj_buf, n_rows_read
-
-                # otherwise re-create the encoded LGDO
-                rawdata = enc_lgdo(
-                    encoded_data=encoded_data,
-                    decoded_size=decoded_size,
-                    attrs=h5f[name].attrs,
-                )
-
-                # already return if no decompression is requested
-                if not decompress:
-                    return rawdata, n_rows_read
-
-                # if no buffer, decode and return
-                if obj_buf is None and decompress:
-                    return compress.decode(rawdata), n_rows_read
-
-                # eventually expand provided obj_buf, if too short
-                buf_size = obj_buf_start + n_rows_read
-                if len(obj_buf) < buf_size:
-                    obj_buf.resize(buf_size)
-
-                # use the (decoded object type) buffer otherwise
-                if enc_lgdo == ArrayOfEncodedEqualSizedArrays:
-                    if not isinstance(obj_buf, ArrayOfEqualSizedArrays):
-                        msg = f"obj_buf for decoded '{name}' not an ArrayOfEqualSizedArrays"
-                        raise ValueError(msg)
-
-                    compress.decode(rawdata, obj_buf[obj_buf_start:buf_size])
-
-                elif enc_lgdo == VectorOfEncodedVectors:
-                    if not isinstance(obj_buf, VectorOfVectors):
-                        msg = f"obj_buf for decoded '{name}' not a VectorOfVectors"
-                        raise ValueError(msg)
-
-                    # FIXME: not a good idea. an in place decoding version
-                    # of decode would be needed to avoid extra memory
-                    # allocations
-                    for i, wf in enumerate(compress.decode(rawdata)):
-                        obj_buf[obj_buf_start + i] = wf
-
-                return obj_buf, n_rows_read
-
-        # VectorOfVectors
-        # read out vector of vectors of different size
-        if elements.startswith("array"):
-            if obj_buf is not None and not isinstance(obj_buf, VectorOfVectors):
-                msg = f"obj_buf for '{name}' not a LGDO VectorOfVectors"
-                raise ValueError(msg)
-
-            # read out cumulative_length
-            cumulen_buf = None if obj_buf is None else obj_buf.cumulative_length
-            cumulative_length, n_rows_read = self.read(
-                f"{name}/cumulative_length",
-                h5f,
-                start_row=start_row,
-                n_rows=n_rows,
-                idx=idx,
-                use_h5idx=use_h5idx,
-                obj_buf=cumulen_buf,
-                obj_buf_start=obj_buf_start,
-            )
-            # get a view of just what was read out for cleaner code below
-            this_cumulen_nda = cumulative_length.nda[
-                obj_buf_start : obj_buf_start + n_rows_read
-            ]
-
-            if idx is not None and n_rows_read > 0:
-                # get the starting indices for each array in flattened data:
-                # the starting index for array[i] is cumulative_length[i-1]
-                idx2 = (np.asarray(idx[0]).copy() - 1,)
-
-                # re-read cumulative_length with these indices
-                # note this will allocate memory for fd_starts!
-                fd_start = None
-                if idx2[0][0] == -1:
-                    idx2 = (idx2[0][1:],)
-                    fd_start = 0  # this variable avoids an ndarray append
-                fd_starts, fds_n_rows_read = self.read(
-                    f"{name}/cumulative_length",
-                    h5f,
-                    start_row=start_row,
-                    n_rows=n_rows,
-                    idx=idx2,
-                    use_h5idx=use_h5idx,
-                )
-                fd_starts = fd_starts.nda  # we just need the nda
-                if fd_start is None:
-                    fd_start = fd_starts[0]
-
-                # compute the length that flattened_data will have after the
-                # fancy-indexed read
-                fd_n_rows = np.sum(this_cumulen_nda[-len(fd_starts) :] - fd_starts)
-                if fd_start == 0:
-                    fd_n_rows += this_cumulen_nda[0]
-
-                # now make fd_idx
-                fd_idx = np.empty(fd_n_rows, dtype="int32")
-                fd_idx = _make_fd_idx(fd_starts, this_cumulen_nda, fd_idx)
-
-                # Now clean up this_cumulen_nda, to be ready
-                # to match the in-memory version of flattened_data. Note: these
-                # operations on the view change the original array because they are
-                # numpy arrays, not lists.
-                this_cumulen_nda[-len(fd_starts) :] -= fd_starts
-                np.cumsum(this_cumulen_nda, out=this_cumulen_nda)
-
-            else:
-                fd_idx = None
-
-                # determine the start_row and n_rows for the flattened_data readout
-                fd_start = 0
-                if start_row > 0 and n_rows_read > 0:
-                    # need to read out the cumulen sample -before- the first sample
-                    # read above in order to get the starting row of the first
-                    # vector to read out in flattened_data
-                    fd_start = h5f[f"{name}/cumulative_length"][start_row - 1]
-
-                    # check limits for values that will be used subsequently
-                    if this_cumulen_nda[-1] < fd_start:
-                        log.debug(
-                            f"this_cumulen_nda[-1] = {this_cumulen_nda[-1]}, "
-                            f"fd_start = {fd_start}, "
-                            f"start_row = {start_row}, "
-                            f"n_rows_read = {n_rows_read}"
-                        )
-                        msg = (
-                            f"cumulative_length non-increasing between entries "
-                            f"{start_row} and {start_row+n_rows_read} ??"
-                        )
-                        raise RuntimeError(msg)
-
-                # determine the number of rows for the flattened_data readout
-                fd_n_rows = this_cumulen_nda[-1] if n_rows_read > 0 else 0
-
-                # Now done with this_cumulen_nda, so we can clean it up to be ready
-                # to match the in-memory version of flattened_data. Note: these
-                # operations on the view change the original array because they are
-                # numpy arrays, not lists.
-                #
-                # First we need to subtract off the in-file offset for the start of
-                # read for flattened_data
-                this_cumulen_nda -= fd_start
-
-            # If we started with a partially-filled buffer, add the
-            # appropriate offset for the start of the in-memory flattened
-            # data for this read.
-            fd_buf_start = np.uint32(0)
-            if obj_buf_start > 0:
-                fd_buf_start = cumulative_length.nda[obj_buf_start - 1]
-                this_cumulen_nda += fd_buf_start
-
-            # Now prepare the object buffer if necessary
-            fd_buf = None
-            if obj_buf is not None:
-                fd_buf = obj_buf.flattened_data
-                # grow fd_buf if necessary to hold the data
-                fdb_size = fd_buf_start + fd_n_rows
-                if len(fd_buf) < fdb_size:
-                    fd_buf.resize(fdb_size)
-
-            # now read
-            flattened_data, dummy_rows_read = self.read(
-                f"{name}/flattened_data",
-                h5f,
-                start_row=fd_start,
-                n_rows=fd_n_rows,
-                idx=fd_idx,
-                use_h5idx=use_h5idx,
-                obj_buf=fd_buf,
-                obj_buf_start=fd_buf_start,
-            )
-            if obj_buf is not None:
-                return obj_buf, n_rows_read
-            return (
-                VectorOfVectors(
-                    flattened_data=flattened_data,
-                    cumulative_length=cumulative_length,
-                    attrs=h5f[name].attrs,
-                ),
-                n_rows_read,
-            )
-
-        # Array
-        # FixedSizeArray
-        # ArrayOfEqualSizedArrays
-        # read out all arrays by slicing
-        if "array" in datatype:
-            if obj_buf is not None and not isinstance(obj_buf, Array):
-                msg = f"obj_buf for '{name}' not an LGDO Array"
-                raise ValueError(msg)
-                obj_buf = None
-
-            # compute the number of rows to read
-            # we culled idx above for start_row and n_rows, now we have to apply
-            # the constraint of the length of the dataset
-            ds_n_rows = h5f[name].shape[0]
-            if idx is not None:
-                if len(idx[0]) > 0 and idx[0][-1] >= ds_n_rows:
-                    log.warning(
-                        "idx indexed past the end of the array in the file. Culling..."
-                    )
-                    n_rows_to_read = bisect_left(idx[0], ds_n_rows)
-                    idx = (idx[0][:n_rows_to_read],)
-                    if len(idx[0]) == 0:
-                        log.warning("idx empty after culling.")
-                n_rows_to_read = len(idx[0])
-            else:
-                n_rows_to_read = ds_n_rows - start_row
-            if n_rows_to_read > n_rows:
-                n_rows_to_read = n_rows
-
-            # if idx is passed, check if we can make it a slice instead (faster)
-            change_idx_to_slice = False
-
-            # prepare the selection for the read. Use idx if available
-            if idx is not None:
-                # check if idx is empty and convert to slice instead
-                if len(idx[0]) == 0:
-                    source_sel = np.s_[0:0]
-                    change_idx_to_slice = True
-                # check if idx is contiguous and increasing
-                # if so, convert it to a slice instead (faster)
-                elif np.all(np.diff(idx[0]) == 1):
-                    source_sel = np.s_[idx[0][0] : idx[0][-1] + 1]
-                    change_idx_to_slice = True
-                else:
-                    source_sel = idx
-            else:
-                source_sel = np.s_[start_row : start_row + n_rows_to_read]
-
-            # Now read the array
-            if obj_buf is not None and n_rows_to_read > 0:
-                buf_size = obj_buf_start + n_rows_to_read
-                if len(obj_buf) < buf_size:
-                    obj_buf.resize(buf_size)
-                dest_sel = np.s_[obj_buf_start:buf_size]
-
-                # this is required to make the read of multiple files faster
-                # until a better solution found.
-                if change_idx_to_slice or idx is None or use_h5idx:
-                    h5f[name].read_direct(obj_buf.nda, source_sel, dest_sel)
-                else:
-                    # it is faster to read the whole object and then do fancy indexing
-                    obj_buf.nda[dest_sel] = h5f[name][...][source_sel]
-
-                nda = obj_buf.nda
-            elif n_rows == 0:
-                tmp_shape = (0,) + h5f[name].shape[1:]
-                nda = np.empty(tmp_shape, h5f[name].dtype)
-            elif change_idx_to_slice or idx is None or use_h5idx:
-                nda = h5f[name][source_sel]
-            else:
-                # it is faster to read the whole object and then do fancy indexing
-                nda = h5f[name][...][source_sel]
-
-                # if reading a list of files recursively, this is given to obj_buf on
-                # the first file read. obj_buf needs to be resized and therefore
-                # it needs to hold the data itself (not a view of the data).
-                # a view is returned by the source_sel indexing, which cannot be resized
-                # by ndarray.resize().
-                if hasattr(self, "in_file_loop") and self.in_file_loop:
-                    nda = np.copy(nda)
-
-            # special handling for bools
-            # (c and Julia store as uint8 so cast to bool)
-            if elements == "bool":
-                nda = nda.astype(np.bool_)
-
-            # Finally, set attributes and return objects
-            attrs = h5f[name].attrs
-            if obj_buf is None:
-                if datatype == "array":
-                    return Array(nda=nda, attrs=attrs), n_rows_to_read
-                if datatype == "fixedsize_array":
-                    return FixedSizeArray(nda=nda, attrs=attrs), n_rows_to_read
-                if datatype == "array_of_equalsized_arrays":
-                    return (
-                        ArrayOfEqualSizedArrays(nda=nda, dims=shape, attrs=attrs),
-                        n_rows_to_read,
-                    )
-            else:
-                if set(obj_buf.attrs.keys()) != set(attrs.keys()):
-                    msg = (
-                        f"attrs mismatch. "
-                        f"obj_buf.attrs: {obj_buf.attrs}, "
-                        f"h5f[{name}].attrs: {attrs}"
-                    )
-                    raise RuntimeError(msg)
-                return obj_buf, n_rows_to_read
-
-        msg = "don't know how to read datatype {datatype}"
-        raise RuntimeError(msg)
 
     def write(
         self,
