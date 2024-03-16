@@ -33,13 +33,7 @@ def _h5_read_array(
     if obj_buf is None:
         return Array(nda=nda, attrs=attrs), n_rows_to_read
 
-    if set(obj_buf.attrs.keys()) != set(attrs.keys()):
-        msg = (
-            f"attrs mismatch. "
-            f"obj_buf.attrs: {obj_buf.attrs}, "
-            f"h5f[{name}].attrs: {attrs}"
-        )
-        raise RuntimeError(msg)
+    check_obj_buf_attrs(obj_buf.attrs, attrs, f"{h5f.filename}[{name}]")
 
     return obj_buf, n_rows_to_read
 
@@ -68,13 +62,7 @@ def _h5_read_fixedsize_array(
     if obj_buf is None:
         return FixedSizeArray(nda=nda, attrs=attrs), n_rows_to_read
 
-    if set(obj_buf.attrs.keys()) != set(attrs.keys()):
-        msg = (
-            f"attrs mismatch. "
-            f"obj_buf.attrs: {obj_buf.attrs}, "
-            f"h5f[{name}].attrs: {attrs}"
-        )
-        raise RuntimeError(msg)
+    check_obj_buf_attrs(obj_buf.attrs, attrs, f"{h5f.filename}[{name}]")
 
     return obj_buf, n_rows_to_read
 
@@ -106,12 +94,15 @@ def _h5_read_array_of_equalsized_arrays(
             n_rows_to_read,
         )
 
-    if set(obj_buf.attrs.keys()) != set(attrs.keys()):
-        msg = (
-            f"attrs mismatch. "
-            f"obj_buf.attrs: {obj_buf.attrs}, "
-            f"h5f[{name}].attrs: {attrs}"
-        )
-        raise RuntimeError(msg)
+    check_obj_buf_attrs(obj_buf.attrs, attrs, f"{h5f.filename}[{name}]")
 
     return obj_buf, n_rows_to_read
+
+
+def check_obj_buf_attrs(attrs, new_attrs, name):
+    if attrs != new_attrs:
+        msg = (
+            f"existing LGDO buffer and new data chunk have different attributes: "
+            f"obj_buf.attrs={attrs} != {name}.attrs={new_attrs}"
+        )
+        raise RuntimeError(msg)
