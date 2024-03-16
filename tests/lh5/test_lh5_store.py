@@ -276,12 +276,36 @@ def test_read_array(lh5_file):
         )
 
 
+def test_read_array_slice(lh5_file):
+    store = lh5.LH5Store()
+    lh5_obj, n_rows = store.read(
+        "/data/struct_full/array", lh5_file, start_row=1, n_rows=3
+    )
+    assert isinstance(lh5_obj, types.Array)
+    assert n_rows == 3
+    assert lh5_obj == lgdo.Array([2, 3, 4])
+
+    lh5_obj, n_rows = store.read(
+        "/data/struct_full/array", [lh5_file, lh5_file], start_row=1, n_rows=6
+    )
+    assert isinstance(lh5_obj, types.Array)
+    assert n_rows == 6
+    assert lh5_obj == lgdo.Array([2, 3, 4, 5, 1, 2])
+
+
 def test_read_array_fancy_idx(lh5_file):
     store = lh5.LH5Store()
     lh5_obj, n_rows = store.read("/data/struct_full/array", lh5_file, idx=[0, 3, 4])
     assert isinstance(lh5_obj, types.Array)
-    assert (lh5_obj.nda == np.array([1, 4, 5])).all()
     assert n_rows == 3
+    assert lh5_obj == lgdo.Array([1, 4, 5])
+
+    lh5_obj, n_rows = store.read(
+        "/data/struct_full/array", [lh5_file, lh5_file], idx=[[0, 3, 4], [0, 3, 4]]
+    )
+    assert isinstance(lh5_obj, types.Array)
+    assert n_rows == 6
+    assert lh5_obj == lgdo.Array([1, 4, 5, 1, 4, 5])
 
 
 def test_read_vov(lh5_file):

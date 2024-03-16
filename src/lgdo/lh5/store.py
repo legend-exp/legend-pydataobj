@@ -259,13 +259,6 @@ class LH5Store:
             lh5_file = list(lh5_file)
             n_rows_read = 0
 
-            # to know whether we are reading in a list of files.
-            # this is part of the fix for reading data by idx
-            # (see https://github.com/legend-exp/legend-pydataobj/issues/29)
-            # so that we only make a copy of the data if absolutely necessary
-            # or if we can read the data from file without having to make a copy
-            in_file_loop = True
-
             for i, h5f in enumerate(lh5_file):
                 if isinstance(idx, list) and len(idx) > 0 and not np.isscalar(idx[0]):
                     # a list of lists: must be one per file
@@ -286,10 +279,6 @@ class LH5Store:
                     idx_i = None
                 n_rows_i = n_rows - n_rows_read
 
-                # maybe someone passed in a list of len==1?
-                if i == (len(lh5_file) - 1):
-                    in_file_loop = False
-
                 obj_buf, n_rows_read_i = _serializers._h5_read_lgdo(
                     name,
                     self.gimme_file(lh5_file[i], "r"),
@@ -301,7 +290,6 @@ class LH5Store:
                     obj_buf=obj_buf,
                     obj_buf_start=obj_buf_start,
                     decompress=decompress,
-                    copy_read_nda=in_file_loop,
                 )
 
                 n_rows_read += n_rows_read_i
@@ -309,8 +297,6 @@ class LH5Store:
                     return obj_buf, n_rows_read
                 start_row = 0
                 obj_buf_start += n_rows_read_i
-
-            in_file_loop = False
 
             return obj_buf, n_rows_read
 

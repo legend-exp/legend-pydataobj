@@ -21,7 +21,6 @@ def _h5_read_ndarray(
     use_h5idx=False,
     obj_buf=None,
     obj_buf_start=0,
-    copy_read_nda=False,
 ):
     # read out all arrays by slicing
     if obj_buf is not None and not isinstance(obj_buf, Array):
@@ -89,14 +88,6 @@ def _h5_read_ndarray(
     else:
         # it is faster to read the whole object and then do fancy indexing
         nda = h5f[name][...][source_sel]
-
-        # if reading a list of files recursively, this is given to obj_buf on
-        # the first file read. obj_buf needs to be resized and therefore
-        # it needs to hold the data itself (not a view of the data).
-        # a view is returned by the source_sel indexing, which cannot be resized
-        # by ndarray.resize().
-        if copy_read_nda:
-            nda = np.copy(nda)
 
     # Finally, set attributes and return objects
     attrs = h5f[name].attrs

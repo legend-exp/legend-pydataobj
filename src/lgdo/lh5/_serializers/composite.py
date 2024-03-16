@@ -43,7 +43,6 @@ def _h5_read_lgdo(
     obj_buf=None,
     obj_buf_start=0,
     decompress=True,
-    copy_read_nda=False,
 ):
     log.debug(
         f"reading {h5f.filename}:{name}[{start_row}:{n_rows}], decompress = {decompress}, "
@@ -92,7 +91,6 @@ def _h5_read_lgdo(
             use_h5idx=use_h5idx,
             field_mask=field_mask,
             decompress=decompress,
-            copy_read_nda=copy_read_nda,
         )
 
     # Below here is all array-like types. So trim idx if needed
@@ -121,7 +119,6 @@ def _h5_read_lgdo(
             obj_buf=obj_buf,
             obj_buf_start=obj_buf_start,
             decompress=decompress,
-            copy_read_nda=copy_read_nda,
         )
 
     if lgdotype in (ArrayOfEncodedEqualSizedArrays, VectorOfEncodedVectors):
@@ -135,7 +132,6 @@ def _h5_read_lgdo(
             obj_buf=obj_buf,
             obj_buf_start=obj_buf_start,
             decompress=decompress,
-            copy_read_nda=copy_read_nda,
         )
 
     if lgdotype is VectorOfVectors:
@@ -148,7 +144,6 @@ def _h5_read_lgdo(
             use_h5idx=use_h5idx,
             obj_buf=obj_buf,
             obj_buf_start=obj_buf_start,
-            copy_read_nda=copy_read_nda,
         )
 
     # FixedSizeArray
@@ -162,7 +157,6 @@ def _h5_read_lgdo(
             use_h5idx=use_h5idx,
             obj_buf=obj_buf,
             obj_buf_start=obj_buf_start,
-            copy_read_nda=copy_read_nda,
         )
 
     # ArrayOfEqualSizedArrays
@@ -176,7 +170,6 @@ def _h5_read_lgdo(
             use_h5idx=use_h5idx,
             obj_buf=obj_buf,
             obj_buf_start=obj_buf_start,
-            copy_read_nda=copy_read_nda,
         )
 
     # Array
@@ -190,7 +183,6 @@ def _h5_read_lgdo(
             use_h5idx=use_h5idx,
             obj_buf=obj_buf,
             obj_buf_start=obj_buf_start,
-            copy_read_nda=copy_read_nda,
         )
 
     msg = f"don't know how to read datatype {datatype}"
@@ -206,7 +198,6 @@ def _h5_read_vector_of_vectors(
     use_h5idx=False,
     obj_buf=None,
     obj_buf_start=0,
-    copy_read_nda=False,
 ):
     if obj_buf is not None and not isinstance(obj_buf, VectorOfVectors):
         msg = f"obj_buf for '{name}' not a LGDO VectorOfVectors"
@@ -223,7 +214,6 @@ def _h5_read_vector_of_vectors(
         use_h5idx=use_h5idx,
         obj_buf=cumulen_buf,
         obj_buf_start=obj_buf_start,
-        copy_read_nda=copy_read_nda,
     )
     # get a view of just what was read out for cleaner code below
     this_cumulen_nda = cumulative_length.nda[
@@ -249,7 +239,6 @@ def _h5_read_vector_of_vectors(
             n_rows=n_rows,
             idx=idx2,
             use_h5idx=use_h5idx,
-            copy_read_nda=copy_read_nda,
         )
         fd_starts = fd_starts.nda  # we just need the nda
         if fd_start is None:
@@ -336,7 +325,6 @@ def _h5_read_vector_of_vectors(
         use_h5idx=use_h5idx,
         obj_buf=fd_buf,
         obj_buf_start=fd_buf_start,
-        copy_read_nda=copy_read_nda,
     )
     if obj_buf is not None:
         return obj_buf, n_rows_read
@@ -374,7 +362,6 @@ def _h5_read_struct(
     use_h5idx=False,
     field_mask=None,
     decompress=True,
-    copy_read_nda=False,
 ):
     # modify datatype in attrs if a field_mask was used
     attrs = dict(h5f[name].attrs)
@@ -409,7 +396,6 @@ def _h5_read_struct(
             use_h5idx=use_h5idx,
             # field_mask=field_mask,
             decompress=decompress,
-            copy_read_nda=copy_read_nda,
         )
 
     return Struct(obj_dict=obj_dict, attrs=attrs), 1
@@ -426,7 +412,6 @@ def _h5_read_table(
     obj_buf=None,
     obj_buf_start=0,
     decompress=True,
-    copy_read_nda=False,
 ):
     col_dict = {}
 
@@ -463,7 +448,6 @@ def _h5_read_table(
             obj_buf=fld_buf,
             obj_buf_start=obj_buf_start,
             decompress=decompress,
-            copy_read_nda=copy_read_nda,
         )
 
         if obj_buf is not None and obj_buf_start + n_rows_read > len(obj_buf):
@@ -531,7 +515,6 @@ def _h5_read_encoded_array(
     obj_buf=None,
     obj_buf_start=0,
     decompress=True,
-    copy_read_nda=False,
 ):
     datatype = h5f[name].attrs["datatype"]
     elements = utils.get_nested_datatype_string(h5f[name].attrs["datatype"])
@@ -567,7 +550,6 @@ def _h5_read_encoded_array(
                 use_h5idx=use_h5idx,
                 obj_buf=None if decompress else decoded_size_buf,
                 obj_buf_start=0 if decompress else obj_buf_start,
-                copy_read_nda=copy_read_nda,
             )
 
             # read out encoded_data, a VectorOfVectors
@@ -580,7 +562,6 @@ def _h5_read_encoded_array(
                 use_h5idx=use_h5idx,
                 obj_buf=None if decompress else encoded_data_buf,
                 obj_buf_start=0 if decompress else obj_buf_start,
-                copy_read_nda=copy_read_nda,
             )
 
             # return the still encoded data in the buffer object, if there

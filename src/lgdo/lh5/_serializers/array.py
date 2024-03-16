@@ -18,7 +18,6 @@ def _h5_read_array(
     use_h5idx=False,
     obj_buf=None,
     obj_buf_start=0,
-    copy_read_nda=False,
 ):
     nda, attrs, n_rows_to_read = _h5_read_ndarray(
         name,
@@ -29,7 +28,6 @@ def _h5_read_array(
         use_h5idx=use_h5idx,
         obj_buf=obj_buf,
         obj_buf_start=obj_buf_start,
-        copy_read_nda=copy_read_nda,
     )
 
     if obj_buf is None:
@@ -55,7 +53,6 @@ def _h5_read_fixedsize_array(
     use_h5idx=False,
     obj_buf=None,
     obj_buf_start=0,
-    copy_read_nda=False,
 ):
     nda, attrs, n_rows_to_read = _h5_read_ndarray(
         name,
@@ -66,7 +63,6 @@ def _h5_read_fixedsize_array(
         use_h5idx=use_h5idx,
         obj_buf=obj_buf,
         obj_buf_start=obj_buf_start,
-        copy_read_nda=copy_read_nda,
     )
 
     if obj_buf is None:
@@ -92,7 +88,6 @@ def _h5_read_array_of_equalsized_arrays(
     use_h5idx=False,
     obj_buf=None,
     obj_buf_start=0,
-    copy_read_nda=False,
 ):
     nda, attrs, n_rows_to_read = _h5_read_ndarray(
         name,
@@ -103,7 +98,6 @@ def _h5_read_array_of_equalsized_arrays(
         use_h5idx=use_h5idx,
         obj_buf=obj_buf,
         obj_buf_start=obj_buf_start,
-        copy_read_nda=copy_read_nda,
     )
 
     if obj_buf is None:
