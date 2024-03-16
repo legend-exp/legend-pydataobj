@@ -300,15 +300,9 @@ class LH5Store:
 
             return obj_buf, n_rows_read
 
-        # get the file from the store
-        h5f = self.gimme_file(lh5_file, "r")
-        if not h5f or name not in h5f:
-            msg = f"'{name}' not in {h5f.filename}"
-            raise KeyError(msg)
-
         return _serializers._h5_read_lgdo(
             name,
-            h5f,
+            self.gimme_file(lh5_file, "r"),
             start_row=start_row,
             n_rows=n_rows,
             idx=idx,

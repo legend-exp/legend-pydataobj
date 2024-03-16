@@ -32,6 +32,7 @@ def _h5_read_ndarray(
     # we culled idx above for start_row and n_rows, now we have to apply
     # the constraint of the length of the dataset
     ds_n_rows = h5f[name].shape[0]
+
     if idx is not None:
         if len(idx[0]) > 0 and idx[0][-1] >= ds_n_rows:
             log.warning("idx indexed past the end of the array in the file. Culling...")

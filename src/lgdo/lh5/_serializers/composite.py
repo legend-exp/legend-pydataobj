@@ -53,7 +53,12 @@ def _h5_read_lgdo(
     if not (isinstance(idx, tuple) and len(idx) == 1) and idx is not None:
         idx = (idx,)
 
-    datatype = h5f[name].attrs["datatype"]
+    try:
+        datatype = h5f[name].attrs["datatype"]
+    except KeyError as e:
+        msg = f"dataset '{name}' not in {h5f.filename}"
+        raise KeyError(msg) from e
+
     lgdotype = utils.datatype(h5f[name].attrs["datatype"])
 
     if lgdotype is Scalar:
