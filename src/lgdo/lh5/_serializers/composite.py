@@ -373,19 +373,9 @@ def _h5_read_struct(
     idx=None,
     use_h5idx=False,
     field_mask=None,
-    obj_buf=None,
-    obj_buf_start=0,
     decompress=True,
     copy_read_nda=False,
 ):
-    # ignore obj_buf.
-    # TODO: could append new fields or overwrite/concat to existing
-    # fields. If implemented, get_buffer() above should probably also
-    # (optionally?) prep buffers for each field
-    if obj_buf is not None or obj_buf_start is not None:
-        msg = "obj_buf not implemented for LGDO Structs"
-        raise NotImplementedError(msg)
-
     # modify datatype in attrs if a field_mask was used
     attrs = dict(h5f[name].attrs)
     if field_mask is not None:
