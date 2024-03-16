@@ -5,6 +5,7 @@ import logging
 import numpy as np
 
 from ...types import Scalar
+from ..exceptions import LH5DecodeError
 
 log = logging.getLogger(__name__)
 
@@ -24,7 +25,7 @@ def _h5_read_scalar(
     if obj_buf is not None:
         if not isinstance(obj_buf, Scalar):
             msg = f"obj_buf for '{name}' not an LGDO Scalar"
-            raise ValueError(msg)
+            raise LH5DecodeError(msg, h5f, name)
 
         obj_buf.value = value
         obj_buf.attrs.update(h5f[name].attrs)

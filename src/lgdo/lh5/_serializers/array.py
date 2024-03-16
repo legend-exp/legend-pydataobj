@@ -17,7 +17,7 @@ def _h5_read_array_generic(type_, name, h5f, **kwargs):
     if obj_buf is None:
         return type_(nda=nda, attrs=attrs), n_rows_to_read
 
-    utils.check_obj_buf_attrs(obj_buf.attrs, attrs, f"{h5f.filename}[{name}]")
+    utils.check_obj_buf_attrs(obj_buf.attrs, attrs, h5f, name)
 
     return obj_buf, n_rows_to_read
 

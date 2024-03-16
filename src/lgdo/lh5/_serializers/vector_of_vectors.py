@@ -10,6 +10,7 @@ from ...types import (
     Array,
     VectorOfVectors,
 )
+from ..exceptions import LH5DecodeError
 from . import datatype as dtypeutils
 from .array import (
     _h5_read_array,
@@ -30,7 +31,7 @@ def _h5_read_vector_of_vectors(
 ):
     if obj_buf is not None and not isinstance(obj_buf, VectorOfVectors):
         msg = f"obj_buf for '{name}' not a LGDO VectorOfVectors"
-        raise ValueError(msg)
+        raise LH5DecodeError(msg, h5f, name)
 
     # read out cumulative_length
     cumulen_buf = None if obj_buf is None else obj_buf.cumulative_length
@@ -114,7 +115,7 @@ def _h5_read_vector_of_vectors(
                     f"cumulative_length non-increasing between entries "
                     f"{start_row} and {start_row+n_rows_read} ??"
                 )
-                raise RuntimeError(msg)
+                raise LH5DecodeError(msg, h5f, name)
 
         # determine the number of rows for the flattened_data readout
         fd_n_rows = this_cumulen_nda[-1] if n_rows_read > 0 else 0
@@ -146,16 +147,14 @@ def _h5_read_vector_of_vectors(
             fd_buf.resize(fdb_size)
 
     # now read
-    lgdotype = (
-        dtypeutils.datatype(h5f[f"{name}/flattened_data"].attrs["datatype"]) is Array
-    )
+    lgdotype = dtypeutils.datatype(h5f[f"{name}/flattened_data"].attrs["datatype"])
     if lgdotype is Array:
         _func = _h5_read_array
     elif lgdotype is VectorOfVectors:
         _func = _h5_read_vector_of_vectors
     else:
         msg = f"{name}/flattened_data of type {lgdotype.__name__} is not supported"
-        raise RuntimeError(msg)
+        raise LH5DecodeError(msg, h5f, name)
 
     flattened_data, _ = _func(
         f"{name}/flattened_data",

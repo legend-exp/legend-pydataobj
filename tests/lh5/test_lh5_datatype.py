@@ -14,7 +14,7 @@ def test_datatype2lgdo():
 
     assert d(" real ") == types.Scalar
 
-    with pytest.raises(TypeError):
+    with pytest.raises(RuntimeError):
         assert d("int") == types.Scalar
 
     assert d("array<1>{real}") == types.Array

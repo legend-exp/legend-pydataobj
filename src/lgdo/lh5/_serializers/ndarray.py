@@ -7,6 +7,7 @@ from bisect import bisect_left
 import numpy as np
 
 from ...types import Array
+from ..exceptions import LH5DecodeError
 from . import datatype
 
 log = logging.getLogger(__name__)
@@ -24,7 +25,7 @@ def _h5_read_ndarray(
 ):
     if obj_buf is not None and not isinstance(obj_buf, Array):
         msg = f"obj_buf for '{name}' not an LGDO Array"
-        raise ValueError(msg)
+        raise LH5DecodeError(msg, h5f, name)
 
     # compute the number of rows to read
     # we culled idx above for start_row and n_rows, now we have to apply
@@ -33,7 +34,7 @@ def _h5_read_ndarray(
         ds_n_rows = h5f[name].shape[0]
     except AttributeError as e:
         msg = f"'{name!r}' in {h5f.filename} does not seem to be an HDF5 dataset"
-        raise RuntimeError(msg) from e
+        raise LH5DecodeError(msg, h5f, name) from e
 
     if idx is not None:
         if len(idx[0]) > 0 and idx[0][-1] >= ds_n_rows:

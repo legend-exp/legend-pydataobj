@@ -19,6 +19,7 @@ from ...types import (
     VectorOfVectors,
     WaveformTable,
 )
+from ..exceptions import LH5DecodeError
 from . import datatype as dtypeutils
 from . import utils
 from .array import (
@@ -60,8 +61,8 @@ def _h5_read_lgdo(
     try:
         lgdotype = dtypeutils.datatype(h5f[name].attrs["datatype"])
     except KeyError as e:
-        msg = f"dataset '{name}' not in {h5f.filename}"
-        raise KeyError(msg) from e
+        msg = "dataset not found"
+        raise LH5DecodeError(msg, h5f, name) from e
 
     if lgdotype is Scalar:
         return _h5_read_scalar(
@@ -199,7 +200,7 @@ def _h5_read_lgdo(
         )
 
     msg = f"no rule to read {lgdotype.__name__} from LH5"
-    raise RuntimeError(msg)
+    raise LH5DecodeError(msg, h5f, name)
 
 
 def _h5_read_struct(
@@ -263,8 +264,8 @@ def _h5_read_table(
     decompress=True,
 ):
     if obj_buf is not None and not isinstance(obj_buf, Table):
-        msg = f"obj_buf for '{name}' not an LGDO Tablr"
-        raise ValueError(msg)
+        msg = f"obj_buf for '{name}' not an LGDO Table"
+        raise LH5DecodeError(msg, h5f, name)
 
     attrs = dict(h5f[name].attrs)
 
@@ -286,8 +287,8 @@ def _h5_read_table(
         fld_buf = None
         if obj_buf is not None:
             if not isinstance(obj_buf, Table) or field not in obj_buf:
-                msg = f"obj_buf for LGDO Table '{name}' not a Table or columns missing"
-                raise ValueError(msg)
+                msg = f"obj_buf for LGDO Table '{name}' not a Table or columns are missing"
+                raise LH5DecodeError(msg, h5f, name)
 
             fld_buf = obj_buf[field]
 
@@ -350,6 +351,6 @@ def _h5_read_table(
     obj_buf.loc = obj_buf_start + n_rows_read
 
     # check attributes
-    utils.check_obj_buf_attrs(obj_buf.attrs, attrs, f"{h5f.filename}[{name}]")
+    utils.check_obj_buf_attrs(obj_buf.attrs, attrs, h5f, name)
 
     return obj_buf, n_rows_read

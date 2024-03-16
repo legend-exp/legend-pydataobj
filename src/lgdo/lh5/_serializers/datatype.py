@@ -30,7 +30,7 @@ def datatype(expr: str) -> type:
             return type_
 
     msg = f"unknown datatype '{expr}'"
-    raise TypeError(msg)
+    raise RuntimeError(msg)
 
 
 def get_nested_datatype_string(expr: str) -> str:
