@@ -21,7 +21,8 @@ from ...types import (
     VectorOfVectors,
     WaveformTable,
 )
-from . import datatype as utils
+from . import datatype as dtypeutils
+from . import utils
 from .array import (
     _h5_read_array,
     _h5_read_array_of_equalsized_arrays,
@@ -54,7 +55,7 @@ def _h5_read_lgdo(
         idx = (idx,)
 
     try:
-        lgdotype = utils.datatype(h5f[name].attrs["datatype"])
+        lgdotype = dtypeutils.datatype(h5f[name].attrs["datatype"])
     except KeyError as e:
         msg = f"dataset '{name}' not in {h5f.filename}"
         raise KeyError(msg) from e
@@ -370,7 +371,7 @@ def _h5_read_struct(
     attrs = dict(h5f[name].attrs)
 
     # determine fields to be read out
-    all_fields = utils.get_struct_fields(attrs["datatype"])
+    all_fields = dtypeutils.get_struct_fields(attrs["datatype"])
     selected_fields = (
         [field for field in all_fields if field_mask[field]]
         if field_mask is not None
@@ -416,26 +417,27 @@ def _h5_read_table(
         msg = f"obj_buf for '{name}' not an LGDO Tablr"
         raise ValueError(msg)
 
-    col_dict = {}
+    attrs = dict(h5f[name].attrs)
+
+    # determine fields to be read out
+    all_fields = dtypeutils.get_struct_fields(attrs["datatype"])
+    selected_fields = (
+        [field for field in all_fields if field_mask[field]]
+        if field_mask is not None
+        else all_fields
+    )
 
     # modify datatype in attrs if a field_mask was used
-    attrs = dict(h5f[name].attrs)
-    if field_mask is not None:
-        selected_fields = []
-        for field in utils.get_struct_fields(attrs["datatype"]):
-            if field_mask[field]:
-                selected_fields.append(field)
-        attrs["datatype"] = "table{" + ",".join(selected_fields) + "}"
-    else:
-        selected_fields = utils.get_struct_fields(attrs["datatype"])
+    attrs["datatype"] = "table{" + ",".join(selected_fields) + "}"
 
     # read out each of the fields
+    col_dict = {}
     rows_read = []
     for field in selected_fields:
         fld_buf = None
         if obj_buf is not None:
             if not isinstance(obj_buf, Table) or field not in obj_buf:
-                msg = f"obj_buf for LGDO Table '{name}' not formatted correctly"
+                msg = f"obj_buf for LGDO Table '{name}' not a Table or columns missing"
                 raise ValueError(msg)
 
             fld_buf = obj_buf[field]
@@ -447,7 +449,6 @@ def _h5_read_table(
             n_rows=n_rows,
             idx=idx,
             use_h5idx=use_h5idx,
-            # field_mask=field_mask,
             obj_buf=fld_buf,
             obj_buf_start=obj_buf_start,
             decompress=decompress,
@@ -468,7 +469,8 @@ def _h5_read_table(
     for n in rows_read[1:]:
         if n != n_rows_read:
             log.warning(
-                f"Table '{name}' got strange n_rows_read = {n}, {n_rows_read} was expected ({rows_read})"
+                f"Table '{name}' got strange n_rows_read = {n}, "
+                "{n_rows_read} was expected ({rows_read})"
             )
 
     # fields have been read out, now return a table
@@ -497,13 +499,9 @@ def _h5_read_table(
     obj_buf.resize(do_warn=True)
     # set (write) loc to end of tree
     obj_buf.loc = obj_buf_start + n_rows_read
+
     # check attributes
-    if set(obj_buf.attrs.keys()) != set(attrs.keys()):
-        msg = (
-            f"attrs mismatch. obj_buf.attrs: "
-            f"{obj_buf.attrs}, h5f[{name}].attrs: {attrs}"
-        )
-        raise RuntimeError(msg)
+    utils.check_obj_buf_attrs(obj_buf.attrs, attrs, f"{h5f.filename}[{name}]")
 
     return obj_buf, n_rows_read
 
@@ -520,7 +518,7 @@ def _h5_read_encoded_array(
     decompress=True,
 ):
     datatype = h5f[name].attrs["datatype"]
-    elements = utils.get_nested_datatype_string(h5f[name].attrs["datatype"])
+    elements = dtypeutils.get_nested_datatype_string(h5f[name].attrs["datatype"])
 
     for cond, enc_lgdo in [
         (
