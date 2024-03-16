@@ -22,11 +22,9 @@ def _h5_read_ndarray(
     obj_buf=None,
     obj_buf_start=0,
 ):
-    # read out all arrays by slicing
     if obj_buf is not None and not isinstance(obj_buf, Array):
         msg = f"obj_buf for '{name}' not an LGDO Array"
         raise ValueError(msg)
-        obj_buf = None
 
     # compute the number of rows to read
     # we culled idx above for start_row and n_rows, now we have to apply

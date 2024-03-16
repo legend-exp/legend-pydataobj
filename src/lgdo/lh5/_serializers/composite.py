@@ -418,6 +418,10 @@ def _h5_read_table(
     obj_buf_start=0,
     decompress=True,
 ):
+    if obj_buf is not None and not isinstance(obj_buf, Table):
+        msg = f"obj_buf for '{name}' not an LGDO Tablr"
+        raise ValueError(msg)
+
     col_dict = {}
 
     # modify datatype in attrs if a field_mask was used

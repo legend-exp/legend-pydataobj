@@ -22,6 +22,10 @@ def _h5_read_scalar(
         value = np.bool_(value)
 
     if obj_buf is not None:
+        if not isinstance(obj_buf, Scalar):
+            msg = f"obj_buf for '{name}' not an LGDO Scalar"
+            raise ValueError(msg)
+
         obj_buf.value = value
         obj_buf.attrs.update(h5f[name].attrs)
         return obj_buf, 1
