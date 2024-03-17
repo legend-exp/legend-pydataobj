@@ -6,7 +6,74 @@ import logging
 import os
 import string
 
+import h5py
+
+from .exceptions import LH5DecodeError
+
 log = logging.getLogger(__name__)
+
+
+def read_n_rows(name: str, h5f: str | h5py.File) -> int | None:
+    """Look up the number of rows in an Array-like object.
+
+    Return ``None`` if `name` is a :class:`Scalar` or a :class:`Struct`.
+    """
+    if not isinstance(h5f, h5py.File):
+        h5f = h5py.File(h5f, "r")
+
+    if not h5f or name not in h5f:
+        msg = "not found"
+        raise LH5DecodeError(msg, h5f, name)
+
+    # get the datatype
+    if "datatype" not in h5f[name].attrs:
+        msg = "missing 'datatype' attribute"
+        raise LH5DecodeError(msg, h5f, name)
+
+    datatype = h5f[name].attrs["datatype"]
+    datatype, shape, elements = parse_datatype(datatype)
+
+    # scalars are dim-0 datasets
+    if datatype == "scalar":
+        return None
+
+    # structs don't have rows
+    if datatype == "struct":
+        return None
+
+    # tables should have elements with all the same length
+    if datatype == "table":
+        # read out each of the fields
+        rows_read = None
+        for field in elements:
+            n_rows_read = read_n_rows(name + "/" + field, h5f)
+            if not rows_read:
+                rows_read = n_rows_read
+            elif rows_read != n_rows_read:
+                log.warning(
+                    f"'{field}' field in table '{name}' has {rows_read} rows, "
+                    f"{n_rows_read} was expected"
+                )
+        return rows_read
+
+    # length of vector of vectors is the length of its cumulative_length
+    if elements.startswith("array"):
+        return read_n_rows(f"{name}/cumulative_length", h5f)
+
+    # length of vector of encoded vectors is the length of its decoded_size
+    if (
+        elements.startswith("encoded_array")
+        or datatype == "array_of_encoded_equalsized_arrays"
+    ):
+        return read_n_rows(f"{name}/encoded_data", h5f)
+
+    # return array length (without reading the array!)
+    if "array" in datatype:
+        # compute the number of rows to read
+        return h5f[name].shape[0]
+
+    msg = f"don't know how to read datatype '{datatype}'"
+    raise RuntimeError(msg)
 
 
 def parse_datatype(datatype: str) -> tuple[str, tuple[int, ...], str | list[str]]:

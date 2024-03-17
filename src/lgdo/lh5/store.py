@@ -11,7 +11,6 @@ from bisect import bisect_left
 from typing import Any
 
 import h5py
-import numba as nb
 import numpy as np
 
 from .. import compression as compress
@@ -26,8 +25,7 @@ from ..types import (
     VectorOfVectors,
     WaveformTable,
 )
-from . import _serializers
-from .utils import expand_path, parse_datatype
+from . import _serializers, utils
 
 log = logging.getLogger(__name__)
 
@@ -59,7 +57,7 @@ class LH5Store:
             whether to keep files open by storing the :mod:`h5py` objects as
             class attributes.
         """
-        self.base_path = "" if base_path == "" else expand_path(base_path)
+        self.base_path = "" if base_path == "" else utils.expand_path(base_path)
         self.keep_open = keep_open
         self.files = {}
 
@@ -75,27 +73,36 @@ class LH5Store:
         """
         if isinstance(lh5_file, h5py.File):
             return lh5_file
+
         if mode == "r":
-            lh5_file = expand_path(lh5_file, base_path=self.base_path)
+            lh5_file = utils.expand_path(lh5_file, base_path=self.base_path)
+
         if lh5_file in self.files:
             return self.files[lh5_file]
+
         if self.base_path != "":
             full_path = os.path.join(self.base_path, lh5_file)
         else:
             full_path = lh5_file
+
         if mode != "r":
             directory = os.path.dirname(full_path)
             if directory != "" and not os.path.exists(directory):
                 log.debug(f"making path {directory}")
                 os.makedirs(directory)
+
         if mode == "r" and not os.path.exists(full_path):
             msg = f"file {full_path} not found"
             raise FileNotFoundError(msg)
+
         if mode != "r" and os.path.exists(full_path):
             log.debug(f"opening existing file {full_path} in mode '{mode}'")
+
         h5f = h5py.File(full_path, mode)
+
         if self.keep_open:
             self.files[lh5_file] = h5f
+
         return h5f
 
     def gimme_group(
@@ -246,7 +253,6 @@ class LH5Store:
             Decompress data encoded with LGDO's compression routines right
             after reading. The option has no effect on data encoded with HDF5
             built-in filters, which is always decompressed upstream by HDF5.
-
 
         Returns
         -------
@@ -449,7 +455,9 @@ class LH5Store:
             # can write the fields to the table as normal.
             if wo_mode == "ac":
                 old_group = self.gimme_group(name, group)
-                datatype, shape, fields = parse_datatype(old_group.attrs["datatype"])
+                datatype, shape, fields = utils.parse_datatype(
+                    old_group.attrs["datatype"]
+                )
                 if datatype not in ["table", "struct"]:
                     msg = f"Trying to append columns to an object of type {datatype}"
                     raise RuntimeError(msg)
@@ -703,77 +711,8 @@ class LH5Store:
             raise RuntimeError(msg)
 
     def read_n_rows(self, name: str, lh5_file: str | h5py.File) -> int | None:
-        """Look up the number of rows in an Array-like object called `name` in
-        `lh5_file`.
+        """Look up the number of rows in an Array-like object called `name` in `lh5_file`.
 
         Return ``None`` if it is a :class:`.Scalar` or a :class:`.Struct`."""
         # this is basically a stripped down version of read_object
-        h5f = self.gimme_file(lh5_file, "r")
-        if not h5f or name not in h5f:
-            msg = f"'{name}' not in {lh5_file}"
-            raise KeyError(msg)
-
-        # get the datatype
-        if "datatype" not in h5f[name].attrs:
-            msg = f"'{name}' in file {lh5_file} is missing the datatype attribute"
-            raise RuntimeError(msg)
-
-        datatype = h5f[name].attrs["datatype"]
-        datatype, shape, elements = parse_datatype(datatype)
-
-        # scalars are dim-0 datasets
-        if datatype == "scalar":
-            return None
-
-        # structs don't have rows
-        if datatype == "struct":
-            return None
-
-        # tables should have elements with all the same length
-        if datatype == "table":
-            # read out each of the fields
-            rows_read = None
-            for field in elements:
-                n_rows_read = self.read_n_rows(name + "/" + field, h5f)
-                if not rows_read:
-                    rows_read = n_rows_read
-                elif rows_read != n_rows_read:
-                    log.warning(
-                        f"'{field}' field in table '{name}' has {rows_read} rows, "
-                        f"{n_rows_read} was expected"
-                    )
-            return rows_read
-
-        # length of vector of vectors is the length of its cumulative_length
-        if elements.startswith("array"):
-            return self.read_n_rows(f"{name}/cumulative_length", h5f)
-
-        # length of vector of encoded vectors is the length of its decoded_size
-        if (
-            elements.startswith("encoded_array")
-            or datatype == "array_of_encoded_equalsized_arrays"
-        ):
-            return self.read_n_rows(f"{name}/encoded_data", h5f)
-
-        # return array length (without reading the array!)
-        if "array" in datatype:
-            # compute the number of rows to read
-            return h5f[name].shape[0]
-
-        msg = f"don't know how to read datatype '{datatype}'"
-        raise RuntimeError(msg)
-
-
-@nb.njit(parallel=False, fastmath=True)
-def _make_fd_idx(starts, stops, idx):
-    k = 0
-    if len(starts) < len(stops):
-        for i in range(stops[0]):
-            idx[k] = i
-            k += 1
-        stops = stops[1:]
-    for j in range(len(starts)):
-        for i in range(starts[j], stops[j]):
-            idx[k] = i
-            k += 1
-    return (idx,)
+        return utils.read_n_rows(name, self.gimme_file(lh5_file, "r"))
