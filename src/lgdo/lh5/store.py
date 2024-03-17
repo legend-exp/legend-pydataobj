@@ -134,17 +134,14 @@ class LH5Store:
     def get_buffer(
         self,
         name: str,
-        lh5_file: str | h5py.File | list[str | h5py.File],
+        lh5_file: str | h5py.File | Sequence[str | h5py.File],
         size: int | None = None,
-        field_mask: dict[str, bool] | list[str] | tuple[str] | None = None,
+        field_mask: Mapping[str, bool] | Sequence[str] | None = None,
     ) -> LGDO:
         """Returns an LH5 object appropriate for use as a pre-allocated buffer
         in a read loop. Sets size to `size` if object has a size.
         """
-        obj, n_rows = self.read(name, lh5_file, n_rows=0, field_mask=field_mask)
-        if hasattr(obj, "resize") and size is not None:
-            obj.resize(new_size=size)
-        return obj
+        return utils.get_buffer(name, lh5_file, size, field_mask)
 
     def read(
         self,

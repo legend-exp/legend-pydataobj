@@ -105,7 +105,7 @@ def read(
         successfully read out. Essential for arrays when the amount of data
         is smaller than the object buffer.  For scalars and structs
         `n_rows_read` will be``1``. For tables it is redundant with
-        ``table.loc``.
+        ``table.loc``. If `obj_buf` is ``None``, only `object` is returned.
     """
     obj, n_rows_read = _serializers._h5_read_lgdo(
         name,
