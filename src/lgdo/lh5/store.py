@@ -7,7 +7,6 @@ from __future__ import annotations
 import logging
 import os
 import sys
-from bisect import bisect_left
 from typing import Any
 
 import h5py
@@ -239,55 +238,13 @@ class LH5Store:
             `n_rows_read` will be``1``. For tables it is redundant with
             ``table.loc``.
         """
-        # Handle list-of-files recursively
+        # grab files from store
         if not isinstance(lh5_file, (str, h5py.File)):
-            lh5_file = list(lh5_file)
-            n_rows_read = 0
-
-            for i, h5f in enumerate(lh5_file):
-                if isinstance(idx, list) and len(idx) > 0 and not np.isscalar(idx[0]):
-                    # a list of lists: must be one per file
-                    idx_i = idx[i]
-                elif idx is not None:
-                    # make idx a proper tuple if it's not one already
-                    if not (isinstance(idx, tuple) and len(idx) == 1):
-                        idx = (idx,)
-                    # idx is a long continuous array
-                    n_rows_i = self.read_n_rows(name, h5f)
-                    # find the length of the subset of idx that contains indices
-                    # that are less than n_rows_i
-                    n_rows_to_read_i = bisect_left(idx[0], n_rows_i)
-                    # now split idx into idx_i and the remainder
-                    idx_i = (idx[0][:n_rows_to_read_i],)
-                    idx = (idx[0][n_rows_to_read_i:] - n_rows_i,)
-                else:
-                    idx_i = None
-                n_rows_i = n_rows - n_rows_read
-
-                obj_buf, n_rows_read_i = _serializers._h5_read_lgdo(
-                    name,
-                    self.gimme_file(lh5_file[i], "r"),
-                    start_row=start_row,
-                    n_rows=n_rows_i,
-                    idx=idx_i,
-                    use_h5idx=use_h5idx,
-                    field_mask=field_mask,
-                    obj_buf=obj_buf,
-                    obj_buf_start=obj_buf_start,
-                    decompress=decompress,
-                )
-
-                n_rows_read += n_rows_read_i
-                if n_rows_read >= n_rows or obj_buf is None:
-                    return obj_buf, n_rows_read
-                start_row = 0
-                obj_buf_start += n_rows_read_i
-
-            return obj_buf, n_rows_read
+            lh5_file = [self.gimme_file(f, "r") for f in list(lh5_file)]
 
         return _serializers._h5_read_lgdo(
             name,
-            self.gimme_file(lh5_file, "r"),
+            lh5_file,
             start_row=start_row,
             n_rows=n_rows,
             idx=idx,
