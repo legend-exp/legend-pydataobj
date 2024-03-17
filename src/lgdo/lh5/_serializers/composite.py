@@ -199,7 +199,7 @@ def _h5_read_lgdo(
             obj_buf_start=obj_buf_start,
         )
 
-    msg = f"no rule to read {lgdotype.__name__} from LH5"
+    msg = f"no rule to decode {lgdotype.__name__} from LH5"
     raise LH5DecodeError(msg, h5f, name)
 
 
@@ -264,7 +264,7 @@ def _h5_read_table(
     decompress=True,
 ):
     if obj_buf is not None and not isinstance(obj_buf, Table):
-        msg = f"obj_buf for '{name}' not an LGDO Table"
+        msg = "provided object buffer is not a Table"
         raise LH5DecodeError(msg, h5f, name)
 
     attrs = dict(h5f[name].attrs)
@@ -287,7 +287,7 @@ def _h5_read_table(
         fld_buf = None
         if obj_buf is not None:
             if not isinstance(obj_buf, Table) or field not in obj_buf:
-                msg = f"obj_buf for LGDO Table '{name}' not a Table or columns are missing"
+                msg = "provided object buffer is not a Table or columns are missing"
                 raise LH5DecodeError(msg, h5f, name)
 
             fld_buf = obj_buf[field]

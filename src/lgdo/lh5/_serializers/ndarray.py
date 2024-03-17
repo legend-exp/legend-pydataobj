@@ -24,7 +24,7 @@ def _h5_read_ndarray(
     obj_buf_start=0,
 ):
     if obj_buf is not None and not isinstance(obj_buf, Array):
-        msg = f"obj_buf for '{name}' not an LGDO Array"
+        msg = "object buffer is not an Array"
         raise LH5DecodeError(msg, h5f, name)
 
     # compute the number of rows to read
@@ -33,7 +33,7 @@ def _h5_read_ndarray(
     try:
         ds_n_rows = h5f[name].shape[0]
     except AttributeError as e:
-        msg = f"'{name!r}' in {h5f.filename} does not seem to be an HDF5 dataset"
+        msg = "does not seem to be an HDF5 dataset"
         raise LH5DecodeError(msg, h5f, name) from e
 
     if idx is not None:

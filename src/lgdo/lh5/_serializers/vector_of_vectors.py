@@ -30,7 +30,7 @@ def _h5_read_vector_of_vectors(
     obj_buf_start=0,
 ):
     if obj_buf is not None and not isinstance(obj_buf, VectorOfVectors):
-        msg = f"obj_buf for '{name}' not a LGDO VectorOfVectors"
+        msg = "object buffer is not a VectorOfVectors"
         raise LH5DecodeError(msg, h5f, name)
 
     # read out cumulative_length
@@ -113,7 +113,7 @@ def _h5_read_vector_of_vectors(
                 )
                 msg = (
                     f"cumulative_length non-increasing between entries "
-                    f"{start_row} and {start_row+n_rows_read} ??"
+                    f"{start_row} and {start_row+n_rows_read}"
                 )
                 raise LH5DecodeError(msg, h5f, name)
 
@@ -153,8 +153,8 @@ def _h5_read_vector_of_vectors(
     elif lgdotype is VectorOfVectors:
         _func = _h5_read_vector_of_vectors
     else:
-        msg = f"{name}/flattened_data of type {lgdotype.__name__} is not supported"
-        raise LH5DecodeError(msg, h5f, name)
+        msg = "type {lgdotype.__name__} is not supported"
+        raise LH5DecodeError(msg, h5f, f"{name}/flattened_data")
 
     flattened_data, _ = _func(
         f"{name}/flattened_data",

@@ -6,9 +6,7 @@ import sys
 from ... import compression as compress
 from ...types import (
     ArrayOfEncodedEqualSizedArrays,
-    ArrayOfEqualSizedArrays,
     VectorOfEncodedVectors,
-    VectorOfVectors,
 )
 from ..exceptions import LH5DecodeError
 from .array import (
@@ -49,11 +47,11 @@ def _h5_read_encoded_array(
     decompress=True,
 ):
     if lgdotype not in (ArrayOfEncodedEqualSizedArrays, VectorOfEncodedVectors):
-        msg = f"unsupported LGDO encoded type {lgdotype.__name__}"
+        msg = f"unsupported read of encoded type {lgdotype.__name__}"
         raise LH5DecodeError(msg, h5f, name)
 
     if not decompress and obj_buf is not None and not isinstance(obj_buf, lgdotype):
-        msg = f"obj_buf for '{name}' not a {lgdotype.__name__}"
+        msg = f"object buffer is not a {lgdotype.__name__}"
         raise LH5DecodeError(msg, h5f, name)
 
     # read out decoded_size, either a Scalar or an Array
@@ -119,17 +117,9 @@ def _h5_read_encoded_array(
 
     # use the (decoded object type) buffer otherwise
     if lgdotype is ArrayOfEncodedEqualSizedArrays:
-        if not isinstance(obj_buf, ArrayOfEqualSizedArrays):
-            msg = f"obj_buf for decoded '{name}' not an ArrayOfEqualSizedArrays"
-            raise LH5DecodeError(msg, h5f, name)
-
         compress.decode(rawdata, obj_buf[obj_buf_start:buf_size])
 
     elif lgdotype is VectorOfEncodedVectors:
-        if not isinstance(obj_buf, VectorOfVectors):
-            msg = f"obj_buf for decoded '{name}' not a VectorOfVectors"
-            raise LH5DecodeError(msg, h5f, name)
-
         # FIXME: not a good idea. an in place decoding version
         # of decode would be needed to avoid extra memory
         # allocations

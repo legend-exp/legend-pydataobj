@@ -134,7 +134,10 @@ class LH5Store:
             and len(set(grp_attrs.items()) ^ set(group.attrs.items())) > 0
         ):
             if not overwrite:
-                msg = "grp_attrs != group.attrs but overwrite not set"
+                msg = (
+                    "Provided group attrs are different from "
+                    "existing ones but overwrite flag is not set"
+                )
                 raise RuntimeError(msg)
 
             log.debug(f"overwriting {group}.attrs...")

@@ -24,7 +24,7 @@ def _h5_read_scalar(
 
     if obj_buf is not None:
         if not isinstance(obj_buf, Scalar):
-            msg = f"obj_buf for '{name}' not an LGDO Scalar"
+            msg = "object buffer a Scalar"
             raise LH5DecodeError(msg, h5f, name)
 
         obj_buf.value = value
