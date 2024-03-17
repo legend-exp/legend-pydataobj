@@ -8,6 +8,8 @@ import string
 
 import h5py
 
+from .. import types
+from . import datatype
 from .exceptions import LH5DecodeError
 
 log = logging.getLogger(__name__)
@@ -30,22 +32,22 @@ def read_n_rows(name: str, h5f: str | h5py.File) -> int | None:
         msg = "missing 'datatype' attribute"
         raise LH5DecodeError(msg, h5f, name)
 
-    datatype = h5f[name].attrs["datatype"]
-    datatype, shape, elements = parse_datatype(datatype)
+    attrs = h5f[name].attrs
+    lgdotype = datatype.datatype(attrs["datatype"])
 
     # scalars are dim-0 datasets
-    if datatype == "scalar":
+    if lgdotype is types.Scalar:
         return None
 
     # structs don't have rows
-    if datatype == "struct":
+    if lgdotype is types.Struct:
         return None
 
     # tables should have elements with all the same length
-    if datatype == "table":
+    if lgdotype is types.Table:
         # read out each of the fields
         rows_read = None
-        for field in elements:
+        for field in datatype.get_struct_fields(attrs["datatype"]):
             n_rows_read = read_n_rows(name + "/" + field, h5f)
             if not rows_read:
                 rows_read = n_rows_read
@@ -57,22 +59,19 @@ def read_n_rows(name: str, h5f: str | h5py.File) -> int | None:
         return rows_read
 
     # length of vector of vectors is the length of its cumulative_length
-    if elements.startswith("array"):
+    if lgdotype is types.VectorOfVectors:
         return read_n_rows(f"{name}/cumulative_length", h5f)
 
     # length of vector of encoded vectors is the length of its decoded_size
-    if (
-        elements.startswith("encoded_array")
-        or datatype == "array_of_encoded_equalsized_arrays"
-    ):
+    if lgdotype in (types.VectorOfEncodedVectors, types.ArrayOfEncodedEqualSizedArrays):
         return read_n_rows(f"{name}/encoded_data", h5f)
 
     # return array length (without reading the array!)
-    if "array" in datatype:
+    if issubclass(lgdotype, types.Array):
         # compute the number of rows to read
         return h5f[name].shape[0]
 
-    msg = f"don't know how to read datatype '{datatype}'"
+    msg = f"don't know how to read rows of LGDO {lgdotype.__name__}"
     raise RuntimeError(msg)
 
 
