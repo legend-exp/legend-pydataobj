@@ -4,8 +4,8 @@ import logging
 
 import numpy as np
 
-from ...types import Scalar
-from ..exceptions import LH5DecodeError
+from ....types import Scalar
+from ...exceptions import LH5DecodeError
 
 log = logging.getLogger(__name__)
 

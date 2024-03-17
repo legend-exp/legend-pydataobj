@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ..exceptions import LH5DecodeError
+from ...exceptions import LH5DecodeError
 
 
 def check_obj_buf_attrs(attrs, new_attrs, file, name):

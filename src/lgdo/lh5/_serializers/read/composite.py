@@ -8,7 +8,7 @@ from collections import defaultdict
 import h5py
 import numpy as np
 
-from ...types import (
+from ....types import (
     Array,
     ArrayOfEncodedEqualSizedArrays,
     ArrayOfEqualSizedArrays,
@@ -20,9 +20,9 @@ from ...types import (
     VectorOfVectors,
     WaveformTable,
 )
-from .. import datatype as dtypeutils
-from ..exceptions import LH5DecodeError
-from ..utils import read_n_rows
+from ... import datatype as dtypeutils
+from ...exceptions import LH5DecodeError
+from ...utils import read_n_rows
 from . import utils
 from .array import (
     _h5_read_array,

@@ -6,9 +6,9 @@ from bisect import bisect_left
 
 import numpy as np
 
-from ...types import Array
-from .. import datatype
-from ..exceptions import LH5DecodeError
+from ....types import Array
+from ... import datatype
+from ...exceptions import LH5DecodeError
 
 log = logging.getLogger(__name__)
 

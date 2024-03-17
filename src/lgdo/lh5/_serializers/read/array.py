@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 
-from ...types import Array, ArrayOfEqualSizedArrays, FixedSizeArray
+from ....types import Array, ArrayOfEqualSizedArrays, FixedSizeArray
 from . import utils
 from .ndarray import _h5_read_ndarray
 

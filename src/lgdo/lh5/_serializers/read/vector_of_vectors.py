@@ -6,12 +6,12 @@ import sys
 import numba
 import numpy as np
 
-from ...types import (
+from ....types import (
     Array,
     VectorOfVectors,
 )
-from .. import datatype as dtypeutils
-from ..exceptions import LH5DecodeError
+from ... import datatype as dtypeutils
+from ...exceptions import LH5DecodeError
 from .array import (
     _h5_read_array,
 )

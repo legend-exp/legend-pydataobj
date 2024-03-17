@@ -1,22 +1,22 @@
 from __future__ import annotations
 
-from .array import (
+from .read.array import (
     _h5_read_array,
     _h5_read_array_of_equalsized_arrays,
     _h5_read_fixedsize_array,
     _h5_read_ndarray,
 )
-from .composite import (
+from .read.composite import (
     _h5_read_lgdo,
     _h5_read_struct,
     _h5_read_table,
 )
-from .encoded import (
+from .read.encoded import (
     _h5_read_array_of_encoded_equalsized_arrays,
     _h5_read_vector_of_encoded_vectors,
 )
-from .scalar import _h5_read_scalar
-from .vector_of_vectors import _h5_read_vector_of_vectors
+from .read.scalar import _h5_read_scalar
+from .read.vector_of_vectors import _h5_read_vector_of_vectors
 
 __all__ = [
     "_h5_read_lgdo",

@@ -3,12 +3,12 @@ from __future__ import annotations
 import logging
 import sys
 
-from ... import compression as compress
-from ...types import (
+from .... import compression as compress
+from ....types import (
     ArrayOfEncodedEqualSizedArrays,
     VectorOfEncodedVectors,
 )
-from ..exceptions import LH5DecodeError
+from ...exceptions import LH5DecodeError
 from .array import (
     _h5_read_array,
 )
