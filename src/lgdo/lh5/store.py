@@ -128,31 +128,7 @@ class LH5Store:
             whether overwrite group attributes, ignored if `grp_attrs` is
             ``None``.
         """
-        if not isinstance(group, h5py.Group):
-            if group in base_group:
-                group = base_group[group]
-            else:
-                group = base_group.create_group(group)
-                if grp_attrs is not None:
-                    group.attrs.update(grp_attrs)
-                return group
-        if (
-            grp_attrs is not None
-            and len(set(grp_attrs.items()) ^ set(group.attrs.items())) > 0
-        ):
-            if not overwrite:
-                msg = (
-                    "Provided group attrs are different from "
-                    "existing ones but overwrite flag is not set"
-                )
-                raise RuntimeError(msg)
-
-            log.debug(f"overwriting {group}.attrs...")
-            for key in group.attrs:
-                group.attrs.pop(key)
-            group.attrs.update(grp_attrs)
-
-        return group
+        return utils.get_h5_group(group, base_group, grp_attrs, overwrite)
 
     def get_buffer(
         self,

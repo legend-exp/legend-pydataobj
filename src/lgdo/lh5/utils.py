@@ -5,6 +5,8 @@ import glob
 import logging
 import os
 import string
+from collections.abc import Mapping
+from typing import Any
 
 import h5py
 
@@ -16,7 +18,7 @@ log = logging.getLogger(__name__)
 
 
 def read_n_rows(name: str, h5f: str | h5py.File) -> int | None:
-    """Look up the number of rows in an Array-like object.
+    """Look up the number of rows in an Array-like LGDO object on disk.
 
     Return ``None`` if `name` is a :class:`Scalar` or a :class:`Struct`.
     """
@@ -72,6 +74,55 @@ def read_n_rows(name: str, h5f: str | h5py.File) -> int | None:
 
     msg = f"don't know how to read rows of LGDO {lgdotype.__name__}"
     raise LH5DecodeError(msg, h5f, name)
+
+
+def get_h5_group(
+    group: str | h5py.Group,
+    base_group: h5py.Group,
+    grp_attrs: Mapping[str, Any] | None = None,
+    overwrite: bool = False,
+) -> h5py.Group:
+    """
+    Returns an existing :class:`h5py` group from a base group or creates a
+    new one. Can also set (or replace) group attributes.
+
+    Parameters
+    ----------
+    group
+        name of the HDF5 group.
+    base_group
+        HDF5 group to be used as a base.
+    grp_attrs
+        HDF5 group attributes.
+    overwrite
+        whether overwrite group attributes, ignored if `grp_attrs` is
+        ``None``.
+    """
+    if not isinstance(group, h5py.Group):
+        if group in base_group:
+            group = base_group[group]
+        else:
+            group = base_group.create_group(group)
+            if grp_attrs is not None:
+                group.attrs.update(grp_attrs)
+            return group
+    if (
+        grp_attrs is not None
+        and len(set(grp_attrs.items()) ^ set(group.attrs.items())) > 0
+    ):
+        if not overwrite:
+            msg = (
+                "Provided group attrs are different from "
+                "existing ones but overwrite flag is not set"
+            )
+            raise RuntimeError(msg)
+
+        log.debug(f"overwriting {group}.attrs...")
+        for key in group.attrs:
+            group.attrs.pop(key)
+        group.attrs.update(grp_attrs)
+
+    return group
 
 
 def parse_datatype(datatype: str) -> tuple[str, tuple[int, ...], str | list[str]]:

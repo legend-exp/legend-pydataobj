@@ -9,6 +9,7 @@ from __future__ import annotations
 from .iterator import LH5Iterator
 from .store import LH5Store
 from .tools import load_dfs, load_nda, ls, read_as, show
+from .utils import read_n_rows
 
 __all__ = [
     "LH5Iterator",
@@ -17,5 +18,6 @@ __all__ = [
     "load_nda",
     "read_as",
     "ls",
+    "read_n_rows",
     "show",
 ]
