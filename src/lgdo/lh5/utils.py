@@ -23,16 +23,15 @@ def read_n_rows(name: str, h5f: str | h5py.File) -> int | None:
     if not isinstance(h5f, h5py.File):
         h5f = h5py.File(h5f, "r")
 
-    if not h5f or name not in h5f:
+    try:
+        attrs = h5f[name].attrs
+    except KeyError as e:
         msg = "not found"
-        raise LH5DecodeError(msg, h5f, name)
-
-    # get the datatype
-    if "datatype" not in h5f[name].attrs:
+        raise LH5DecodeError(msg, h5f, name) from e
+    except AttributeError as e:
         msg = "missing 'datatype' attribute"
-        raise LH5DecodeError(msg, h5f, name)
+        raise LH5DecodeError(msg, h5f, name) from e
 
-    attrs = h5f[name].attrs
     lgdotype = datatype.datatype(attrs["datatype"])
 
     # scalars are dim-0 datasets
@@ -72,7 +71,7 @@ def read_n_rows(name: str, h5f: str | h5py.File) -> int | None:
         return h5f[name].shape[0]
 
     msg = f"don't know how to read rows of LGDO {lgdotype.__name__}"
-    raise RuntimeError(msg)
+    raise LH5DecodeError(msg, h5f, name)
 
 
 def parse_datatype(datatype: str) -> tuple[str, tuple[int, ...], str | list[str]]:
