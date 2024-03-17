@@ -212,5 +212,6 @@ class LH5Store:
     def read_n_rows(self, name: str, lh5_file: str | h5py.File) -> int | None:
         """Look up the number of rows in an Array-like object called `name` in `lh5_file`.
 
-        Return ``None`` if it is a :class:`.Scalar` or a :class:`.Struct`."""
+        Return ``None`` if it is a :class:`.Scalar` or a :class:`.Struct`.
+        """
         return utils.read_n_rows(name, self.gimme_file(lh5_file, "r"))

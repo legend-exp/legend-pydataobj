@@ -40,7 +40,7 @@ def get_buffer(
 def read_n_rows(name: str, h5f: str | h5py.File) -> int | None:
     """Look up the number of rows in an Array-like LGDO object on disk.
 
-    Return ``None`` if `name` is a :class:`Scalar` or a :class:`Struct`.
+    Return ``None`` if `name` is a :class:`.Scalar` or a :class:`.Struct`.
     """
     if not isinstance(h5f, h5py.File):
         h5f = h5py.File(h5f, "r")
@@ -103,7 +103,7 @@ def get_h5_group(
     overwrite: bool = False,
 ) -> h5py.Group:
     """
-    Returns an existing :class:`h5py` group from a base group or creates a
+    Returns an existing :mod:`h5py` group from a base group or creates a
     new one. Can also set (or replace) group attributes.
 
     Parameters
@@ -159,10 +159,9 @@ def parse_datatype(datatype: str) -> tuple[str, tuple[int, ...], str | list[str]
         the datatype name dims if not ``None``, a tuple of dimensions for the
         LGDO. Note this is not the same as the NumPy shape of the underlying
         data object. See the LGDO specification for more information. Also see
-        :class:`~.types.ArrayOfEqualSizedArrays` and
-        :meth:`.lh5_store.LH5Store.read` for example code elements for
-        numeric objects, the element type for struct-like  objects, the list of
-        fields in the struct.
+        :class:`.ArrayOfEqualSizedArrays` and :meth:`.lh5_store.LH5Store.read`
+        for example code elements for numeric objects, the element type for
+        struct-like  objects, the list of fields in the struct.
     """
     if "{" not in datatype:
         return "scalar", None, datatype

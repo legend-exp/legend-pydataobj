@@ -5,7 +5,7 @@ import logging
 import h5py
 
 from .... import compression, types
-from ... import utils
+from ... import datatype, utils
 from ...exceptions import LH5EncodeError
 from .array import _h5_write_array
 from .scalar import _h5_write_scalar
@@ -179,9 +179,10 @@ def _h5_write_struct(
     # can write the fields to the table as normal.
     if wo_mode == "ac":
         old_group = utils.get_h5_group(name, group)
-        datatype, shape, fields = utils.parse_datatype(old_group.attrs["datatype"])
-        if datatype not in ["table", "struct"]:
-            msg = f"Trying to append columns to an object of type {datatype}"
+        lgdotype = datatype.datatype(old_group.attrs["datatype"])
+        fields = datatype.get_struct_fields(old_group.attrs["datatype"])
+        if not issubclass(lgdotype, types.Struct):
+            msg = f"Trying to append columns to an object of type {lgdotype.__name__}"
             raise LH5EncodeError(msg, lh5_file, group, name)
 
         # If the mode is `append_column`, make sure we aren't appending

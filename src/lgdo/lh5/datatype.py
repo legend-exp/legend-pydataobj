@@ -21,9 +21,11 @@ _lgdo_datatype_map: dict[str, lgdo.LGDO] = OrderedDict(
         (lgdo.Array, r"^array<1>\{.+\}$"),
     ]
 )
+"""Mapping between LGDO types and regular expression defining the corresponding datatype string"""
 
 
 def datatype(expr: str) -> type:
+    """Return the LGDO type corresponding to a datatype string."""
     expr = expr.strip()
     for type_, regex in _lgdo_datatype_map.items():
         if re.search(regex, expr):
@@ -34,8 +36,10 @@ def datatype(expr: str) -> type:
 
 
 def get_nested_datatype_string(expr: str) -> str:
+    """Matches the content of the outermost curly brackets."""
     return re.search(r"\{(.+)\}$", expr).group(1)
 
 
 def get_struct_fields(expr: str) -> list[str]:
+    """Returns a list of :class:`~.lgdo.types.struct.Struct` fields, given its datatype string."""
     return get_nested_datatype_string(expr).split(",")

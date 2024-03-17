@@ -69,7 +69,7 @@ def read(
         prioritizes speed over a small memory penalty.
     use_h5idx
         ``True`` will directly pass the ``idx`` parameter to the underlying
-        ``h5py`` call such that only the selected rows are read directly
+        :mod:`h5py` call such that only the selected rows are read directly
         into memory, which conserves memory at the cost of speed. There can
         be a significant penalty to speed for larger files (1 - 2 orders of
         magnitude longer time).  ``False`` (default) will read the entire
@@ -236,7 +236,7 @@ def read_as(
     """Read LH5 data from disk straight into a third-party data format view.
 
     This function is nothing more than a shortcut chained call to
-    :meth:`.LH5Store.read` and to :meth:`.LGDO.view_as`.
+    :func:`.read` and to :meth:`.LGDO.view_as`.
 
     Parameters
     ----------
