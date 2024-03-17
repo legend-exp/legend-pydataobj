@@ -51,8 +51,6 @@ def _h5_read_lgdo(
     obj_buf_start=0,
     decompress=True,
 ):
-    """Read LH5 object data from a file."""
-
     # Handle list-of-files recursively
     if not isinstance(h5f, (str, h5py.File)):
         lh5_file = list(h5f)
