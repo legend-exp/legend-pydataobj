@@ -910,18 +910,13 @@ def test_write_object_append_column(tmptestdir):
     tb1 = types.Table(col_dict={"dset1`": types.Array(np.ones(10))})
     store = lh5.LH5Store()
     store.write(array1, "my_table", f"{tmptestdir}/write_object_append_column_test.lh5")
-    with pytest.raises(RuntimeError) as exc_info:
+    with pytest.raises(lh5.exceptions.LH5EncodeError):
         store.write(
             tb1,
             "my_table",
             f"{tmptestdir}/write_object_append_column_test.lh5",
             wo_mode="append_column",
         )  # Now, try to append a column to an array
-
-    assert exc_info.type is RuntimeError
-    assert (
-        exc_info.value.args[0] == "Trying to append columns to an object of type array"
-    )
 
     # Try to append a table that has a same key as the old table
     if os.path.exists(f"{tmptestdir}/write_object_append_column_test.lh5"):
@@ -938,19 +933,13 @@ def test_write_object_append_column(tmptestdir):
     )  # Same field name, different values
     store = lh5.LH5Store()
     store.write(tb1, "my_table", f"{tmptestdir}/write_object_append_column_test.lh5")
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(lh5.exceptions.LH5EncodeError):
         store.write(
             tb2,
             "my_table",
             f"{tmptestdir}/write_object_append_column_test.lh5",
             wo_mode="append_column",
         )  # Now, try to append a column with a same field
-
-    assert exc_info.type is ValueError
-    assert (
-        exc_info.value.args[0]
-        == "Can't append ['dset2'] column(s) to a table with the same field(s)"
-    )
 
     # try appending a column that is larger than one that exists
     if os.path.exists(f"{tmptestdir}/write_object_append_column_test.lh5"):
@@ -962,19 +951,13 @@ def test_write_object_append_column(tmptestdir):
     )  # different field name, different size
     store = lh5.LH5Store()
     store.write(tb1, "my_table", f"{tmptestdir}/write_object_append_column_test.lh5")
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(lh5.exceptions.LH5EncodeError):
         store.write(
             tb2,
             "my_table",
             f"{tmptestdir}/write_object_append_column_test.lh5",
             wo_mode="append_column",
         )  # Now, try to append a column with a different field size
-
-    assert exc_info.type is ValueError
-    assert (
-        exc_info.value.args[0]
-        == "Table sizes don't match. Trying to append column of size 20 to a table of size 10."
-    )
 
     # Finally successfully append a column
     if os.path.exists(f"{tmptestdir}/write_object_append_column_test.lh5"):
