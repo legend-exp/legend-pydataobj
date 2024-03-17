@@ -10,14 +10,8 @@ import numpy as np
 import pytest
 
 import lgdo
-from lgdo import compression, lh5, types
-from lgdo.compression import RadwareSigcompress
+from lgdo import lh5, types
 from lgdo.lh5.store import DEFAULT_HDF5_SETTINGS
-
-
-@pytest.fixture(scope="module")
-def lgnd_file(lgnd_test_data):
-    return lgnd_test_data.get_path("lh5/LDQTA_r117_20200110T105115Z_cal_geds_raw.lh5")
 
 
 def test_init():
@@ -44,189 +38,6 @@ def test_gimme_group(lgnd_file, tmptestdir):
     f = h5py.File(f"{tmptestdir}/testfile.lh5", mode="w")
     g = store.gimme_group("/geds", f, grp_attrs={"attr1": 1}, overwrite=True)
     assert isinstance(g, h5py.Group)
-
-
-def test_ls(lgnd_test_data):
-    lgnd_file = lgnd_test_data.get_path(
-        "lh5/LDQTA_r117_20200110T105115Z_cal_geds_raw.lh5"
-    )
-    assert lh5.ls(lgnd_file) == ["geds"]
-    assert lh5.ls(lgnd_file, "/*/raw") == ["geds/raw"]
-    assert lh5.ls(lgnd_file, "geds/raw/") == [
-        "geds/raw/baseline",
-        "geds/raw/channel",
-        "geds/raw/energy",
-        "geds/raw/ievt",
-        "geds/raw/numtraces",
-        "geds/raw/packet_id",
-        "geds/raw/timestamp",
-        "geds/raw/tracelist",
-        "geds/raw/waveform",
-        "geds/raw/wf_max",
-        "geds/raw/wf_std",
-    ]
-    assert lh5.ls(lgnd_file, recursive=True) == [
-        "geds",
-        "geds/raw",
-        "geds/raw/baseline",
-        "geds/raw/channel",
-        "geds/raw/energy",
-        "geds/raw/ievt",
-        "geds/raw/numtraces",
-        "geds/raw/packet_id",
-        "geds/raw/timestamp",
-        "geds/raw/tracelist",
-        "geds/raw/waveform",
-        "geds/raw/wf_max",
-        "geds/raw/wf_std",
-        "geds/raw/tracelist/cumulative_length",
-        "geds/raw/tracelist/flattened_data",
-        "geds/raw/waveform/dt",
-        "geds/raw/waveform/t0",
-        "geds/raw/waveform/values",
-    ]
-
-    lgnd_file = lgnd_test_data.get_path("lh5/L200-comm-20211130-phy-spms.lh5")
-    assert lh5.ls(lgnd_file, "ch5/raw/", recursive=True) == [
-        "ch5/raw/abs_delta_mu_usec",
-        "ch5/raw/baseline",
-        "ch5/raw/channel",
-        "ch5/raw/daqenergy",
-        "ch5/raw/deadtime",
-        "ch5/raw/delta_mu_usec",
-        "ch5/raw/dr_maxticks",
-        "ch5/raw/dr_start_pps",
-        "ch5/raw/dr_start_ticks",
-        "ch5/raw/dr_stop_pps",
-        "ch5/raw/dr_stop_ticks",
-        "ch5/raw/eventnumber",
-        "ch5/raw/mu_offset_sec",
-        "ch5/raw/mu_offset_usec",
-        "ch5/raw/numtraces",
-        "ch5/raw/packet_id",
-        "ch5/raw/runtime",
-        "ch5/raw/timestamp",
-        "ch5/raw/to_master_sec",
-        "ch5/raw/to_start_sec",
-        "ch5/raw/to_start_usec",
-        "ch5/raw/tracelist",
-        "ch5/raw/ts_maxticks",
-        "ch5/raw/ts_pps",
-        "ch5/raw/ts_ticks",
-        "ch5/raw/waveform",
-        "ch5/raw/tracelist/cumulative_length",
-        "ch5/raw/tracelist/flattened_data",
-        "ch5/raw/waveform/dt",
-        "ch5/raw/waveform/t0",
-        "ch5/raw/waveform/values",
-    ]
-
-
-def test_show(lgnd_file):
-    lh5.show(lgnd_file)
-    lh5.show(lgnd_file, "/geds/raw")
-    lh5.show(lgnd_file, "geds/raw")
-
-
-@pytest.fixture(scope="module")
-def lh5_file(tmptestdir):
-    store = lh5.LH5Store()
-
-    struct = lgdo.Struct()
-    struct.add_field("scalar", lgdo.Scalar(value=10, attrs={"sth": 1}))
-    struct.add_field("array", types.Array(nda=np.array([1, 2, 3, 4, 5])))
-    struct.add_field(
-        "aoesa",
-        types.ArrayOfEqualSizedArrays(shape=(5, 5), dtype=np.float32, fill_val=42),
-    )
-    struct.add_field(
-        "vov",
-        types.VectorOfVectors(
-            flattened_data=types.Array(
-                nda=np.array([1, 2, 3, 4, 5, 2, 4, 8, 9, 7, 5, 3, 1])
-            ),
-            cumulative_length=types.Array(nda=np.array([2, 5, 6, 10, 13])),
-            attrs={"myattr": 2},
-        ),
-    )
-    struct.add_field(
-        "vov3d",
-        types.VectorOfVectors(
-            [[[1, 2], [3, 4, 5]], [[2], [4, 8, 9, 7]], [[5, 3, 1]], [[3], []], [[3, 4]]]
-        ),
-    )
-
-    struct.add_field(
-        "voev",
-        types.VectorOfEncodedVectors(
-            encoded_data=types.VectorOfVectors(
-                flattened_data=types.Array(
-                    nda=np.array([1, 2, 3, 4, 5, 2, 4, 8, 9, 7, 5, 3, 1])
-                ),
-                cumulative_length=types.Array(nda=np.array([2, 5, 6, 10, 13])),
-            ),
-            decoded_size=types.Array(shape=5, fill_val=6),
-        ),
-    )
-
-    col_dict = {
-        "a": lgdo.Array(nda=np.array([1, 2, 3, 4]), attrs={"attr": 9}),
-        "b": lgdo.Array(nda=np.array([5, 6, 7, 8]), attrs={"compression": "gzip"}),
-        "c": lgdo.Array(
-            nda=np.array([5, 6, 7, 8]),
-            attrs={"compression": {"compression": "gzip", "compression_opts": 9}},
-        ),
-        "d": lgdo.Array(
-            nda=np.array([5, 6, 7, 8]),
-            attrs={"compression": None},
-        ),
-    }
-
-    struct.add_field("table", types.Table(col_dict=col_dict, attrs={"stuff": 5}))
-
-    struct.add_field(
-        "wftable",
-        types.WaveformTable(
-            t0=types.Array(np.zeros(10)),
-            dt=types.Array(np.full(10, fill_value=1)),
-            values=types.ArrayOfEqualSizedArrays(
-                shape=(10, 1000), dtype=np.uint16, fill_val=100, attrs={"custom": 8}
-            ),
-        ),
-    )
-
-    struct.add_field(
-        "wftable_enc",
-        types.WaveformTable(
-            t0=types.Array(np.zeros(10)),
-            dt=types.Array(np.full(10, fill_value=1)),
-            values=compression.encode(
-                struct["wftable"].values, codec=RadwareSigcompress(codec_shift=-32768)
-            ),
-        ),
-    )
-
-    store.write(
-        struct,
-        "struct",
-        f"{tmptestdir}/tmp-pygama-lgdo-types.lh5",
-        group="/data",
-        start_row=1,
-        n_rows=3,
-        wo_mode="overwrite_file",
-    )
-
-    store.write(
-        struct,
-        "struct_full",
-        f"{tmptestdir}/tmp-pygama-lgdo-types.lh5",
-        group="/data",
-        wo_mode="append",
-    )
-
-    assert struct["table"]["b"].attrs["compression"] == "gzip"
-
-    return f"{tmptestdir}/tmp-pygama-lgdo-types.lh5"
 
 
 def test_write_objects(lh5_file):
@@ -628,20 +439,6 @@ def test_read_lgnd_waveform_table_fancy_idx(lgnd_file):
     assert len(lh5_obj) == 19
 
 
-@pytest.fixture(scope="module")
-def enc_lgnd_file(lgnd_file, tmptestdir):
-    store = lh5.LH5Store()
-    wft, n_rows = store.read("/geds/raw/waveform", lgnd_file)
-    wft.values.attrs["compression"] = RadwareSigcompress(codec_shift=-32768)
-    store.write(
-        wft,
-        "/geds/raw/waveform",
-        f"{tmptestdir}/tmp-pygama-compressed-wfs.lh5",
-        wo_mode="overwrite_file",
-    )
-    return f"{tmptestdir}/tmp-pygama-compressed-wfs.lh5"
-
-
 def test_write_compressed_lgnd_waveform_table(enc_lgnd_file):
     pass
 
@@ -681,17 +478,6 @@ def test_write_with_hdf5_compression(lgnd_file, tmptestdir):
     with h5py.File(f"{tmptestdir}/tmp-pygama-hdf5-compressed-wfs.lh5") as h5f:
         assert h5f["/geds/raw/waveform/values"].compression is None
         assert h5f["/geds/raw/waveform/values"].shuffle is False
-
-
-def test_read_as(lh5_file):
-    store = lh5.LH5Store()
-    obj1, _ = store.read("/data/struct/table", lh5_file, start_row=1)
-    obj1 = obj1.view_as("pd", with_units=True)
-
-    obj2 = lh5.read_as(
-        "/data/struct/table", lh5_file, "pd", start_row=1, with_units=True
-    )
-    assert obj1.equals(obj2)
 
 
 # First test that we can overwrite a table with the same name without deleting the original field
