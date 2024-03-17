@@ -189,11 +189,17 @@ def _h5_write_struct(
         # table. Also make sure that the field we are adding has the
         # same size
         if len(list(set(fields).intersection(set(obj.keys())))) != 0:
-            msg = f"Can't append {list(set(fields).intersection(set(obj.keys())))} column(s) to a table with the same field(s)"
+            msg = (
+                f"Can't append {list(set(fields).intersection(set(obj.keys())))} "
+                "column(s) to a table with the same field(s)"
+            )
             raise LH5EncodeError(msg, lh5_file, group, name)
         # It doesn't matter what key we access, as all fields in the old table have the same size
         if old_group[next(iter(old_group.keys()))].size != obj.size:
-            msg = f"Table sizes don't match. Trying to append column of size {obj.size} to a table of size {old_group[next(iter(old_group.keys()))].size}."
+            msg = (
+                f"Table sizes don't match. Trying to append column of size {obj.size} "
+                f"to a table of size {old_group[next(iter(old_group.keys()))].size}."
+            )
             raise LH5EncodeError(msg, lh5_file, group, name)
 
         # Now we can append the obj.keys() to the old fields, and then update obj.attrs.

@@ -102,20 +102,11 @@ class LH5Store:
         overwrite: bool = False,
     ) -> h5py.Group:
         """
-        Returns an existing :class:`h5py` group from a base group or creates a
-        new one. Can also set (or replace) group attributes.
+        Returns an existing :class:`h5py` group from a base group or creates a new one.
 
-        Parameters
-        ----------
-        group
-            name of the HDF5 group.
-        base_group
-            HDF5 group to be used as a base.
-        grp_attrs
-            HDF5 group attributes.
-        overwrite
-            whether overwrite group attributes, ignored if `grp_attrs` is
-            ``None``.
+        See Also
+        --------
+        .lh5.utils.get_h5_group
         """
         return utils.get_h5_group(group, base_group, grp_attrs, overwrite)
 
@@ -181,83 +172,9 @@ class LH5Store:
     ) -> None:
         """Write an LGDO into an LH5 file.
 
-        If the `obj` :class:`.LGDO` has a `compression` attribute, its value is
-        interpreted as the algorithm to be used to compress `obj` before
-        writing to disk. The type of `compression` can be:
-
-        string, kwargs dictionary, hdf5plugin filter
-          interpreted as the name of a built-in or custom `HDF5 compression
-          filter <https://docs.h5py.org/en/stable/high/dataset.html#filter-pipeline>`_
-          (``"gzip"``, ``"lzf"``, :mod:`hdf5plugin` filter object etc.) and
-          passed directly to :meth:`h5py.Group.create_dataset`.
-
-        :class:`.WaveformCodec` object
-          If `obj` is a :class:`.WaveformTable` and ``obj.values`` holds the
-          attribute, compress ``values`` using this algorithm. More
-          documentation about the supported waveform compression algorithms at
-          :mod:`.lgdo.compression`.
-
-        If the `obj` :class:`.LGDO` has a `hdf5_settings` attribute holding a
-        dictionary, it is interpreted as a list of keyword arguments to be
-        forwarded directly to :meth:`h5py.Group.create_dataset` (exactly like
-        the first format of `compression` above). This is the preferred way to
-        specify HDF5 dataset options such as chunking etc. If compression
-        options are specified, they take precedence over those set with the
-        `compression` attribute.
-
-        Note
-        ----------
-        The `compression` LGDO attribute takes precedence over the default HDF5
-        compression settings. The `hdf5_settings` attribute takes precedence
-        over `compression`. These attributes are not written to disk.
-
-        Note
-        ----------
-        HDF5 compression is skipped for the `encoded_data.flattened_data`
-        dataset of :class:`.VectorOfEncodedVectors` and
-        :class:`.ArrayOfEncodedEqualSizedArrays`.
-
-        Parameters
-        ----------
-        obj
-            LH5 object. if object is array-like, writes `n_rows` starting from
-            `start_row` in `obj`.
-        name
-            name of the object in the output HDF5 file.
-        lh5_file
-            HDF5 file name or :class:`h5py.File` object.
-        group
-            HDF5 group name or :class:`h5py.Group` object in which `obj` should
-            be written.
-        start_row
-            first row in `obj` to be written.
-        n_rows
-            number of rows in `obj` to be written.
-        wo_mode
-            - ``write_safe`` or ``w``: only proceed with writing if the
-              object does not already exist in the file.
-            - ``append`` or ``a``: append along axis 0 (the first dimension)
-              of array-like objects and array-like subfields of structs.
-              :class:`~.lgdo.scalar.Scalar` objects get overwritten.
-            - ``overwrite`` or ``o``: replace data in the file if present,
-              starting from `write_start`. Note: overwriting with `write_start` =
-              end of array is the same as ``append``.
-            - ``overwrite_file`` or ``of``: delete file if present prior to
-              writing to it. `write_start` should be 0 (its ignored).
-            - ``append_column`` or ``ac``: append columns from an
-              :class:`~.lgdo.table.Table` `obj` only if there is an existing
-              :class:`~.lgdo.table.Table` in the `lh5_file` with the same
-              `name` and :class:`~.lgdo.table.Table.size`. If the sizes don't
-              match, or if there are matching fields, it errors out.
-        write_start
-            row in the output file (if already existing) to start overwriting
-            from.
-        **h5py_kwargs
-            additional keyword arguments forwarded to
-            :meth:`h5py.Group.create_dataset` to specify, for example, an HDF5
-            compression filter to be applied before writing non-scalar
-            datasets. **Note: `compression` Ignored if compression is specified
-            as an `obj` attribute.**
+        See Also
+        --------
+        .lh5.core.write
         """
         if wo_mode == "write_safe":
             wo_mode = "w"
