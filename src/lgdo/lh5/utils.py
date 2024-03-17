@@ -145,39 +145,6 @@ def get_h5_group(
     return group
 
 
-def parse_datatype(datatype: str) -> tuple[str, tuple[int, ...], str | list[str]]:
-    """Parse datatype string and return type, dimensions and elements.
-
-    Parameters
-    ----------
-    datatype
-        a LGDO-formatted datatype string.
-
-    Returns
-    -------
-    element_type
-        the datatype name dims if not ``None``, a tuple of dimensions for the
-        LGDO. Note this is not the same as the NumPy shape of the underlying
-        data object. See the LGDO specification for more information. Also see
-        :class:`.ArrayOfEqualSizedArrays` and :meth:`.lh5_store.LH5Store.read`
-        for example code elements for numeric objects, the element type for
-        struct-like  objects, the list of fields in the struct.
-    """
-    if "{" not in datatype:
-        return "scalar", None, datatype
-
-    # for other datatypes, need to parse the datatype string
-    from parse import parse
-
-    datatype, element_description = parse("{}{{{}}}", datatype)
-    if datatype.endswith(">"):
-        datatype, dims = parse("{}<{}>", datatype)
-        dims = [int(i) for i in dims.split(",")]
-        return datatype, tuple(dims), element_description
-
-    return datatype, None, element_description.split(",")
-
-
 def expand_vars(expr: str, substitute: dict[str, str] | None = None) -> str:
     """Expand (environment) variables.
 
