@@ -19,8 +19,8 @@ from ...types import (
     VectorOfVectors,
     WaveformTable,
 )
+from .. import datatype as dtypeutils
 from ..exceptions import LH5DecodeError
-from . import datatype as dtypeutils
 from . import utils
 from .array import (
     _h5_read_array,

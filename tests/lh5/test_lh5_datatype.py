@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from lgdo import types
-from lgdo.lh5._serializers import datatype
+from lgdo.lh5 import datatype
 
 
 def test_datatype2lgdo():

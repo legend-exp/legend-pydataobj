@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from collections import OrderedDict
 
-from ... import types as lgdo
+from .. import types as lgdo
 
 _lgdo_datatype_map: dict[str, lgdo.LGDO] = OrderedDict(
     [
