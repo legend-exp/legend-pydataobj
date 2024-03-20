@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import os
 
+import awkward as ak
 import h5py
 import numpy as np
 import pytest
@@ -144,8 +145,8 @@ def test_read_vov(lh5_file):
     lh5_obj, n_rows = store.read("/data/struct/vov3d", lh5_file)
     assert isinstance(lh5_obj, types.VectorOfVectors)
 
-    assert lh5_obj == types.VectorOfVectors(
-        [[[2], [4, 8, 9, 7]], [[5, 3, 1]], [[3], []]]
+    assert ak.all(
+        lh5_obj.view_as("ak") == ak.Array([[[2], [4, 8, 9, 7]], [[5, 3, 1]], [[3], []]])
     )
 
 
@@ -448,6 +449,20 @@ def test_read_compressed_lgnd_waveform_table(lgnd_file, enc_lgnd_file):
     wft, _ = store.read("/geds/raw/waveform", enc_lgnd_file)
     assert isinstance(wft.values, types.ArrayOfEqualSizedArrays)
     assert "compression" not in wft.values.attrs
+
+
+def test_write_empty_vov(tmptestdir):
+    vov = types.VectorOfVectors(flattened_data=[], cumulative_length=[])
+    store = lh5.LH5Store()
+    store.write(
+        vov,
+        "vov",
+        f"{tmptestdir}/tmp-pygama-lgdo-empty-vov.lh5",
+        group="/data",
+    )
+
+    obj, _ = store.read("/data/vov", f"{tmptestdir}/tmp-pygama-lgdo-empty-vov.lh5")
+    assert obj == vov
 
 
 def test_write_with_hdf5_compression(lgnd_file, tmptestdir):

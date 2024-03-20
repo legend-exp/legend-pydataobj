@@ -41,7 +41,11 @@ def _h5_write_vector_of_vectors(
 
     # First write flattened_data array. Only write rows with data.
     fd_start = 0 if start_row == 0 else obj.cumulative_length.nda[start_row - 1]
-    fd_n_rows = obj.cumulative_length.nda[start_row + n_rows - 1] - fd_start
+    fd_n_rows = (
+        obj.cumulative_length.nda[start_row + n_rows - 1] - fd_start
+        if len(obj.cumulative_length) > 0
+        else 0
+    )
 
     if isinstance(obj.flattened_data, types.Array):
         _func = _h5_write_array
