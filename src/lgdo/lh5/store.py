@@ -120,7 +120,10 @@ class LH5Store:
         """Returns an LH5 object appropriate for use as a pre-allocated buffer
         in a read loop. Sets size to `size` if object has a size.
         """
-        return utils.get_buffer(name, lh5_file, size, field_mask)
+        obj, n_rows = self.read(name, lh5_file, n_rows=0, field_mask=field_mask)
+        if hasattr(obj, "resize") and size is not None:
+            obj.resize(new_size=size)
+        return obj
 
     def read(
         self,
@@ -144,6 +147,8 @@ class LH5Store:
         # grab files from store
         if not isinstance(lh5_file, (str, h5py.File)):
             lh5_file = [self.gimme_file(f, "r") for f in list(lh5_file)]
+        else:
+            lh5_file = self.gimme_file(lh5_file, "r")
 
         return _serializers._h5_read_lgdo(
             name,
