@@ -238,7 +238,7 @@ Exclude the /data/table1/col1 Table column:
         # now remove fields
         for k in list(table.keys()):
             if k not in kept:
-                table.pop(k)
+                table.remove_column(k)
 
         msg = f"fields left in table '{name}': {table.keys()}"
         log.debug(msg)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from lgdo import cli, lh5
+from lgdo import cli, lh5, types
 
 
 def test_lh5ls(lgnd_test_data):
@@ -82,6 +82,7 @@ def test_lh5concat(lgnd_test_data, tmptestdir):
     assert size == 20
 
     arg_list = [
+        "--verbose",
         "--overwrite",
         "--output",
         outfile,
@@ -101,14 +102,17 @@ def test_lh5concat(lgnd_test_data, tmptestdir):
         "ch1057600",
     ]
 
-    arg_list[4] = "ch1057600/raw/waveform/values"
+    arg_list[5] = "ch1057600/raw/waveform/values"
     cli.lh5concat(arg_list)
     assert lh5.ls(outfile, "ch1057600/raw/waveform/") == [
         "ch1057600/raw/waveform/values",
     ]
 
-    arg_list[3] = "--exclude"
-    arg_list[4] = "ch1057600/raw/waveform/values"
+    tbl, _ = store.read("ch1057600/raw", outfile)
+    assert isinstance(tbl, types.Table)
+
+    arg_list[4] = "--exclude"
+    arg_list[5] = "ch1057600/raw/waveform/values"
     cli.lh5concat(arg_list)
     assert lh5.ls(outfile) == [
         "ch1057600",
