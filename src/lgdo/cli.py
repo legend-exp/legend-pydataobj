@@ -120,7 +120,7 @@ Exclude the /data/table1/col1 Table column:
         "--output",
         "-o",
         help="""Output file""",
-        required=True,
+        default="lh5concat-output.lh5",
     )
     parser.add_argument(
         "--overwrite",
@@ -152,7 +152,7 @@ Exclude the /data/table1/col1 Table column:
     args = parser.parse_args(args)
 
     if args.verbose:
-        lgdogging.setup(logging.DEBUG, log)
+        lgdogging.setup(logging.INFO, log)
     elif args.debug:
         lgdogging.setup(logging.DEBUG, logging.root)
     else:
@@ -257,6 +257,8 @@ Exclude the /data/table1/col1 Table column:
         _inplace_table_filter(key, val, obj_list)
 
     # 3. write to output file
+    msg = f"creating output file {args.output}"
+    log.info(msg)
 
     first_done = False
     for name, obj in lgdos.items():
@@ -274,8 +276,8 @@ Exclude the /data/table1/col1 Table column:
     # 4. loop over rest of files/names and write-append
 
     for file in args.lh5_file[1:]:
-        msg = f"chaining file {file}"
-        log.debug(msg)
+        msg = f"appending file {file} to {args.output}"
+        log.info(msg)
 
         for name in lgdos:
             obj, _ = store.read(name, file)
