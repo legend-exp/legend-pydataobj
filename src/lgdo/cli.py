@@ -230,7 +230,7 @@ Exclude the /data/table1/col1 Table column:
 
     # 2. remove (nested) table fields based on obj_list
 
-    def _inplace_table_filter(name, table):
+    def _inplace_table_filter(name, table, obj_list):
         # filter objects nested in this LGDO
         skm = fnmatch.filter(obj_list, f"{name}/*")
         kept = {it.removeprefix(name).strip("/").split("/")[0] for it in skm}
@@ -248,13 +248,13 @@ Exclude the /data/table1/col1 Table column:
             if not isinstance(v2, Table):
                 continue
 
-            _inplace_table_filter(f"{name}/{k2}", v2)
+            _inplace_table_filter(f"{name}/{k2}", v2, obj_list)
 
     for key, val in lgdos.items():
         if not isinstance(val, Table):
             continue
 
-        _inplace_table_filter(key, val)
+        _inplace_table_filter(key, val, obj_list)
 
     # 3. write to output file
 
@@ -277,6 +277,10 @@ Exclude the /data/table1/col1 Table column:
         msg = f"chaining file {file}"
         log.debug(msg)
 
-        for name in obj_list:
+        for name in lgdos:
             obj, _ = store.read(name, file)
+            # need to remove nested LGDOs from obj too before appending
+            if isinstance(obj, Table):
+                _inplace_table_filter(name, obj, obj_list)
+
             store.write(obj, name, args.output, wo_mode="append")
