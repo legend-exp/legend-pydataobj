@@ -258,13 +258,18 @@ Exclude the /data/table1/col1 Table column:
 
     # 3. write to output file
 
+    first_done = False
     for name, obj in lgdos.items():
         store.write(
             obj,
             name,
             args.output,
-            wo_mode="overwrite_file" if args.overwrite else "write_safe",
+            wo_mode="overwrite_file"
+            if (args.overwrite and not first_done)
+            else "write_safe",
         )
+
+        first_done = True
 
     # 4. loop over rest of files/names and write-append
 

@@ -112,7 +112,7 @@ def _h5_read_lgdo(
     try:
         lgdotype = dtypeutils.datatype(h5f[name].attrs["datatype"])
     except KeyError as e:
-        msg = "dataset not found"
+        msg = "dataset not in file or missing 'datatype' attribute"
         raise LH5DecodeError(msg, h5f, name) from e
 
     if lgdotype is Scalar:

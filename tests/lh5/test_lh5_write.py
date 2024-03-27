@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import os
 
+import awkward as ak
 import h5py
 import numpy as np
 import pytest
@@ -56,6 +57,43 @@ def test_write_empty_vov(tmptestdir):
 
     obj, _ = store.read("/data/vov", f"{tmptestdir}/tmp-pygama-lgdo-empty-vov.lh5")
     assert obj == vov
+
+
+def test_write_append_array(tmptestdir):
+    arr = types.Array([1, 2, 3, 4])
+    arr_bis = types.Array([11, 34, 55, 57, 16])
+
+    outfile = f"{tmptestdir}/write_append_array.lh5"
+    lh5.write(arr, "arr", outfile, wo_mode="of")
+    lh5.write(arr_bis, "arr", outfile, wo_mode="append")
+
+    v = lh5.read("arr", outfile)
+    assert v == types.Array([1, 2, 3, 4, 11, 34, 55, 57, 16])
+
+
+def test_write_append_vov(tmptestdir):
+    vov = types.VectorOfVectors([[1, 2, 3], [4], [5, 6], [7, 9, 8]])
+    vov_bis = types.VectorOfVectors([[11], [34, 55], [57, 16], [28]])
+
+    outfile = f"{tmptestdir}/write_append_array.lh5"
+    lh5.write(vov, "vov", outfile, wo_mode="of")
+    lh5.write(vov_bis, "vov", outfile, wo_mode="append")
+
+    v = lh5.read("vov", outfile)
+    assert ak.is_valid(v.view_as("ak"))
+    assert v == types.VectorOfVectors(
+        [[1, 2, 3], [4], [5, 6], [7, 9, 8], [11], [34, 55], [57, 16], [28]]
+    )
+
+    vov = types.VectorOfVectors([[[1, 2, 3], [4]], [[5, 6], [7, 9, 8]]])
+    vov_bis = types.VectorOfVectors([[[11], [34, 55]], [[57, 16], [28]]])
+
+    outfile = f"{tmptestdir}/write_append_array.lh5"
+    lh5.write(vov, "vov", outfile, wo_mode="of")
+    lh5.write(vov_bis, "vov", outfile, wo_mode="append")
+
+    v = lh5.read("vov", outfile)
+    assert ak.is_valid(v.view_as("ak"))
 
 
 # First test that we can overwrite a table with the same name without deleting the original field

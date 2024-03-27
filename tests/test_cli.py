@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import numpy as np
+
 from lgdo import cli, lh5, types
 
 
@@ -14,20 +16,14 @@ def test_lh5ls(lgnd_test_data):
 
 
 def test_lh5concat(lgnd_test_data, tmptestdir):
-    outfile = f"{tmptestdir}/out.lh5"
-    cli.lh5concat(
-        [
-            "--output",
-            outfile,
-            "--",
-            lgnd_test_data.get_path(
-                "lh5/prod-ref-l200/generated/tier/raw/phy/p03/r001/l200-p03-r001-phy-20230322T160139Z-tier_raw.lh5"
-            ),
-            lgnd_test_data.get_path(
-                "lh5/prod-ref-l200/generated/tier/raw/phy/p03/r001/l200-p03-r001-phy-20230322T170202Z-tier_raw.lh5"
-            ),
-        ]
+    infile1 = lgnd_test_data.get_path(
+        "lh5/prod-ref-l200/generated/tier/raw/phy/p03/r001/l200-p03-r001-phy-20230322T160139Z-tier_raw.lh5"
     )
+    infile2 = lgnd_test_data.get_path(
+        "lh5/prod-ref-l200/generated/tier/raw/phy/p03/r001/l200-p03-r001-phy-20230322T170202Z-tier_raw.lh5"
+    )
+    outfile = f"{tmptestdir}/out.lh5"
+    cli.lh5concat(["--output", outfile, "--", infile1, infile2])
 
     assert lh5.ls(outfile) == [
         "ch1057600",
@@ -78,8 +74,19 @@ def test_lh5concat(lgnd_test_data, tmptestdir):
     ]
 
     store = lh5.LH5Store()
-    _, size = store.read("ch1057600/raw", outfile)
+    tbl1, size = store.read("ch1057600/raw", infile1)
+    tbl2, size = store.read("ch1057600/raw", infile2)
+    tbl, size = store.read("ch1057600/raw", outfile)
     assert size == 20
+
+    for i in range(10):
+        assert tbl.packet_id[i] == tbl1.packet_id[i]
+        assert np.array_equal(tbl.tracelist[i], tbl1.tracelist[i])
+        assert np.array_equal(tbl.waveform.values[i], tbl1.waveform.values[i])
+    for i in range(10, 20):
+        assert tbl.packet_id[i] == tbl2.packet_id[i - 10]
+        assert np.array_equal(tbl.tracelist[i], tbl2.tracelist[i - 10])
+        assert np.array_equal(tbl.waveform.values[i], tbl2.waveform.values[i - 10])
 
     arg_list = [
         "--verbose",
@@ -89,12 +96,8 @@ def test_lh5concat(lgnd_test_data, tmptestdir):
         "--include",
         "ch1057600/raw/waveform/*",
         "--",
-        lgnd_test_data.get_path(
-            "lh5/prod-ref-l200/generated/tier/raw/phy/p03/r001/l200-p03-r001-phy-20230322T160139Z-tier_raw.lh5"
-        ),
-        lgnd_test_data.get_path(
-            "lh5/prod-ref-l200/generated/tier/raw/phy/p03/r001/l200-p03-r001-phy-20230322T170202Z-tier_raw.lh5"
-        ),
+        infile1,
+        infile2,
     ]
 
     cli.lh5concat(arg_list)
@@ -113,6 +116,7 @@ def test_lh5concat(lgnd_test_data, tmptestdir):
 
     arg_list[4] = "--exclude"
     arg_list[5] = "ch1057600/raw/waveform/values"
+
     cli.lh5concat(arg_list)
     assert lh5.ls(outfile) == [
         "ch1057600",
@@ -122,7 +126,26 @@ def test_lh5concat(lgnd_test_data, tmptestdir):
         "ch1084804",
         "ch1121600",
     ]
+    assert lh5.ls(outfile, "ch1059201/raw/waveform/") == [
+        "ch1059201/raw/waveform/dt",
+        "ch1059201/raw/waveform/t0",
+        "ch1059201/raw/waveform/values",
+    ]
     assert lh5.ls(outfile, "ch1057600/raw/waveform/") == [
         "ch1057600/raw/waveform/dt",
         "ch1057600/raw/waveform/t0",
     ]
+
+    tbl1, size = store.read("ch1059201/raw", infile1)
+    tbl2, size = store.read("ch1059201/raw", infile2)
+    tbl, size = store.read("ch1059201/raw", outfile)
+    assert size == 20
+
+    for i in range(10):
+        assert tbl.packet_id[i] == tbl1.packet_id[i]
+        assert np.array_equal(tbl.tracelist[i], tbl1.tracelist[i])
+        assert np.array_equal(tbl.waveform.values[i], tbl1.waveform.values[i])
+    for i in range(10, 20):
+        assert tbl.packet_id[i] == tbl2.packet_id[i - 10]
+        assert np.array_equal(tbl.tracelist[i], tbl2.tracelist[i - 10])
+        assert np.array_equal(tbl.waveform.values[i], tbl2.waveform.values[i - 10])
