@@ -132,8 +132,8 @@ def get_h5_group(
     ):
         if not overwrite:
             msg = (
-                "Provided group attrs are different from "
-                "existing ones but overwrite flag is not set"
+                f"Provided {grp_attrs=} are different from "
+                f"existing ones {dict(group.attrs)=} but overwrite flag is not set"
             )
             raise RuntimeError(msg)
 
