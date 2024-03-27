@@ -32,6 +32,9 @@ def testvov():
 
 
 def test_init(testvov):
+    for v in testvov:
+        assert ak.is_valid(v.view_as("ak"))
+
     assert len(VectorOfVectors()) == 0
     assert len(VectorOfVectors(dtype="ubyte")) == 0
     assert VectorOfVectors(dtype="ubyte").flattened_data.dtype == "ubyte"
@@ -60,15 +63,18 @@ def test_init(testvov):
     assert v.cumulative_length == lgdo.Array(
         np.arange(20, 10 * 20 + 1, 20, dtype="uint32")
     )
+    assert ak.is_valid(v.view_as("ak"))
 
     v = VectorOfVectors(shape_guess=(5, 0), dtype="int32")
     assert v.cumulative_length == lgdo.Array([0, 0, 0, 0, 0])
+    assert ak.is_valid(v.view_as("ak"))
 
     # multi-dimensional
     v = VectorOfVectors(shape_guess=(5, 3, 2), dtype="int16", fill_val=1)
     assert isinstance(v.flattened_data, VectorOfVectors)
     assert isinstance(v.flattened_data.flattened_data, Array)
     assert v.flattened_data.flattened_data.dtype == "int16"
+    assert ak.is_valid(v.view_as("ak"))
 
     assert v.cumulative_length == lgdo.Array([3, 6, 9, 12, 15])
     assert v.flattened_data.cumulative_length == lgdo.Array(
@@ -171,15 +177,13 @@ def test_resize(testvov):
     testvov = testvov.v2d
 
     testvov.resize(3)
+    assert ak.is_valid(testvov.view_as("ak"))
     assert len(testvov.cumulative_length) == 3
     assert len(testvov.flattened_data) == testvov.cumulative_length[-1]
-
-    desired = [np.array([1, 2]), np.array([3, 4, 5]), np.array([2])]
-
-    for i in range(len(testvov)):
-        assert np.array_equal(desired[i], testvov[i])
+    assert testvov == VectorOfVectors([[1, 2], [3, 4, 5], [2]])
 
     testvov.resize(5)
+    assert ak.is_valid(testvov.view_as("ak"))
     assert len(testvov) == 5
     assert len(testvov[3]) == 0
     assert len(testvov[4]) == 0
@@ -187,6 +191,7 @@ def test_resize(testvov):
 
     v = VectorOfVectors(dtype="i")
     v.resize(3)
+    assert ak.is_valid(v.view_as("ak"))
     assert v == VectorOfVectors([[], [], []], dtype="i")
 
 
@@ -231,33 +236,32 @@ def test_set_vector(testvov):
     testvov = testvov.v2d
 
     testvov[0] = np.zeros(2)
-
-    desired = [
-        np.zeros(2),
-        np.array([3, 4, 5]),
-        np.array([2]),
-        np.array([4, 8, 9, 7]),
-        np.array([5, 3, 1]),
-    ]
-
-    for i in range(len(desired)):
-        assert np.array_equal(desired[i], testvov[i])
+    assert testvov == VectorOfVectors(
+        [
+            [0, 0],
+            [3, 4, 5],
+            [2],
+            [4, 8, 9, 7],
+            [5, 3, 1],
+        ]
+    )
+    assert ak.is_valid(testvov.view_as("ak"))
 
     with pytest.raises(ValueError):
         testvov[0] = np.zeros(3)
 
     testvov[1] = np.zeros(3)
 
-    desired = [
-        np.zeros(2),
-        np.zeros(3),
-        np.array([2]),
-        np.array([4, 8, 9, 7]),
-        np.array([5, 3, 1]),
-    ]
-
-    for i in range(len(desired)):
-        assert np.array_equal(desired[i], testvov[i])
+    assert testvov == VectorOfVectors(
+        [
+            [0, 0],
+            [0, 0, 0],
+            [2],
+            [4, 8, 9, 7],
+            [5, 3, 1],
+        ]
+    )
+    assert ak.is_valid(testvov.view_as("ak"))
 
 
 def test_append(testvov):
@@ -269,6 +273,7 @@ def test_append(testvov):
     v = VectorOfVectors(dtype="int64")
     v.append(np.zeros(3))
     assert v == VectorOfVectors([[0, 0, 0]])
+    assert ak.is_valid(v.view_as("ak"))
 
 
 def test_insert(testvov):
@@ -285,6 +290,7 @@ def test_insert(testvov):
             [5, 3, 1],
         ]
     )
+    assert ak.is_valid(testvov.view_as("ak"))
 
     v = VectorOfVectors(shape_guess=(3, 5), dtype="int32", fill_val=0)
     v.insert(2, [1, 2, 3])
@@ -306,6 +312,7 @@ def test_replace(testvov):
             [5, 3, 1],
         ]
     )
+    assert ak.is_valid(v.view_as("ak"))
 
     v = copy.deepcopy(testvov)
     v.replace(1, np.zeros(2))
@@ -318,6 +325,7 @@ def test_replace(testvov):
             [5, 3, 1],
         ]
     )
+    assert ak.is_valid(v.view_as("ak"))
 
     v = copy.deepcopy(testvov)
     v.replace(1, np.zeros(4))
@@ -330,6 +338,7 @@ def test_replace(testvov):
             [5, 3, 1],
         ]
     )
+    assert ak.is_valid(v.view_as("ak"))
 
 
 def test_set_vector_unsafe(testvov):
@@ -363,10 +372,8 @@ def test_iter(testvov):
 
     desired = [[1, 2], [3, 4, 5], [2], [4, 8, 9, 7], [5, 3, 1]]
 
-    c = 0
-    for v in testvov:
+    for c, v in enumerate(testvov):
         assert np.array_equal(v, desired[c])
-        c += 1
 
 
 def test_view_as(testvov):
@@ -379,6 +386,7 @@ def test_view_as(testvov):
     ak_arr = v2d.view_as("ak", with_units=False)
 
     assert isinstance(ak_arr, ak.Array)
+    assert ak.is_valid(ak_arr)
     assert len(ak_arr) == len(v2d)
     assert ak.all(ak_arr == [[1, 2], [3, 4, 5], [2], [4, 8, 9, 7], [5, 3, 1]])
 
@@ -403,5 +411,6 @@ def test_view_as(testvov):
     ak_arr = v3d.view_as("ak", with_units=False)
 
     assert isinstance(ak_arr, ak.Array)
+    assert ak.is_valid(ak_arr)
     assert len(ak_arr) == len(v3d)
     assert ak.all(ak_arr == [[[1, 2], [3, 4, 5]], [[2], [4, 8, 9, 7]], [[5, 3, 1]]])

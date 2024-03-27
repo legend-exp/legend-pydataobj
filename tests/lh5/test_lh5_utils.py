@@ -12,28 +12,6 @@ def lgnd_file(lgnd_test_data):
     return lgnd_test_data.get_path("lh5/LDQTA_r117_20200110T105115Z_cal_geds_raw.lh5")
 
 
-def test_parse_datatype():
-    datatypes = [
-        ("real", ("scalar", None, "real")),
-        ("array<1>{bool}", ("array", (1,), "bool")),
-        ("fixedsizearray<2>{real}", ("fixedsizearray", (2,), "real")),
-        (
-            "arrayofequalsizedarrays<3,4>{complex}",
-            ("arrayofequalsizedarrays", (3, 4), "complex"),
-        ),
-        ("array<1>{array<1>{blob}}", ("array", (1,), "array<1>{blob}")),
-        (
-            "struct{field1,field2,fieldn}",
-            ("struct", None, ["field1", "field2", "fieldn"]),
-        ),
-        ("table{col1,col2,coln}", ("table", None, ["col1", "col2", "coln"])),
-    ]
-
-    for string, dt_tuple in datatypes:
-        pd_dt_tuple = utils.parse_datatype(string)
-        assert pd_dt_tuple == dt_tuple
-
-
 def test_expand_vars():
     # Check env variable expansion
     os.environ["PYGAMATESTBASEDIR"] = "a_random_string"

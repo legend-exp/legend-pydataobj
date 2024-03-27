@@ -73,7 +73,7 @@ class LH5Iterator(typing.Iterator):
         buffer_len
             number of entries to read at a time while iterating through files.
         friend
-            a ''friend'' LH5Iterator that will be read in parallel with this.
+            a \"friend\" LH5Iterator that will be read in parallel with this.
             The friend should have the same length and entry list. A single
             LH5 table containing columns from both iterators will be returned.
         """

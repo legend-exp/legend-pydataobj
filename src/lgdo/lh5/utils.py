@@ -5,42 +5,144 @@ import glob
 import logging
 import os
 import string
+from collections.abc import Mapping, Sequence
+from typing import Any
+
+import h5py
+
+from .. import types
+from . import _serializers, datatype
+from .exceptions import LH5DecodeError
 
 log = logging.getLogger(__name__)
 
 
-def parse_datatype(datatype: str) -> tuple[str, tuple[int, ...], str | list[str]]:
-    """Parse datatype string and return type, dimensions and elements.
+def get_buffer(
+    name: str,
+    lh5_file: str | h5py.File | Sequence[str | h5py.File],
+    size: int | None = None,
+    field_mask: Mapping[str, bool] | Sequence[str] | None = None,
+) -> types.LGDO:
+    """Returns an LGDO appropriate for use as a pre-allocated buffer.
+
+    Sets size to `size` if object has a size.
+    """
+    obj, n_rows = _serializers._h5_read_lgdo(
+        name, lh5_file, n_rows=0, field_mask=field_mask
+    )
+
+    if hasattr(obj, "resize") and size is not None:
+        obj.resize(new_size=size)
+
+    return obj
+
+
+def read_n_rows(name: str, h5f: str | h5py.File) -> int | None:
+    """Look up the number of rows in an Array-like LGDO object on disk.
+
+    Return ``None`` if `name` is a :class:`.Scalar` or a :class:`.Struct`.
+    """
+    if not isinstance(h5f, h5py.File):
+        h5f = h5py.File(h5f, "r")
+
+    try:
+        attrs = h5f[name].attrs
+    except KeyError as e:
+        msg = "not found"
+        raise LH5DecodeError(msg, h5f, name) from e
+    except AttributeError as e:
+        msg = "missing 'datatype' attribute"
+        raise LH5DecodeError(msg, h5f, name) from e
+
+    lgdotype = datatype.datatype(attrs["datatype"])
+
+    # scalars are dim-0 datasets
+    if lgdotype is types.Scalar:
+        return None
+
+    # structs don't have rows
+    if lgdotype is types.Struct:
+        return None
+
+    # tables should have elements with all the same length
+    if lgdotype is types.Table:
+        # read out each of the fields
+        rows_read = None
+        for field in datatype.get_struct_fields(attrs["datatype"]):
+            n_rows_read = read_n_rows(name + "/" + field, h5f)
+            if not rows_read:
+                rows_read = n_rows_read
+            elif rows_read != n_rows_read:
+                log.warning(
+                    f"'{field}' field in table '{name}' has {rows_read} rows, "
+                    f"{n_rows_read} was expected"
+                )
+        return rows_read
+
+    # length of vector of vectors is the length of its cumulative_length
+    if lgdotype is types.VectorOfVectors:
+        return read_n_rows(f"{name}/cumulative_length", h5f)
+
+    # length of vector of encoded vectors is the length of its decoded_size
+    if lgdotype in (types.VectorOfEncodedVectors, types.ArrayOfEncodedEqualSizedArrays):
+        return read_n_rows(f"{name}/encoded_data", h5f)
+
+    # return array length (without reading the array!)
+    if issubclass(lgdotype, types.Array):
+        # compute the number of rows to read
+        return h5f[name].shape[0]
+
+    msg = f"don't know how to read rows of LGDO {lgdotype.__name__}"
+    raise LH5DecodeError(msg, h5f, name)
+
+
+def get_h5_group(
+    group: str | h5py.Group,
+    base_group: h5py.Group,
+    grp_attrs: Mapping[str, Any] | None = None,
+    overwrite: bool = False,
+) -> h5py.Group:
+    """
+    Returns an existing :mod:`h5py` group from a base group or creates a
+    new one. Can also set (or replace) group attributes.
 
     Parameters
     ----------
-    datatype
-        a LGDO-formatted datatype string.
-
-    Returns
-    -------
-    element_type
-        the datatype name dims if not ``None``, a tuple of dimensions for the
-        LGDO. Note this is not the same as the NumPy shape of the underlying
-        data object. See the LGDO specification for more information. Also see
-        :class:`~.types.ArrayOfEqualSizedArrays` and
-        :meth:`.lh5_store.LH5Store.read` for example code elements for
-        numeric objects, the element type for struct-like  objects, the list of
-        fields in the struct.
+    group
+        name of the HDF5 group.
+    base_group
+        HDF5 group to be used as a base.
+    grp_attrs
+        HDF5 group attributes.
+    overwrite
+        whether overwrite group attributes, ignored if `grp_attrs` is
+        ``None``.
     """
-    if "{" not in datatype:
-        return "scalar", None, datatype
+    if not isinstance(group, h5py.Group):
+        if group in base_group:
+            group = base_group[group]
+        else:
+            group = base_group.create_group(group)
+            if grp_attrs is not None:
+                group.attrs.update(grp_attrs)
+            return group
+    if (
+        grp_attrs is not None
+        and len(set(grp_attrs.items()) ^ set(group.attrs.items())) > 0
+    ):
+        if not overwrite:
+            msg = (
+                f"Provided {grp_attrs=} are different from "
+                f"existing ones {dict(group.attrs)=} but overwrite flag is not set"
+            )
+            raise RuntimeError(msg)
 
-    # for other datatypes, need to parse the datatype string
-    from parse import parse
+        log.debug(f"overwriting {group}.attrs...")
+        for key in group.attrs:
+            group.attrs.pop(key)
+        group.attrs.update(grp_attrs)
 
-    datatype, element_description = parse("{}{{{}}}", datatype)
-    if datatype.endswith(">"):
-        datatype, dims = parse("{}<{}>", datatype)
-        dims = [int(i) for i in dims.split(",")]
-        return datatype, tuple(dims), element_description
-
-    return datatype, None, element_description.split(",")
+    return group
 
 
 def expand_vars(expr: str, substitute: dict[str, str] | None = None) -> str:

@@ -120,7 +120,7 @@ Exclude the /data/table1/col1 Table column:
         "--output",
         "-o",
         help="""Output file""",
-        required=True,
+        default="lh5concat-output.lh5",
     )
     parser.add_argument(
         "--overwrite",
@@ -152,7 +152,7 @@ Exclude the /data/table1/col1 Table column:
     args = parser.parse_args(args)
 
     if args.verbose:
-        lgdogging.setup(logging.DEBUG, log)
+        lgdogging.setup(logging.INFO, log)
     elif args.debug:
         lgdogging.setup(logging.DEBUG, logging.root)
     else:
@@ -230,7 +230,7 @@ Exclude the /data/table1/col1 Table column:
 
     # 2. remove (nested) table fields based on obj_list
 
-    def _inplace_table_filter(name, table):
+    def _inplace_table_filter(name, table, obj_list):
         # filter objects nested in this LGDO
         skm = fnmatch.filter(obj_list, f"{name}/*")
         kept = {it.removeprefix(name).strip("/").split("/")[0] for it in skm}
@@ -248,30 +248,41 @@ Exclude the /data/table1/col1 Table column:
             if not isinstance(v2, Table):
                 continue
 
-            _inplace_table_filter(f"{name}/{k2}", v2)
+            _inplace_table_filter(f"{name}/{k2}", v2, obj_list)
 
     for key, val in lgdos.items():
         if not isinstance(val, Table):
             continue
 
-        _inplace_table_filter(key, val)
+        _inplace_table_filter(key, val, obj_list)
 
     # 3. write to output file
+    msg = f"creating output file {args.output}"
+    log.info(msg)
 
+    first_done = False
     for name, obj in lgdos.items():
         store.write(
             obj,
             name,
             args.output,
-            wo_mode="overwrite_file" if args.overwrite else "write_safe",
+            wo_mode="overwrite_file"
+            if (args.overwrite and not first_done)
+            else "write_safe",
         )
+
+        first_done = True
 
     # 4. loop over rest of files/names and write-append
 
     for file in args.lh5_file[1:]:
-        msg = f"chaining file {file}"
-        log.debug(msg)
+        msg = f"appending file {file} to {args.output}"
+        log.info(msg)
 
-        for name in obj_list:
+        for name in lgdos:
             obj, _ = store.read(name, file)
+            # need to remove nested LGDOs from obj too before appending
+            if isinstance(obj, Table):
+                _inplace_table_filter(name, obj, obj_list)
+
             store.write(obj, name, args.output, wo_mode="append")
