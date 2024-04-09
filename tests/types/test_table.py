@@ -148,6 +148,23 @@ def test_view_as():
         tbl.view_as("pd", with_units=True)
 
 
+def test_flatten():
+    tbl = Table(
+        col_dict={
+            "a": lgdo.Array(np.array([1, 2, 3])),
+            "tbl": Table(
+                col_dict={
+                    "b": lgdo.Array(np.array([4, 5, 6])),
+                    "tbl1": Table(col_dict={"z": lgdo.Array(np.array([9, 9, 9]))}),
+                }
+            ),
+        }
+    )
+
+    fl_tbl = tbl.flatten()
+    assert sorted(fl_tbl.keys()) == ["a", "tbl__b", "tbl__tbl1__z"]
+
+
 def test_remove_column():
     col_dict = {
         "a": lgdo.Array(nda=np.array([1, 2, 3, 4])),

@@ -22,6 +22,12 @@ def test_eval_dependency():
                 ],
             ),
             "e": lgdo.VectorOfVectors([[1, 2, 3], [4], [], [8, 6]]),
+            "tbl": lgdo.Table(
+                col_dict={
+                    "z": lgdo.Array([1, 1, 1, 1]),
+                    "y": lgdo.Array([8, 8, 8, 8]),
+                }
+            ),
         }
     )
     r = obj.eval("sum(a)")
@@ -30,6 +36,10 @@ def test_eval_dependency():
     r = obj.eval("a + b")
     assert isinstance(r, lgdo.Array)
     assert np.array_equal(r.nda, obj.a.nda + obj.b.nda)
+
+    r = obj.eval("a + tbl__z")
+    assert isinstance(r, lgdo.Array)
+    assert np.array_equal(r.nda, obj.a.nda + obj.tbl.z.nda)
 
     r = obj.eval("((a - b) > 1) & ((b - a) < -1)")
     assert isinstance(r, lgdo.Array)
