@@ -229,6 +229,29 @@ class Table(Struct):
         )
         return self.view_as(library="pd", cols=cols, prefix=prefix)
 
+    def flatten(self, _prefix="") -> Table:
+        """Flatten the table, if nested.
+
+        Returns a new :class:`Table` (that references, not copies, the existing
+        columns) with columns in nested tables being moved to the first level
+        (and renamed appropriately).
+
+        Examples
+        --------
+        >>> repr(tbl)
+        "Table(dict={'a': Array([1 2 3], attrs={'datatype': 'array<1>{real}'}), 'tbl': Table(dict={'b': Array([4 5 6], attrs={'datatype': 'array<1>{real}'}), 'tbl1': Table(dict={'z': Array([9 9 9], attrs={'datatype': 'array<1>{real}'})}, attrs={'datatype': 'table{z}'})}, attrs={'datatype': 'table{b,tbl1}'})}, attrs={'datatype': 'table{a,tbl}'})"
+        >>> tbl.flatten().keys()
+        dict_keys(['a', 'tbl__b', 'tbl__tbl1__z'])
+        """
+        flat_table = Table(size=self.size)
+        for key, obj in self.items():
+            if isinstance(obj, Table):
+                flat_table.join(obj.flatten(_prefix=f"{_prefix}{key}__"))
+            else:
+                flat_table.add_column(_prefix + key, obj)
+
+        return flat_table
+
     def eval(
         self,
         expr: str,
@@ -241,6 +264,13 @@ class Table(Struct):
         :class:`.VectorOfVectors` are involved. In the latter case, the VoV
         columns are viewed as :class:`ak.Array` and the respective routines are
         therefore available.
+
+        To columns nested in subtables can be accessed by scoping with two
+        underscores (``__``). For example: ::
+
+          tbl.eval("a + tbl2__b")
+
+        computes the sum of column `a` and column `b` in the subtable `tbl2`.
 
         Parameters
         ----------
@@ -285,15 +315,16 @@ class Table(Struct):
 
         # make a dictionary of low-level objects (numpy or awkward)
         # for later computation
+        flat_self = self.flatten()
         self_unwrap = {}
         has_ak = False
         for obj in c.co_names:
-            if obj in self.keys():
-                if isinstance(self[obj], VectorOfVectors):
-                    self_unwrap[obj] = self[obj].view_as("ak", with_units=False)
+            if obj in flat_self:
+                if isinstance(flat_self[obj], VectorOfVectors):
+                    self_unwrap[obj] = flat_self[obj].view_as("ak", with_units=False)
                     has_ak = True
                 else:
-                    self_unwrap[obj] = self[obj].view_as("np", with_units=False)
+                    self_unwrap[obj] = flat_self[obj].view_as("np", with_units=False)
 
         # use numexpr if we are only dealing with numpy data types
         if not has_ak:
