@@ -365,7 +365,7 @@ def _h5_read_table(
         n_rows_read = rows_read[0]
     else:
         n_rows_read = 0
-        log.warning(f"Table '{name}' has no subgroups accepted by field mask")
+        log.warning(f"Table '{name}' has no fields specified by {field_mask=}")
 
     for n in rows_read[1:]:
         if n != n_rows_read:
