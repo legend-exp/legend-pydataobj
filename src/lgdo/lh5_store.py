@@ -27,9 +27,7 @@ from .types import (
     WaveformTable,  # noqa: F401
 )
 
-DEFAULT_HDF5_COMPRESSION = None
 LGDO = Union[Array, Scalar, Struct, VectorOfVectors]
-DEFAULT_HDF5_SETTINGS: dict[str, ...] = {"shuffle": True, "compression": "gzip"}
 
 
 class LH5Iterator(lh5.LH5Iterator):

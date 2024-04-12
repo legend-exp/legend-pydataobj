@@ -9,7 +9,7 @@ import pytest
 
 import lgdo
 from lgdo import lh5, types
-from lgdo.lh5.store import DEFAULT_HDF5_SETTINGS
+from lgdo.lh5 import DEFAULT_HDF5_SETTINGS
 
 
 def test_init():

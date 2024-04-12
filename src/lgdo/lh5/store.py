@@ -18,9 +18,6 @@ from . import _serializers, utils
 
 log = logging.getLogger(__name__)
 
-DEFAULT_HDF5_SETTINGS: dict[str, ...] = {"shuffle": True, "compression": "gzip"}
-DEFAULT_HDF5_COMPRESSION = None
-
 
 class LH5Store:
     """
