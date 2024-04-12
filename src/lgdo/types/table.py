@@ -2,6 +2,7 @@
 Implements a LEGEND Data Object representing a special struct of arrays of
 equal length and corresponding utilities.
 """
+
 from __future__ import annotations
 
 import logging
@@ -350,7 +351,7 @@ class Table(Struct):
 
         # resort to good ol' eval()
         globs = {"ak": ak, "np": np}
-        out_data = eval(expr, globs, (self_unwrap | parameters))  # noqa: PGH001
+        out_data = eval(expr, globs, (self_unwrap | parameters))
 
         # need to convert back to LGDO
         if isinstance(out_data, ak.Array):

@@ -179,8 +179,8 @@ class VectorOfEncodedVectors(LGDO):
 
     def __str__(self) -> str:
         string = ""
-        pos = 0
-        for vec, size in self:
+        for pos, res in enumerate(self):
+            vec, size = res[0], res[1]
             if pos != 0:
                 string += " "
 
@@ -199,8 +199,6 @@ class VectorOfEncodedVectors(LGDO):
 
             if pos < len(self.encoded_data.cumulative_length):
                 string += ",\n"
-
-            pos += 1
 
         string = f"[{string}]"
 
@@ -400,8 +398,7 @@ class ArrayOfEncodedEqualSizedArrays(LGDO):
 
     def __str__(self) -> str:
         string = ""
-        pos = 0
-        for vec in self:
+        for pos, vec in enumerate(self):
             if pos != 0:
                 string += " "
 
@@ -417,8 +414,6 @@ class ArrayOfEncodedEqualSizedArrays(LGDO):
 
             if pos < len(self.encoded_data.cumulative_length):
                 string += ",\n"
-
-            pos += 1
 
         string = f"[{string}] decoded_size={self.decoded_size}"
 

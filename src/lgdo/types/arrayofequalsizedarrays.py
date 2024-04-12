@@ -2,6 +2,7 @@
 Implements a LEGEND Data Object representing an array of equal-sized arrays and
 corresponding utilities.
 """
+
 from __future__ import annotations
 
 from collections.abc import Iterator

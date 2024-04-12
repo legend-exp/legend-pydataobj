@@ -1,4 +1,5 @@
 """This module implements some helpers for setting up logging."""
+
 from __future__ import annotations
 
 import logging

@@ -286,9 +286,7 @@ def _h5_read_struct(
     obj_dict = {}
     for field in selected_fields:
         # support for integer keys
-        field_key = (
-            int(field) if "int_keys" in attrs and attrs["int_keys"] else str(field)
-        )
+        field_key = int(field) if attrs.get("int_keys") else str(field)
         obj_dict[field_key], _ = _h5_read_lgdo(
             f"{name}/{field}",
             h5f,

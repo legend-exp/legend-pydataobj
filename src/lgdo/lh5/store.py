@@ -2,6 +2,7 @@
 This module implements routines from reading and writing LEGEND Data Objects in
 HDF5 files.
 """
+
 from __future__ import annotations
 
 import logging

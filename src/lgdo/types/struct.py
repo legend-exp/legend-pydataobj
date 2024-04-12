@@ -2,6 +2,7 @@
 Implements a LEGEND Data Object representing a struct and corresponding
 utilities.
 """
+
 from __future__ import annotations
 
 import logging

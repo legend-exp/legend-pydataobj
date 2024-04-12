@@ -1,4 +1,5 @@
 """Implements utilities for LEGEND Data Objects."""
+
 from __future__ import annotations
 
 import glob
