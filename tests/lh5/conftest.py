@@ -91,6 +91,8 @@ def lh5_file(tmptestdir):
         ),
     )
 
+    struct.add_field("empty_struct", types.Struct())
+
     store.write(
         struct,
         "struct",

@@ -31,6 +31,7 @@ def test_datatype2lgdo():
     )
 
     assert d("struct{a,b,c,d}") == types.Struct
+    assert d("struct{}") == types.Struct
     assert d("table{a,b,c,d}") == types.Table
 
 
@@ -40,9 +41,11 @@ def test_utils():
         == "encoded_array<1>{real}"
     )
     assert datatype.get_nested_datatype_string("table{a,b,c,d}") == "a,b,c,d"
+    assert datatype.get_nested_datatype_string("table{}") == ""
     assert (
         datatype.get_nested_datatype_string("array_of_equalsized_arrays<1,1>{real}")
         == "real"
     )
 
     assert datatype.get_struct_fields("table{a,b,c,d}") == ["a", "b", "c", "d"]
+    assert datatype.get_struct_fields("table{}") == []

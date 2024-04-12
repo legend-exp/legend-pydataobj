@@ -14,8 +14,8 @@ _lgdo_datatype_map: dict[str, lgdo.LGDO] = OrderedDict(
             lgdo.ArrayOfEncodedEqualSizedArrays,
             r"^array_of_encoded_equalsized_arrays<1,1>\{.+\}$",
         ),
-        (lgdo.Struct, r"^struct\{.+\}$"),
-        (lgdo.Table, r"^table\{.+\}$"),
+        (lgdo.Struct, r"^struct\{.*\}$"),
+        (lgdo.Table, r"^table\{.*\}$"),
         (lgdo.FixedSizeArray, r"^fixedsize_array<1>\{.+\}$"),
         (lgdo.ArrayOfEqualSizedArrays, r"^array_of_equalsized_arrays<1,1>\{.+\}$"),
         (lgdo.Array, r"^array<1>\{.+\}$"),
@@ -37,9 +37,10 @@ def datatype(expr: str) -> type:
 
 def get_nested_datatype_string(expr: str) -> str:
     """Matches the content of the outermost curly brackets."""
-    return re.search(r"\{(.+)\}$", expr).group(1)
+    return re.search(r"\{(.*)\}$", expr).group(1)
 
 
 def get_struct_fields(expr: str) -> list[str]:
     """Returns a list of :class:`~.lgdo.types.struct.Struct` fields, given its datatype string."""
-    return get_nested_datatype_string(expr).split(",")
+    fields = get_nested_datatype_string(expr).split(",")
+    return [] if fields == [""] else fields

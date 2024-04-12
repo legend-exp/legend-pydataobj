@@ -231,6 +231,13 @@ def test_read_table(lh5_file):
     assert lh5_obj["a"].attrs["attr"] == 9
 
 
+def test_read_empty_struct(lh5_file):
+    store = lh5.LH5Store()
+    lh5_obj, n_rows = store.read("/data/struct/empty_struct", lh5_file)
+    assert isinstance(lh5_obj, types.Struct)
+    assert list(lh5_obj.keys()) == []
+
+
 def test_read_hdf5_compressed_data(lh5_file):
     store = lh5.LH5Store()
     lh5_obj, n_rows = store.read("/data/struct/table", lh5_file)
@@ -331,7 +338,7 @@ def test_read_with_field_mask(lh5_file):
     lh5_obj, n_rows = store.read(
         "/data/struct_full", lh5_file, field_mask=("array", "table")
     )
-    assert list(lh5_obj.keys()) == ["array", "table"]
+    assert sorted(lh5_obj.keys()) == ["array", "table"]
 
     lh5_obj, n_rows = store.read(
         "/data/struct_full", lh5_file, field_mask={"array": True}
@@ -341,12 +348,13 @@ def test_read_with_field_mask(lh5_file):
     lh5_obj, n_rows = store.read(
         "/data/struct_full", lh5_file, field_mask={"vov": False, "voev": False}
     )
-    assert list(lh5_obj.keys()) == [
-        "scalar",
-        "array",
+    assert sorted(lh5_obj.keys()) == [
         "aoesa",
-        "vov3d",
+        "array",
+        "empty_struct",
+        "scalar",
         "table",
+        "vov3d",
         "wftable",
         "wftable_enc",
     ]
