@@ -2,6 +2,7 @@
 .. warning::
     This subpackage is deprecated, use :mod:`lgdo.lh5`.
 """
+
 from __future__ import annotations
 
 import sys

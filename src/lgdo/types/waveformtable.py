@@ -3,6 +3,7 @@ Implements a LEGEND Data Object representing a special
 :class:`~.lgdo.table.Table` to store blocks of one-dimensional time-series
 data.
 """
+
 from __future__ import annotations
 
 import logging

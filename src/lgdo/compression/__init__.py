@@ -21,6 +21,7 @@ interface for encoding/decoding :class:`~.lgdo.LGDO`\ s.
 >>> enc_wft = compression.encode(wftable, RadwareSigcompress(codec_shift=-23768)
 >>> compression.decode(enc_wft) # == wftbl
 """
+
 from __future__ import annotations
 
 from .base import WaveformCodec

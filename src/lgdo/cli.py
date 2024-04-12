@@ -1,4 +1,5 @@
 """legend-pydataobj's command line interface utilities."""
+
 from __future__ import annotations
 
 import argparse

@@ -39,6 +39,7 @@ is done via the class :class:`.lh5_store.LH5Store`. LH5 files can also be
 browsed easily in python like any `HDF5 <https://www.hdfgroup.org>`_ file using
 `h5py <https://www.h5py.org>`_.
 """
+
 from __future__ import annotations
 
 from ._version import version as __version__

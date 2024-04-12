@@ -1,4 +1,5 @@
 """:class:`~.lgdo.typing.vectorofvectors.VectorOfVectors` utilities."""
+
 from __future__ import annotations
 
 import logging
