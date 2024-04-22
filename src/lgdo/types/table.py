@@ -327,12 +327,18 @@ class Table(Struct):
                 else:
                     self_unwrap[obj] = flat_self[obj].view_as("np", with_units=False)
 
+        msg = f"evaluating {expr!r} with locals={(self_unwrap | parameters)} and {has_ak=}"
+        log.debug(msg)
+
         # use numexpr if we are only dealing with numpy data types
         if not has_ak:
             out_data = ne.evaluate(
                 expr,
                 local_dict=(self_unwrap | parameters),
             )
+
+            msg = f"...the result is {out_data!r}"
+            log.debug(msg)
 
             # need to convert back to LGDO
             # np.evaluate should always return a numpy thing?
@@ -352,6 +358,9 @@ class Table(Struct):
         # resort to good ol' eval()
         globs = {"ak": ak, "np": np}
         out_data = eval(expr, globs, (self_unwrap | parameters))
+
+        msg = f"...the result is {out_data!r}"
+        log.debug(msg)
 
         # need to convert back to LGDO
         if isinstance(out_data, ak.Array):

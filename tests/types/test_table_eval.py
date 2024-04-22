@@ -22,6 +22,7 @@ def test_eval_dependency():
                 ],
             ),
             "e": lgdo.VectorOfVectors([[1, 2, 3], [4], [], [8, 6]]),
+            "ee": lgdo.VectorOfVectors([[[1], [2, 3]], [[], [4]], [[]], [[8, 6]]]),
             "tbl": lgdo.Table(
                 col_dict={
                     "z": lgdo.Array([1, 1, 1, 1]),
@@ -59,6 +60,10 @@ def test_eval_dependency():
     r = obj.eval("2*e + 1")
     assert isinstance(r, lgdo.VectorOfVectors)
     assert r == lgdo.VectorOfVectors([[3, 5, 7], [9], [], [17, 13]])
+
+    r = obj.eval("2*ee + 1")
+    assert isinstance(r, lgdo.VectorOfVectors)
+    assert r == lgdo.VectorOfVectors([[[3], [5, 7]], [[], [9]], [[]], [[17, 13]]])
 
     r = obj.eval("e > 2")
     assert isinstance(r, lgdo.VectorOfVectors)

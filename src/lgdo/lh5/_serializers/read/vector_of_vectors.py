@@ -168,6 +168,12 @@ def _h5_read_vector_of_vectors(
     )
 
     if obj_buf is not None:
+        # if the buffer is partially filled, cumulative_length will be invalid
+        # (i.e. non monotonically increasing). Let's fix that but filling the
+        # rest of the array with the length of flattened_data
+        end = obj_buf_start + n_rows_read
+        obj_buf.cumulative_length.nda[end:] = obj_buf.cumulative_length.nda[end - 1]
+
         return obj_buf, n_rows_read
 
     return (
