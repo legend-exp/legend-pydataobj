@@ -10,7 +10,7 @@ from ...exceptions import LH5EncodeError
 
 log = logging.getLogger(__name__)
 
-DEFAULT_HDF5_SETTINGS: dict[str, ...] = {"shuffle": True, "compression": "gzip"}
+DEFAULT_HDF5_SETTINGS: dict[str, ...] = {"shuffle": True, "compression": "lzf"}
 
 
 def _h5_write_array(
