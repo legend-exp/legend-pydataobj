@@ -84,6 +84,10 @@ def test_read_array(lh5_file):
             is DEFAULT_HDF5_SETTINGS["compression"]
         )
 
+    lh5_obj, n_rows = store.read("/data/struct_full/array2d", lh5_file)
+    assert isinstance(lh5_obj, types.Array)
+    assert lh5_obj == types.Array(shape=(23, 56), fill_val=69, dtype=int)
+
 
 def test_read_array_slice(lh5_file):
     store = lh5.LH5Store()
@@ -351,6 +355,7 @@ def test_read_with_field_mask(lh5_file):
     assert sorted(lh5_obj.keys()) == [
         "aoesa",
         "array",
+        "array2d",
         "empty_struct",
         "scalar",
         "table",
