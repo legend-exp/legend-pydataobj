@@ -19,6 +19,7 @@ def lh5_file(tmptestdir):
     struct = lgdo.Struct()
     struct.add_field("scalar", lgdo.Scalar(value=10, attrs={"sth": 1}))
     struct.add_field("array", types.Array(nda=np.array([1, 2, 3, 4, 5])))
+    struct.add_field("array2d", types.Array(shape=(23, 56), fill_val=69, dtype=int))
     struct.add_field(
         "aoesa",
         types.ArrayOfEqualSizedArrays(shape=(5, 5), dtype=np.float32, fill_val=42),
