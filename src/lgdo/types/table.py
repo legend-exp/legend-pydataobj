@@ -68,6 +68,9 @@ class Table(Struct):
         -----
         the :attr:`loc` attribute is initialized to 0.
         """
+        if isinstance(col_dict, pd.DataFrame):
+            col_dict = {k: Array(v) for k, v in col_dict.items()}
+
         super().__init__(obj_dict=col_dict, attrs=attrs)
 
         # if col_dict is not empty, set size according to it

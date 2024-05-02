@@ -31,6 +31,16 @@ def test_init():
     assert tbl.size == 3
 
 
+def test_pandas_df_init():
+    df = pd.DataFrame({"a": [1, 2, 3, 4], "b": [5, 6, 7, 8]})
+    tbl = Table(col_dict=df)
+    assert sorted(tbl.keys()) == ["a", "b"]
+    assert isinstance(tbl.a, lgdo.Array)
+    assert isinstance(tbl.b, lgdo.Array)
+    assert tbl.a == lgdo.Array([1, 2, 3, 4])
+    assert tbl.b == lgdo.Array([5, 6, 7, 8])
+
+
 def test_datatype_name():
     tbl = Table()
     assert tbl.datatype_name() == "table"
