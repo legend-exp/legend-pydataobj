@@ -37,6 +37,11 @@ class Struct(LGDO, dict):
             a set of user attributes to be carried along with this LGDO.
         """
         if obj_dict is not None:
+            for k, v in obj_dict.items():
+                if not isinstance(v, LGDO | dict):
+                    msg = f"value of '{k}' ({v!r}) is not an LGDO"
+                    raise ValueError(msg)
+
             self.update(obj_dict)
 
         super().__init__(attrs)

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 import lgdo
 
 
@@ -25,6 +27,12 @@ def test_init():
     struct = lgdo.Struct(obj_dict=obj_dict, attrs=attrs)
     assert dict(struct) == obj_dict
     assert struct.attrs == attrs | {"datatype": "struct{scalar1}"}
+
+    with pytest.raises(ValueError):
+        lgdo.Struct(obj_dict={"scalar1": 1})
+
+    with pytest.raises(ValueError):
+        lgdo.Struct(obj_dict={"scalar1": lgdo.Scalar(value=10)})
 
 
 def test_add_field():
