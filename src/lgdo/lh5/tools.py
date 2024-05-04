@@ -87,6 +87,7 @@ def show(
     indent: str = "",
     header: bool = True,
     depth: int | None = None,
+    detail: bool = False,
 ) -> None:
     """Print a tree of LH5 file contents with LGDO datatype.
 
@@ -104,6 +105,8 @@ def show(
         print `lh5_group` at the top of the diagram.
     depth
         maximum tree depth of groups to print
+    detail
+        whether to print additional information about how the data is stored
 
     Examples
     --------
@@ -171,6 +174,26 @@ def show(
 
         print(f"{indent}{char} \033[1m{key}\033[0m · {dtype} {_attrs}")  # noqa: T201
 
+        if detail and isinstance(val, h5py.Dataset):
+            char = "|       "
+            if killme:
+                char = "        "
+            toprint = f"{indent}{char}"
+            try:
+                toprint += f"\x1B[3mdtype\x1B[0m {val.dtype}"  # noqa: T201
+                toprint += f", \x1B[3mshape\x1B[0m {val.shape}"  # noqa: T201
+                toprint += f", \x1B[3mnbytes\x1B[0m {utils.fmtbytes(val.nbytes)}"  # noqa: T201
+                if chunkshape:=val.chunks is None:
+                    toprint += f", \x1B[3mnumchunks\x1B[0m continuous"
+                else:
+                    toprint += f", \x1B[3mnumchunks\x1B[0m {val.id.get_num_chunks()}"  # noqa: T201
+                    toprint += f", \x1B[3mchunkshape\x1B[0m {chunkshape}"  # noqa: T201
+                toprint += f", \x1B[3mcompression\x1B[0m {val.compression}"  # noqa: T201"
+            except TypeError:
+                toprint += f"(scalar)"
+            
+            print(toprint)
+                
         # if it's a group, call this function recursively
         if isinstance(val, h5py.Group):
             show(
@@ -179,6 +202,7 @@ def show(
                 header=False,
                 attrs=attrs,
                 depth=depth - 1 if depth else None,
+                detail=detail,
             )
 
         # break or move to next key
