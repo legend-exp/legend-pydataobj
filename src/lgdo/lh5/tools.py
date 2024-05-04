@@ -184,7 +184,7 @@ def show(
                 toprint += f", \x1B[3mshape\x1B[0m {val.shape}"  # noqa: T201
                 toprint += f", \x1B[3mnbytes\x1B[0m {utils.fmtbytes(val.nbytes)}"  # noqa: T201
                 if chunkshape:=val.chunks is None:
-                    toprint += f", \x1B[3mnumchunks\x1B[0m continuous"
+                    toprint += f", \x1B[3mnumchunks\x1B[0m contiguous" # noqa: T201
                 else:
                     toprint += f", \x1B[3mnumchunks\x1B[0m {val.id.get_num_chunks()}"  # noqa: T201
                     toprint += f", \x1B[3mchunkshape\x1B[0m {chunkshape}"  # noqa: T201
