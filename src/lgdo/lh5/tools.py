@@ -188,11 +188,11 @@ def show(
                 else:
                     toprint += f", \x1b[3mnumchunks\x1b[0m {val.id.get_num_chunks()}"
                     toprint += f", \x1b[3mchunkshape\x1b[0m {chunkshape}"
-                toprint += f", \x1b[3mcompression\x1b[0m {val.compression}"  # "
+                toprint += f", \x1b[3mcompression\x1b[0m {val.compression}" 
             except TypeError:
                 toprint += "(scalar)"
 
-            print(toprint)
+            print(toprint)  # noqa: T201
 
         # if it's a group, call this function recursively
         if isinstance(val, h5py.Group):
