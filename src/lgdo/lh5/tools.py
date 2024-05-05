@@ -188,7 +188,7 @@ def show(
                 else:
                     toprint += f", \x1b[3mnumchunks\x1b[0m {val.id.get_num_chunks()}"
                     toprint += f", \x1b[3mchunkshape\x1b[0m {chunkshape}"
-                toprint += f", \x1b[3mcompression\x1b[0m {val.compression}" 
+                toprint += f", \x1b[3mcompression\x1b[0m {val.compression}"
             except TypeError:
                 toprint += "(scalar)"
 
