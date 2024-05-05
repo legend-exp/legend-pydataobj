@@ -183,7 +183,7 @@ def show(
                 toprint += f"\x1b[3mdtype\x1b[0m {val.dtype}"
                 toprint += f", \x1b[3mshape\x1b[0m {val.shape}"
                 toprint += f", \x1b[3mnbytes\x1b[0m {utils.fmtbytes(val.nbytes)}"
-                if chunkshape := val.chunks is None:
+                if (chunkshape := val.chunks) is None:
                     toprint += ", \x1b[3mnumchunks\x1b[0m contiguous"
                 else:
                     toprint += f", \x1b[3mnumchunks\x1b[0m {val.id.get_num_chunks()}"
