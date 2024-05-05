@@ -180,20 +180,20 @@ def show(
                 char = "        "
             toprint = f"{indent}{char}"
             try:
-                toprint += f"\x1B[3mdtype\x1B[0m {val.dtype}"  # noqa: T201
-                toprint += f", \x1B[3mshape\x1B[0m {val.shape}"  # noqa: T201
-                toprint += f", \x1B[3mnbytes\x1B[0m {utils.fmtbytes(val.nbytes)}"  # noqa: T201
-                if chunkshape:=val.chunks is None:
-                    toprint += f", \x1B[3mnumchunks\x1B[0m contiguous" # noqa: T201
+                toprint += f"\x1b[3mdtype\x1b[0m {val.dtype}"
+                toprint += f", \x1b[3mshape\x1b[0m {val.shape}"
+                toprint += f", \x1b[3mnbytes\x1b[0m {utils.fmtbytes(val.nbytes)}"
+                if chunkshape := val.chunks is None:
+                    toprint += ", \x1b[3mnumchunks\x1b[0m contiguous"
                 else:
-                    toprint += f", \x1B[3mnumchunks\x1B[0m {val.id.get_num_chunks()}"  # noqa: T201
-                    toprint += f", \x1B[3mchunkshape\x1B[0m {chunkshape}"  # noqa: T201
-                toprint += f", \x1B[3mcompression\x1B[0m {val.compression}"  # noqa: T201"
+                    toprint += f", \x1b[3mnumchunks\x1b[0m {val.id.get_num_chunks()}"
+                    toprint += f", \x1b[3mchunkshape\x1b[0m {chunkshape}"
+                toprint += f", \x1b[3mcompression\x1b[0m {val.compression}"  # "
             except TypeError:
-                toprint += f"(scalar)"
-            
+                toprint += "(scalar)"
+
             print(toprint)
-                
+
         # if it's a group, call this function recursively
         if isinstance(val, h5py.Group):
             show(
