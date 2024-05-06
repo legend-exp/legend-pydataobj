@@ -52,6 +52,11 @@ def lh5ls(args=None):
         default=None,
         help="""Maximum tree depth of groups to print""",
     )
+    parser.add_argument(
+        "--detail",
+        action="store_true",
+        help="""Print details about datasets""",
+    )
 
     args = parser.parse_args(args)
 
@@ -66,7 +71,13 @@ def lh5ls(args=None):
         print(__version__)  # noqa: T201
         sys.exit()
 
-    lh5.show(args.lh5_file, args.lh5_group, attrs=args.attributes, depth=args.depth)
+    lh5.show(
+        args.lh5_file,
+        args.lh5_group,
+        attrs=args.attributes,
+        depth=args.depth,
+        detail=args.detail,
+    )
 
 
 def lh5concat(args=None):

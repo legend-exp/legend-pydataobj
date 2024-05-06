@@ -221,3 +221,13 @@ def expand_path(
         return paths[0]
 
     return paths
+
+
+# https://stackoverflow.com/a/1094933
+def fmtbytes(num, suffix="B"):
+    """Returns formatted f-string for printing human-readable number of bytes."""
+    for unit in ("", "k", "M", "G", "T", "P", "E", "Z"):
+        if abs(num) < 1024.0:
+            return f"{num:3.1f} {unit}{suffix}"
+        num /= 1024.0
+    return f"{num:.1f} Y{suffix}"
