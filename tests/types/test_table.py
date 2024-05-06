@@ -57,6 +57,22 @@ def test_pandas_df_init():
     assert tbl.b == lgdo.Array([5, 6, 7, 8])
 
 
+def test_ak_array_init():
+    array = ak.Array(
+        {
+            "a": [1, 2, 3, 4],
+            "b": [[1, 2], [3], [4], [5, 6, 7]],
+            "c": {"f1": [[], [5], [3, 7, 6], []], "f2": [5, 6, 7, 8]},
+        }
+    )
+    tbl = Table(array)
+    assert isinstance(tbl.a, lgdo.Array)
+    assert isinstance(tbl.b, lgdo.VectorOfVectors)
+    assert isinstance(tbl.c, Table)
+    assert isinstance(tbl.c.f1, lgdo.VectorOfVectors)
+    assert isinstance(tbl.c.f2, lgdo.Array)
+
+
 def test_datatype_name():
     tbl = Table()
     assert tbl.datatype_name() == "table"

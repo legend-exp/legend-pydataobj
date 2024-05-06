@@ -42,9 +42,9 @@ class Table(Struct):
 
     def __init__(
         self,
-        col_dict: dict[str, LGDO] | None = None,
+        col_dict: Mapping[str, LGDO] | pd.DataFrame | ak.Array | None = None,
         size: int | None = None,
-        attrs: dict[str, Any] | None = None,
+        attrs: Mapping[str, Any] | None = None,
     ) -> None:
         r"""
         Parameters
@@ -56,11 +56,14 @@ class Table(Struct):
             determined from the length of the first array in `col_dict`. If
             neither is provided, a default length of 1024 is used.
         col_dict
-            instantiate this table using the supplied named array-like LGDO's.
-            Note 1: no copy is performed, the objects are used directly.
-            Note 2: if `size` is not ``None``, all arrays will be resized to
-            match it.  Note 3: if the arrays have different lengths, all will
-            be resized to match the length of the first array.
+            instantiate this table using the supplied mapping of column names
+            and array-like objects. Supported input types are: mapping of
+            strings to LGDOs, :class:`pd.DataFrame` and :class:`ak.Array`.
+            Note 1: no copy is performed, the objects are used directly (unless
+            :class:`ak.Array` is provided).  Note 2: if `size` is not ``None``,
+            all arrays will be resized to match it.  Note 3: if the arrays have
+            different lengths, all will be resized to match the length of the
+            first array.
         attrs
             A set of user attributes to be carried along with this LGDO.
 
@@ -71,6 +74,9 @@ class Table(Struct):
         if isinstance(col_dict, pd.DataFrame):
             col_dict = {k: Array(v) for k, v in col_dict.items()}
 
+        if isinstance(col_dict, ak.Array):
+            col_dict = _ak_to_lgdo_or_col_dict(col_dict)
+
         # call Struct constructor
         super().__init__(obj_dict=col_dict, attrs=attrs)
 
@@ -78,8 +84,7 @@ class Table(Struct):
         # if size is also supplied, resize all fields to match it
         # otherwise, warn if the supplied fields have varying size
         if col_dict is not None and len(col_dict) > 0:
-            do_warn = size is None
-            self.resize(new_size=size, do_warn=do_warn)
+            self.resize(new_size=size, do_warn=(size is None))
 
         # if no col_dict, just set the size (default to 1024)
         else:
@@ -483,3 +488,11 @@ class Table(Struct):
 
         msg = f"{library!r} is not a supported third-party format."
         raise TypeError(msg)
+
+
+def _ak_to_lgdo_or_col_dict(array: ak.Array):
+    if array.layout.is_record:
+        return {field: _ak_to_lgdo_or_col_dict(array[field]) for field in array.fields}
+    if array.layout.is_numpy:
+        return Array(ak.to_numpy(array))
+    return VectorOfVectors(array)
