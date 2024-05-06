@@ -491,8 +491,8 @@ class Table(Struct):
 
 
 def _ak_to_lgdo_or_col_dict(array: ak.Array):
-    if array.layout.is_record:
+    if isinstance(array.type.content, ak.types.RecordType):
         return {field: _ak_to_lgdo_or_col_dict(array[field]) for field in array.fields}
-    if array.layout.is_numpy:
+    if isinstance(array.type.content, ak.types.NumpyType):
         return Array(ak.to_numpy(array))
     return VectorOfVectors(array)
