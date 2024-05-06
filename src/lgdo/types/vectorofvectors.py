@@ -302,26 +302,23 @@ class VectorOfVectors(LGDO):
          [3],
         ]
         """
-        if self.ndim == 2:
-            vidx = self.cumulative_length
-            old_s = len(self)
-            dlen = new_size - old_s
-            csum = vidx[-1] if len(self) > 0 else 0
+        vidx = self.cumulative_length
+        old_s = len(self)
+        dlen = new_size - old_s
+        csum = vidx[-1] if len(self) > 0 else 0
 
-            # first resize the cumulative length
-            self.cumulative_length.resize(new_size)
+        # first resize the cumulative length
+        self.cumulative_length.resize(new_size)
 
-            # if new_size > size, new elements are filled with zeros, let's fix
-            # that
-            if dlen > 0:
-                self.cumulative_length[old_s:] = csum
+        # if new_size > size, new elements are filled with zeros, let's fix
+        # that
+        if dlen > 0:
+            self.cumulative_length[old_s:] = csum
 
-            # then resize the data array
-            # if dlen > 0 this has no effect
-            if len(self.cumulative_length) > 0:
-                self.flattened_data.resize(self.cumulative_length[-1])
-        else:
-            raise NotImplementedError
+        # then resize the data array
+        # if dlen > 0 this has no effect
+        if len(self.cumulative_length) > 0:
+            self.flattened_data.resize(self.cumulative_length[-1])
 
     def append(self, new: NDArray) -> None:
         """Append a 1D vector `new` at the end.

@@ -174,20 +174,37 @@ def test_getitem(testvov):
 
 
 def test_resize(testvov):
-    testvov = testvov.v2d
+    vov = testvov.v2d
 
-    testvov.resize(3)
-    assert ak.is_valid(testvov.view_as("ak"))
-    assert len(testvov.cumulative_length) == 3
-    assert len(testvov.flattened_data) == testvov.cumulative_length[-1]
-    assert testvov == VectorOfVectors([[1, 2], [3, 4, 5], [2]])
+    vov.resize(3)
+    assert ak.is_valid(vov.view_as("ak"))
+    assert len(vov.cumulative_length) == 3
+    assert len(vov.flattened_data) == vov.cumulative_length[-1]
+    assert vov == VectorOfVectors([[1, 2], [3, 4, 5], [2]])
 
-    testvov.resize(5)
-    assert ak.is_valid(testvov.view_as("ak"))
-    assert len(testvov) == 5
-    assert len(testvov[3]) == 0
-    assert len(testvov[4]) == 0
-    assert testvov == VectorOfVectors([[1, 2], [3, 4, 5], [2], [], []])
+    vov.resize(5)
+    assert ak.is_valid(vov.view_as("ak"))
+    assert len(vov) == 5
+    assert len(vov[3]) == 0
+    assert len(vov[4]) == 0
+    assert vov == VectorOfVectors([[1, 2], [3, 4, 5], [2], [], []])
+
+    vov = testvov.v3d
+
+    vov.resize(3)
+    assert ak.is_valid(vov.view_as("ak"))
+    assert len(vov.cumulative_length) == 3
+    assert len(vov.flattened_data) == vov.cumulative_length[-1]
+    assert vov == VectorOfVectors(
+        [[[1, 2], [3, 4, 5]], [[2], [4, 8, 9, 7]], [[5, 3, 1]]]
+    )
+
+    vov.resize(5)
+    assert ak.is_valid(vov.view_as("ak"))
+    assert len(vov) == 5
+    assert vov == VectorOfVectors(
+        [[[1, 2], [3, 4, 5]], [[2], [4, 8, 9, 7]], [[5, 3, 1]], [], []]
+    )
 
     v = VectorOfVectors(dtype="i")
     v.resize(3)
