@@ -180,15 +180,15 @@ def show(
                 char = "        "
             toprint = f"{indent}{char}"
             try:
-                toprint += f"\x1b[3mdtype\x1b[0m {val.dtype}"
-                toprint += f", \x1b[3mshape\x1b[0m {val.shape}"
-                toprint += f", \x1b[3mnbytes\x1b[0m {utils.fmtbytes(val.nbytes)}"
+                toprint += f"\033[3mdtype\033[0m={val.dtype}"
+                toprint += f", \033[3mshape\033[0m={val.shape}"
+                toprint += f", \033[3mnbytes\033[0m={utils.fmtbytes(val.nbytes)}"
                 if (chunkshape := val.chunks) is None:
-                    toprint += ", \x1b[3mnumchunks\x1b[0m contiguous"
+                    toprint += ", \033[3mnumchunks\033[0m=contiguous"
                 else:
-                    toprint += f", \x1b[3mnumchunks\x1b[0m {val.id.get_num_chunks()}"
-                    toprint += f", \x1b[3mchunkshape\x1b[0m {chunkshape}"
-                toprint += f", \x1b[3mcompression\x1b[0m {val.compression}"
+                    toprint += f", \033[3mnumchunks\033[0m={val.id.get_num_chunks()}"
+                    toprint += f", \033[3mchunkshape\033[0m={chunkshape}"
+                toprint += f", \033[3mcompression\033[0m={val.compression}"
             except TypeError:
                 toprint += "(scalar)"
 
