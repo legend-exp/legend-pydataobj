@@ -32,7 +32,20 @@ def test_init():
         lgdo.Struct(obj_dict={"scalar1": 1})
 
     with pytest.raises(ValueError):
-        lgdo.Struct(obj_dict={"scalar1": lgdo.Scalar(value=10)})
+        lgdo.Struct(obj_dict={"scalar1": lgdo.Scalar(value=10), "thing": int})
+
+
+def test_init_nested():
+    obj_dict = {
+        "scalar1": lgdo.Scalar(10),
+        "struct1": {"field1": lgdo.Scalar(11), "field2": lgdo.Array([1, 2, 3, 4])},
+    }
+    struct = lgdo.Struct(obj_dict)
+    assert isinstance(struct.struct1, lgdo.Struct)
+    assert isinstance(struct.struct1.field1, lgdo.Scalar)
+    assert struct.struct1.field1.value == 11
+    assert isinstance(struct.struct1.field2, lgdo.Array)
+    assert struct.struct1.field2 == lgdo.Array([1, 2, 3, 4])
 
 
 def test_add_field():

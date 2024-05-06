@@ -31,6 +31,22 @@ def test_init():
     assert tbl.size == 3
 
 
+def test_init_nested():
+    col_dict = {
+        "a": lgdo.Array(nda=np.array([1, 2, 3, 4])),
+        "b": lgdo.Array(nda=np.array([5, 6, 7, 8])),
+        "c": {
+            "f1": lgdo.Array([1, 2, 3, 4]),
+            "f2": lgdo.Array([1, 2, 3, 4]),
+        },
+    }
+
+    tbl = Table(col_dict=col_dict)
+    assert isinstance(tbl.c, Table)
+    assert isinstance(tbl.c.f1, lgdo.Array)
+    assert tbl.c.f1 == lgdo.Array([1, 2, 3, 4])
+
+
 def test_pandas_df_init():
     df = pd.DataFrame({"a": [1, 2, 3, 4], "b": [5, 6, 7, 8]})
     tbl = Table(col_dict=df)
