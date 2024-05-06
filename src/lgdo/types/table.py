@@ -42,8 +42,8 @@ class Table(Struct):
 
     def __init__(
         self,
-        size: int | None = None,
         col_dict: dict[str, LGDO] | None = None,
+        size: int | None = None,
         attrs: dict[str, Any] | None = None,
     ) -> None:
         r"""
@@ -71,6 +71,7 @@ class Table(Struct):
         if isinstance(col_dict, pd.DataFrame):
             col_dict = {k: Array(v) for k, v in col_dict.items()}
 
+        # call Struct constructor
         super().__init__(obj_dict=col_dict, attrs=attrs)
 
         # if col_dict is not empty, set size according to it
