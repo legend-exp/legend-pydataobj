@@ -6,6 +6,7 @@ utilities.
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping
 from typing import Any
 
 import numpy as np
@@ -24,8 +25,8 @@ class Struct(LGDO, dict):
 
     def __init__(
         self,
-        obj_dict: dict[str, LGDO] | None = None,
-        attrs: dict[str, Any] | None = None,
+        obj_dict: Mapping[str, LGDO] | None = None,
+        attrs: Mapping[str, Any] | None = None,
     ) -> None:
         """
         Parameters
@@ -37,8 +38,25 @@ class Struct(LGDO, dict):
             a set of user attributes to be carried along with this LGDO.
         """
         if obj_dict is not None:
-            self.update(obj_dict)
+            for k, v in obj_dict.items():
+                # check if value is another mapping-like object
+                # initialize another struct (or derived class) in such a case
+                if not isinstance(v, LGDO) and isinstance(v, Mapping):
+                    # NOTE: calling self.__new__() and then self.__init__() allows for polymorphism
+                    # but is there a better way?
+                    nested = self.__new__(type(self), v)
+                    nested.__init__(v)
+                    super().update({k: nested})
+                else:
+                    # otherwise object must be an LGDO
+                    if not isinstance(v, LGDO):
+                        msg = f"value of '{k}' ({v!r}) is not an LGDO or a dictionary"
+                        raise ValueError(msg)
 
+                    # assign
+                    super().update({k: v})
+
+        # call LGDO constructor to setup attributes
         super().__init__(attrs)
 
     def datatype_name(self) -> str:

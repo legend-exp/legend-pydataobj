@@ -31,6 +31,48 @@ def test_init():
     assert tbl.size == 3
 
 
+def test_init_nested():
+    col_dict = {
+        "a": lgdo.Array(nda=np.array([1, 2, 3, 4])),
+        "b": lgdo.Array(nda=np.array([5, 6, 7, 8])),
+        "c": {
+            "f1": lgdo.Array([1, 2, 3, 4]),
+            "f2": lgdo.Array([1, 2, 3, 4]),
+        },
+    }
+
+    tbl = Table(col_dict=col_dict)
+    assert isinstance(tbl.c, Table)
+    assert isinstance(tbl.c.f1, lgdo.Array)
+    assert tbl.c.f1 == lgdo.Array([1, 2, 3, 4])
+
+
+def test_pandas_df_init():
+    df = pd.DataFrame({"a": [1, 2, 3, 4], "b": [5, 6, 7, 8]})
+    tbl = Table(col_dict=df)
+    assert sorted(tbl.keys()) == ["a", "b"]
+    assert isinstance(tbl.a, lgdo.Array)
+    assert isinstance(tbl.b, lgdo.Array)
+    assert tbl.a == lgdo.Array([1, 2, 3, 4])
+    assert tbl.b == lgdo.Array([5, 6, 7, 8])
+
+
+def test_ak_array_init():
+    array = ak.Array(
+        {
+            "a": [1, 2, 3, 4],
+            "b": [[1, 2], [3], [4], [5, 6, 7]],
+            "c": {"f1": [[], [5], [3, 7, 6], []], "f2": [5, 6, 7, 8]},
+        }
+    )
+    tbl = Table(array)
+    assert isinstance(tbl.a, lgdo.Array)
+    assert isinstance(tbl.b, lgdo.VectorOfVectors)
+    assert isinstance(tbl.c, Table)
+    assert isinstance(tbl.c.f1, lgdo.VectorOfVectors)
+    assert isinstance(tbl.c.f2, lgdo.Array)
+
+
 def test_datatype_name():
     tbl = Table()
     assert tbl.datatype_name() == "table"
@@ -95,7 +137,7 @@ def test_join():
 
 
 def test_view_as():
-    tbl = Table(3)
+    tbl = Table(size=3)
     tbl.add_column("a", lgdo.Array(np.array([1, 2, 3]), attrs={"units": "m"}))
     tbl.add_column("b", lgdo.Array(np.array([[0, 1, 2], [3, 4, 5], [6, 7, 8]])))
     tbl.add_column(
