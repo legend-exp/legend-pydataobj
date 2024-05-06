@@ -71,7 +71,13 @@ def lh5ls(args=None):
         print(__version__)  # noqa: T201
         sys.exit()
 
-    lh5.show(args.lh5_file, args.lh5_group, attrs=args.attributes, depth=args.depth, detail=args.detail)
+    lh5.show(
+        args.lh5_file,
+        args.lh5_group,
+        attrs=args.attributes,
+        depth=args.depth,
+        detail=args.detail,
+    )
 
 
 def lh5concat(args=None):
