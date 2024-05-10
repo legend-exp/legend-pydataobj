@@ -188,7 +188,6 @@ def show(
                 else:
                     toprint += f", \033[3mnumchunks\033[0m={val.id.get_num_chunks()}"
                     toprint += f", \033[3mchunkshape\033[0m={chunkshape}"
-                toprint += f", \033[3mcompression\033[0m={val.compression}"
                 toprint += f", \033[3mfilters\033[0m="
 
                 numfilters = val.id.get_create_plist().get_nfilters()
