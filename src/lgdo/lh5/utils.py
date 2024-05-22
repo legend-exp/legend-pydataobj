@@ -2,12 +2,25 @@
 
 from __future__ import annotations
 
+from functools import reduce
 import glob
+import json
 import logging
+import operator
 import os
 import string
+import sys
 from collections.abc import Mapping, Sequence
 from typing import Any
+
+# https://stackoverflow.com/a/30316760
+from types import ModuleType, FunctionType
+from gc import get_referents
+
+# Custom objects know their class.
+# Function objects seem to know way too much, including modules.
+# Exclude modules as well.
+BLACKLIST = type, ModuleType, FunctionType
 
 import h5py
 
@@ -231,3 +244,90 @@ def fmtbytes(num, suffix="B"):
             return f"{num:3.1f} {unit}{suffix}"
         num /= 1024.0
     return f"{num:.1f} Y{suffix}"
+
+# https://stackoverflow.com/a/14692747
+def getFromDict(dataDict, mapList):
+    if not mapList:
+        return dataDict
+    return reduce(operator.getitem, mapList, dataDict)
+
+# https://stackoverflow.com/a/30316760
+def getsize(obj):
+    """sum size of object & members."""
+    if isinstance(obj, BLACKLIST):
+        raise TypeError('getsize() does not take argument of type: '+ str(type(obj)))
+    seen_ids = set()
+    size = 0
+    objects = [obj]
+    while objects:
+        need_referents = []
+        for obj in objects:
+            if not isinstance(obj, BLACKLIST) and id(obj) not in seen_ids:
+                seen_ids.add(id(obj))
+                size += sys.getsizeof(obj)
+                need_referents.append(obj)
+        objects = get_referents(*need_referents)
+    return size
+
+# function is recursive
+def get_metadata(
+    lh5_file: str | h5py.Group | h5py.File,
+    build: bool = True,
+    force: bool = False,
+    metadata: dict = {}, 
+    base: str = "/", 
+) -> dict:
+    """Get metadata from an LH5 file.
+
+    The `"metadata"` `Dataset` contains a `dict` (stored as a JSON string) of the `Attributes` of all `Datasets` 
+    and `Groups` in the  `LH5` file. The structure of the `dict` matches the structure of the `LH5` file. It is used
+    for much faster loading of attributes. 
+    
+    If the `"metadata"` `Dataset` is not found in the file, then the `dict` is generated from the `LH5` file itself by
+    default, controlled by the `build` flag. 
+
+    If the `"metadata"` `Dataset` is not found in the file and the metadata is not built, then `None` is returned.
+
+    Parameters
+    ----------
+    lh5_file
+        path to an `LH5` file
+    build
+        whether to build the metadata from the file if the `"metadata"` `Dataset` is not found; default is `True`
+    force
+        whether to ignore the `"metadata"` `Dataset` and build a `dict` from the file instead; default is `False`. 
+        Ignores the `build` flag.
+    """
+
+    # open file
+    if isinstance(lh5_file, str):
+        lh5_file = h5py.File(expand_path(lh5_file), "r")
+
+    # looks for "metadata" dataset and uses it if it exists
+    # or you can force it to loop over the file to build it instead
+    if not force and 'metadata' in lh5_file:
+        log.debug(
+            f"metadata found in {lh5_file.filename}"
+        )
+        return json.loads(lh5_file['metadata'][()])
+    elif build or force:
+        # this is the recursive bit
+        log.debug(
+            f"metadata not found in {lh5_file.filename}, building it instead"
+        )
+        for obj in lh5_file:
+            metadata[obj] = {}
+
+            metadata[obj]['attrs'] = {}
+            for attr in lh5_file[base+obj].attrs:
+                metadata[obj]['attrs'][attr] = lh5_file[base+obj].attrs[attr]
+
+            if isinstance(lh5_file[obj], h5py.Group):
+                get_metadata(lh5_file[base+obj], metadata=metadata[obj], base=base+obj+'/')
+    else:
+        log.debug(
+            f"metadata not found in {lh5_file.filename} and did not build it"
+        )
+        return None
+        
+    return metadata

@@ -45,6 +45,7 @@ def _h5_read_encoded_array(
     obj_buf=None,
     obj_buf_start=0,
     decompress=True,
+    metadata=None,
 ):
     if lgdotype not in (ArrayOfEncodedEqualSizedArrays, VectorOfEncodedVectors):
         msg = f"unsupported read of encoded type {lgdotype.__name__}"
@@ -70,6 +71,7 @@ def _h5_read_encoded_array(
             use_h5idx=use_h5idx,
             obj_buf=None if decompress else decoded_size_buf,
             obj_buf_start=0 if decompress else obj_buf_start,
+            metadata=metadata["decoded_size"] if metadata is not None else None,
         )
 
     else:
@@ -77,6 +79,7 @@ def _h5_read_encoded_array(
             f"{name}/decoded_size",
             h5f,
             obj_buf=None if decompress else decoded_size_buf,
+            metadata=metadata["decoded_size"] if metadata is not None else None,
         )
 
     # read out encoded_data, a VectorOfVectors
@@ -89,17 +92,23 @@ def _h5_read_encoded_array(
         use_h5idx=use_h5idx,
         obj_buf=None if decompress else encoded_data_buf,
         obj_buf_start=0 if decompress else obj_buf_start,
+        metadata=metadata["encoded_data"] if metadata is not None else None,
     )
 
     # return the still encoded data in the buffer object, if there
     if obj_buf is not None and not decompress:
         return obj_buf, n_rows_read
 
+    if metadata is not None:
+        attrs = metadata["attrs"]
+    else:
+        attrs = h5f[name].attrs
+
     # otherwise re-create the encoded LGDO
     rawdata = lgdotype(
         encoded_data=encoded_data,
         decoded_size=decoded_size,
-        attrs=h5f[name].attrs,
+        attrs=attrs,
     )
 
     # already return if no decompression is requested

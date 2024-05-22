@@ -28,6 +28,7 @@ def _h5_read_vector_of_vectors(
     use_h5idx=False,
     obj_buf=None,
     obj_buf_start=0,
+    metadata=None,
 ):
     if obj_buf is not None and not isinstance(obj_buf, VectorOfVectors):
         msg = "object buffer is not a VectorOfVectors"
@@ -44,6 +45,7 @@ def _h5_read_vector_of_vectors(
         use_h5idx=use_h5idx,
         obj_buf=cumulen_buf,
         obj_buf_start=obj_buf_start,
+        metadata=metadata["cumulative_length"] if metadata is not None else None,
     )
     # get a view of just what was read out for cleaner code below
     this_cumulen_nda = cumulative_length.nda[
@@ -70,6 +72,7 @@ def _h5_read_vector_of_vectors(
             idx=idx2,
             use_h5idx=use_h5idx,
             obj_buf=None,
+            metadata=metadata["cumulative_length"] if metadata is not None else None,
         )
         fd_starts = fd_starts.nda  # we just need the nda
         if fd_start is None:
@@ -146,8 +149,13 @@ def _h5_read_vector_of_vectors(
         if len(fd_buf) < fdb_size:
             fd_buf.resize(fdb_size)
 
+    if metadata is not None:
+        datatype = metadata["flattened_data"]["attrs"]["datatype"]
+    else:
+        datatype = h5f[f"{name}/flattened_data"].attrs["datatype"]
+
     # now read
-    lgdotype = dtypeutils.datatype(h5f[f"{name}/flattened_data"].attrs["datatype"])
+    lgdotype = dtypeutils.datatype(datatype)
     if lgdotype is Array:
         _func = _h5_read_array
     elif lgdotype is VectorOfVectors:
@@ -165,6 +173,7 @@ def _h5_read_vector_of_vectors(
         use_h5idx=use_h5idx,
         obj_buf=fd_buf,
         obj_buf_start=fd_buf_start,
+        metadata=metadata["flattened_data"] if metadata is not None else None,
     )
 
     if obj_buf is not None:
@@ -176,11 +185,16 @@ def _h5_read_vector_of_vectors(
 
         return obj_buf, n_rows_read
 
+    if metadata is not None:
+        attrs = metadata["attrs"]
+    else:
+        attrs = h5f[name].attrs
+
     return (
         VectorOfVectors(
             flattened_data=flattened_data,
             cumulative_length=cumulative_length,
-            attrs=h5f[name].attrs,
+            attrs=attrs,
         ),
         n_rows_read,
     )

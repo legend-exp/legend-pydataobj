@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import fnmatch
+import h5py
 import logging
 import sys
 
@@ -298,3 +299,55 @@ Exclude the /data/table1/col1 Table column:
                 _inplace_table_filter(name, obj, obj_list)
 
             store.write(obj, name, args.output, wo_mode="append")
+
+def lh5meta(args=None):
+    """Re-builds `metadata"` `Dataset` for an LH5 file."""
+    parser = argparse.ArgumentParser(
+        prog="makemetadata", description="re-builds `'metadata'` `Dataset` for an LH5 file."
+    )   
+
+    # global options
+    parser.add_argument(
+        "--version",
+        action="store_true",
+        help="""Print legend-pydataobj version and exit""",
+    )
+    parser.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="""Increase the program verbosity""",
+    )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="""Increase the program verbosity to maximum""",
+    )
+
+    parser.add_argument(
+    "lh5_file",
+    help="""Input LH5 file""",
+    )  
+
+    args = parser.parse_args(args) 
+
+    if args.verbose:
+        lgdogging.setup(logging.DEBUG)
+    elif args.debug:
+        lgdogging.setup(logging.DEBUG, logging.root)
+    else:
+        lgdogging.setup()
+    
+    if args.version:
+        print(__version__)  # noqa: T201
+        sys.exit()
+
+    with h5py.File(args.lh5_file, mode='a') as f:
+        if 'metadata' in f:
+            del f['metadata']
+        metadata = lh5.utils.get_metadata(lh5_file=args.lh5_file, force=True)
+        jsontowrite = str(metadata).replace("'", "\"")
+        f.create_dataset(f'metadata', dtype=f'S{len(str(jsontowrite))}', data=str(jsontowrite))
+        f['metadata'].attrs['datatype'] = 'JSON'
+    
+    return

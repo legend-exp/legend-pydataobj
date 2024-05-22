@@ -22,7 +22,7 @@ from ....types import (
 )
 from ... import datatype as dtypeutils
 from ...exceptions import LH5DecodeError
-from ...utils import read_n_rows
+# from ...utils import read_n_rows, getFromDict
 from . import utils
 from .array import (
     _h5_read_array,
@@ -50,52 +50,59 @@ def _h5_read_lgdo(
     obj_buf=None,
     obj_buf_start=0,
     decompress=True,
+    metadata=None, # dict
 ):
-    # Handle list-of-files recursively
-    if not isinstance(h5f, (str, h5py.File)):
-        lh5_file = list(h5f)
-        n_rows_read = 0
+    # # Handle list-of-files recursively
+    # if not isinstance(h5f, (str, h5py.File)):
+    #     lh5_file = list(h5f)
+    #     n_rows_read = 0
 
-        for i, h5f in enumerate(lh5_file):
-            if isinstance(idx, list) and len(idx) > 0 and not np.isscalar(idx[0]):
-                # a list of lists: must be one per file
-                idx_i = idx[i]
-            elif idx is not None:
-                # make idx a proper tuple if it's not one already
-                if not (isinstance(idx, tuple) and len(idx) == 1):
-                    idx = (idx,)
-                # idx is a long continuous array
-                n_rows_i = read_n_rows(name, h5f)
-                # find the length of the subset of idx that contains indices
-                # that are less than n_rows_i
-                n_rows_to_read_i = bisect.bisect_left(idx[0], n_rows_i)
-                # now split idx into idx_i and the remainder
-                idx_i = (idx[0][:n_rows_to_read_i],)
-                idx = (idx[0][n_rows_to_read_i:] - n_rows_i,)
-            else:
-                idx_i = None
-            n_rows_i = n_rows - n_rows_read
+    #     for i, h5f in enumerate(lh5_file):
+    #         if isinstance(idx, list) and len(idx) > 0 and not np.isscalar(idx[0]):
+    #             # a list of lists: must be one per file
+    #             idx_i = idx[i]
+    #         elif idx is not None:
+    #             # make idx a proper tuple if it's not one already
+    #             if not (isinstance(idx, tuple) and len(idx) == 1):
+    #                 idx = (idx,)
+    #             # idx is a long continuous array
+    #             n_rows_i = read_n_rows(name, h5f)
+    #             # find the length of the subset of idx that contains indices
+    #             # that are less than n_rows_i
+    #             n_rows_to_read_i = bisect.bisect_left(idx[0], n_rows_i)
+    #             # now split idx into idx_i and the remainder
+    #             idx_i = (idx[0][:n_rows_to_read_i],)
+    #             idx = (idx[0][n_rows_to_read_i:] - n_rows_i,)
+    #         else:
+    #             idx_i = None
+    #         n_rows_i = n_rows - n_rows_read
 
-            obj_buf, n_rows_read_i = _h5_read_lgdo(
-                name,
-                h5f,
-                start_row=start_row,
-                n_rows=n_rows_i,
-                idx=idx_i,
-                use_h5idx=use_h5idx,
-                field_mask=field_mask,
-                obj_buf=obj_buf,
-                obj_buf_start=obj_buf_start,
-                decompress=decompress,
-            )
+    #         metadata = load_metadata(h5f) 
+    #         # just get the relevant subset of metadata now
+    #         if metadata is not None:
+    #             metadata = getFromDict(metadata, list(filter(None, name.strip('/').split('/'))))            
 
-            n_rows_read += n_rows_read_i
-            if n_rows_read >= n_rows or obj_buf is None:
-                return obj_buf, n_rows_read
-            start_row = 0
-            obj_buf_start += n_rows_read_i
+    #         obj_buf, n_rows_read_i = _h5_read_lgdo(
+    #             name,
+    #             h5f,
+    #             start_row=start_row,
+    #             n_rows=n_rows_i,
+    #             idx=idx_i,
+    #             use_h5idx=use_h5idx,
+    #             field_mask=field_mask,
+    #             obj_buf=obj_buf,
+    #             obj_buf_start=obj_buf_start,
+    #             decompress=decompress,
+    #             metadata=metadata,
+    #         )
 
-        return obj_buf, n_rows_read
+    #         n_rows_read += n_rows_read_i
+    #         if n_rows_read >= n_rows or obj_buf is None:
+    #             return obj_buf, n_rows_read
+    #         start_row = 0
+    #         obj_buf_start += n_rows_read_i
+
+    #     return obj_buf, n_rows_read
 
     if not isinstance(h5f, h5py.File):
         h5f = h5py.File(h5f, mode="r")
@@ -109,17 +116,33 @@ def _h5_read_lgdo(
     if not (isinstance(idx, tuple) and len(idx) == 1) and idx is not None:
         idx = (idx,)
 
-    try:
-        lgdotype = dtypeutils.datatype(h5f[name].attrs["datatype"])
-    except KeyError as e:
-        msg = "dataset not in file or missing 'datatype' attribute"
-        raise LH5DecodeError(msg, h5f, name) from e
+
+    # this needs to be done for the requested object
+    if metadata is not None:
+        try:
+            lgdotype = dtypeutils.datatype(metadata['attrs']["datatype"])
+            log.debug(
+                f"{name}.attrs.datatype found in metadata"
+            )
+        except KeyError as e:
+            log.debug(
+                f"metadata key error in {h5f.filename}: {e} - will attempt to use file directly instead"
+            )
+            metadata = None
+
+    if metadata is None:
+        try:
+            lgdotype = dtypeutils.datatype(h5f[name].attrs["datatype"])
+        except KeyError as e:
+            msg = "dataset not in file or missing 'datatype' attribute"
+            raise LH5DecodeError(msg, h5f, name) from e
 
     if lgdotype is Scalar:
         return _h5_read_scalar(
             name,
             h5f,
             obj_buf=obj_buf,
+            metadata=metadata,
         )
 
     # check field_mask and make it a default dict
@@ -146,6 +169,7 @@ def _h5_read_lgdo(
             use_h5idx=use_h5idx,
             field_mask=field_mask,
             decompress=decompress,
+            metadata=metadata,
         )
 
     # Below here is all array-like types. So trim idx if needed
@@ -174,6 +198,7 @@ def _h5_read_lgdo(
             obj_buf=obj_buf,
             obj_buf_start=obj_buf_start,
             decompress=decompress,
+            metadata=metadata,
         )
 
     if lgdotype is ArrayOfEncodedEqualSizedArrays:
@@ -187,6 +212,7 @@ def _h5_read_lgdo(
             obj_buf=obj_buf,
             obj_buf_start=obj_buf_start,
             decompress=decompress,
+            metadata=metadata,
         )
 
     if lgdotype is VectorOfEncodedVectors:
@@ -200,6 +226,7 @@ def _h5_read_lgdo(
             obj_buf=obj_buf,
             obj_buf_start=obj_buf_start,
             decompress=decompress,
+            metadata=metadata,
         )
 
     if lgdotype is VectorOfVectors:
@@ -212,6 +239,7 @@ def _h5_read_lgdo(
             use_h5idx=use_h5idx,
             obj_buf=obj_buf,
             obj_buf_start=obj_buf_start,
+            metadata=metadata,
         )
 
     if lgdotype is FixedSizeArray:
@@ -224,6 +252,7 @@ def _h5_read_lgdo(
             use_h5idx=use_h5idx,
             obj_buf=obj_buf,
             obj_buf_start=obj_buf_start,
+            metadata=metadata,
         )
 
     if lgdotype is ArrayOfEqualSizedArrays:
@@ -236,6 +265,7 @@ def _h5_read_lgdo(
             use_h5idx=use_h5idx,
             obj_buf=obj_buf,
             obj_buf_start=obj_buf_start,
+            metadata=metadata,
         )
 
     if lgdotype is Array:
@@ -248,6 +278,7 @@ def _h5_read_lgdo(
             use_h5idx=use_h5idx,
             obj_buf=obj_buf,
             obj_buf_start=obj_buf_start,
+            metadata=metadata,
         )
 
     msg = f"no rule to decode {lgdotype.__name__} from LH5"
@@ -263,13 +294,17 @@ def _h5_read_struct(
     use_h5idx=False,
     field_mask=None,
     decompress=True,
+    metadata=None,
 ):
     # TODO: it's strange to pass start_row, n_rows, idx to struct
     # fields. If they all had shared indexing, they should be in a
     # table... Maybe should emit a warning? Or allow them to be
     # dicts keyed by field name?
 
-    attrs = dict(h5f[name].attrs)
+    if metadata is not None:
+        attrs = metadata["attrs"]
+    else:
+        attrs = dict(h5f[name].attrs)
 
     # determine fields to be read out
     all_fields = dtypeutils.get_struct_fields(attrs["datatype"])
@@ -295,6 +330,7 @@ def _h5_read_struct(
             idx=idx,
             use_h5idx=use_h5idx,
             decompress=decompress,
+            metadata=metadata[field_key] if metadata is not None else None,
         )
 
     return Struct(obj_dict=obj_dict, attrs=attrs), 1
@@ -311,12 +347,16 @@ def _h5_read_table(
     obj_buf=None,
     obj_buf_start=0,
     decompress=True,
+    metadata=None,
 ):
     if obj_buf is not None and not isinstance(obj_buf, Table):
         msg = "provided object buffer is not a Table"
         raise LH5DecodeError(msg, h5f, name)
 
-    attrs = dict(h5f[name].attrs)
+    if metadata is not None:
+        attrs = metadata["attrs"]
+    else:
+        attrs = dict(h5f[name].attrs)
 
     # determine fields to be read out
     all_fields = dtypeutils.get_struct_fields(attrs["datatype"])
@@ -351,6 +391,7 @@ def _h5_read_table(
             obj_buf=fld_buf,
             obj_buf_start=obj_buf_start,
             decompress=decompress,
+            metadata=metadata[field] if metadata is not None else None,
         )
 
         if obj_buf is not None and obj_buf_start + n_rows_read > len(obj_buf):
