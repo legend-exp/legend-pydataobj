@@ -323,7 +323,15 @@ def get_metadata(
 
     # open file
     if isinstance(lh5_file, str):
-        lh5_file = h5py.File(expand_path(lh5_file), "r")
+        # expand_path gives an error if file does not exist
+        try: 
+            fullpath = expand_path(lh5_file)
+        except FileNotFoundError:
+            log.debug(
+                f"{lh5_file} does not exist, metadata is None"
+            )
+            return None
+        lh5_file = h5py.File(fullpath, "r")
 
     # looks for "metadata" dataset and uses it if it exists
     # or you can force it to loop over the file to build it instead

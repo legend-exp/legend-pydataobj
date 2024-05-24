@@ -161,9 +161,6 @@ class LH5Store:
         else:
             lh5_file = self.gimme_file(lh5_file, "r")
             metadata = self.load_metadata(lh5_file, name) 
-            # # just get the relevant subset of metadata now
-            # if metadata is not None:
-            #     metadata = utils.getFromDict(metadata, list(filter(None, name.strip('/').split('/'))))
 
         h5f = lh5_file
         # Handle list-of-files recursively - how about no?
