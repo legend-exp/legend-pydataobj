@@ -277,6 +277,38 @@ class LH5Store:
             **h5py_kwargs,
         )
 
+    def write_metadata(
+        self,
+        lh5_file: str | h5py.File | list,
+    ) -> None:
+        """Writes the `"metadata"` dataset to an LH5 file. Gathers the metadata from the file and writes it.
+        Overwrites any existing `"metadata"` dataset. Takes an LH5 file, path to file, or list of either.
+
+        Call this method after you are finished writing to a file in order to make reading from the file faster.
+        It takes some time to build the metadata so it is best to call this when you are done writing.
+        """
+
+        # grab files from store
+        if not isinstance(lh5_file, (str, h5py.File)):
+            lh5_files = [self.gimme_file(f, "a") for f in list(lh5_file)]
+        else:
+            lh5_files = [self.gimme_file(lh5_file, "a")]
+
+        for lh5_file in lh5_files:
+            # delete the old metadata if it exists
+            if "metadata" in lh5_file:
+                del lh5_file["metadata"]
+            
+            # get the new metadata from the file
+            metadata = utils.get_metadata(lh5_file=lh5_file, force=True)
+
+            # write the metadata as a JSON string
+            jsontowrite = str(metadata).replace("'", "\"")
+            lh5_file.create_dataset(f'metadata', dtype=f'S{len(str(jsontowrite))}', data=str(jsontowrite))
+            lh5_file['metadata'].attrs['datatype'] = 'JSON'
+
+        return None
+
     def read_n_rows(
         self, 
         name: str, 

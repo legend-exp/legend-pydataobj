@@ -298,6 +298,7 @@ def get_metadata(
     force: bool = False,
     metadata: dict = {}, 
     base: str = "/", 
+    recursing: bool = False,
 ) -> dict:
     """Get metadata from an LH5 file.
 
@@ -335,16 +336,16 @@ def get_metadata(
 
     # looks for "metadata" dataset and uses it if it exists
     # or you can force it to loop over the file to build it instead
-    if not force and 'metadata' in lh5_file:
+    if not recursing and not force and 'metadata' in lh5_file:
         log.debug(
             f"metadata found in {lh5_file.filename}"
         )
         return json.loads(lh5_file['metadata'][()])
-    elif build or force:
-        # this is the recursive bit
-        log.debug(
-            f"metadata not found in {lh5_file.filename}, building it instead"
-        )
+    elif build or force: # this is the recursive bit
+        if not recursing:
+            log.debug(
+                f"metadata not found in {lh5_file.filename}, building it instead"
+            )
         for obj in lh5_file:
             metadata[obj] = {}
 
@@ -353,7 +354,7 @@ def get_metadata(
                 metadata[obj]['attrs'][attr] = lh5_file[base+obj].attrs[attr]
 
             if isinstance(lh5_file[obj], h5py.Group):
-                get_metadata(lh5_file[base+obj], metadata=metadata[obj], base=base+obj+'/')
+                get_metadata(lh5_file[base+obj], metadata=metadata[obj], base=base+obj+'/', build=True, recursing=True)
     else:
         log.debug(
             f"metadata not found in {lh5_file.filename} and did not build it"

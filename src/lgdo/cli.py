@@ -342,12 +342,7 @@ def lh5meta(args=None):
         print(__version__)  # noqa: T201
         sys.exit()
 
-    with h5py.File(args.lh5_file, mode='a') as f:
-        if 'metadata' in f:
-            del f['metadata']
-        metadata = lh5.utils.get_metadata(lh5_file=args.lh5_file, force=True)
-        jsontowrite = str(metadata).replace("'", "\"")
-        f.create_dataset(f'metadata', dtype=f'S{len(str(jsontowrite))}', data=str(jsontowrite))
-        f['metadata'].attrs['datatype'] = 'JSON'
+    store = lh5.LH5Store()
+    store.write_metadata(args.lh5_file)
     
     return
