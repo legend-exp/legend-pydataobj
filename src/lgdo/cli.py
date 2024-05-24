@@ -301,9 +301,9 @@ Exclude the /data/table1/col1 Table column:
             store.write(obj, name, args.output, wo_mode="append")
 
 def lh5meta(args=None):
-    """Re-builds `metadata"` `Dataset` for an LH5 file."""
+    """Re-builds `metadata"` `Dataset` for an LH5 file or list of files."""
     parser = argparse.ArgumentParser(
-        prog="lh5meta", description="re-builds `'metadata'` `Dataset` for an LH5 file."
+        prog="lh5meta", description="re-builds `'metadata'` `Dataset` for an LH5 file or list of files."
     )   
 
     # global options
