@@ -172,6 +172,8 @@ class LH5Store:
             n_rows_read = 0
 
             for i, h5f in enumerate(thislh5_file):
+                metadata = self.load_metadata(h5f, name) 
+
                 if isinstance(idx, list) and len(idx) > 0 and not np.isscalar(idx[0]):
                     # a list of lists: must be one per file
                     idx_i = idx[i]
@@ -180,7 +182,7 @@ class LH5Store:
                     if not (isinstance(idx, tuple) and len(idx) == 1):
                         idx = (idx,)
                     # idx is a long continuous array
-                    n_rows_i = utils.read_n_rows(name, h5f)
+                    n_rows_i = utils.read_n_rows(name, h5f, metadata=metadata)
                     # find the length of the subset of idx that contains indices
                     # that are less than n_rows_i
                     n_rows_to_read_i = bisect.bisect_left(idx[0], n_rows_i)
@@ -189,14 +191,8 @@ class LH5Store:
                     idx = (idx[0][n_rows_to_read_i:] - n_rows_i,)
                 else:
                     idx_i = None
-                n_rows_i = n_rows - n_rows_read
+                n_rows_i = n_rows - n_rows_read                
 
-                metadata = self.load_metadata(h5f, name) 
-
-                # # just get the relevant subset of metadata now
-                # if metadata is not None:
-                #     metadata = utils.getFromDict(metadata, list(filter(None, name.strip('/').split('/'))))
-                    
                 obj_buf, n_rows_read_i = _serializers._h5_read_lgdo(
                     name,
                     h5f,
@@ -284,21 +280,31 @@ class LH5Store:
             **h5py_kwargs,
         )
 
-    def read_n_rows(self, name: str, lh5_file: str | h5py.File) -> int | None:
+    def read_n_rows(
+        self, 
+        name: str, 
+        lh5_file: str | h5py.File,
+        metadata: dict | None = None,
+    ) -> int | None:
         """Look up the number of rows in an Array-like object called `name` in `lh5_file`.
 
         Return ``None`` if it is a :class:`.Scalar` or a :class:`.Struct`.
         """
-        return utils.read_n_rows(name, self.gimme_file(lh5_file, "r"))
+        # check if metadata exists
+        if metadata is None:
+            metadata = self.load_metadata(lh5_file, name)
+        return utils.read_n_rows(name, self.gimme_file(lh5_file, "r"), metadata=metadata)
 
     def load_metadata(
         self,
-        lh5_file: h5py.File,
+        lh5_file: str | h5py.File,
         name: str,
     )-> dict:
         """Gets metadata dataset from the store if it exists or else from the file. Returns None if metadata is not
         found in the file."""
         metadata = None
+
+        lh5_file = self.gimme_file(lh5_file, "r")
 
         if lh5_file.filename not in self.metadata_cache:
             # don't want to build the metadata because this is slow if you only want to grab a few datasets

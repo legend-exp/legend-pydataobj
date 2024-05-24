@@ -51,7 +51,11 @@ def get_buffer(
     return obj
 
 
-def read_n_rows(name: str, h5f: str | h5py.File) -> int | None:
+def read_n_rows(
+    name: str, 
+    h5f: str | h5py.File,
+    metadata: dict = None,
+) -> int | None:
     """Look up the number of rows in an Array-like LGDO object on disk.
 
     Return ``None`` if `name` is a :class:`.Scalar` or a :class:`.Struct`.
@@ -59,16 +63,31 @@ def read_n_rows(name: str, h5f: str | h5py.File) -> int | None:
     if not isinstance(h5f, h5py.File):
         h5f = h5py.File(h5f, "r")
 
-    try:
-        attrs = h5f[name].attrs
-    except KeyError as e:
-        msg = "not found"
-        raise LH5DecodeError(msg, h5f, name) from e
-    except AttributeError as e:
-        msg = "missing 'datatype' attribute"
-        raise LH5DecodeError(msg, h5f, name) from e
+    # this needs to be done for the requested object
+    if metadata is not None:
+        try:
+            attrs = metadata['attrs']
+            lgdotype = datatype.datatype(attrs["datatype"])
+            log.debug(
+                f"{name}.attrs.datatype found in metadata"
+            )
+        except KeyError as e:
+            log.debug(
+                f"metadata key error in {h5f.filename}: {e} - will attempt to use file directly instead"
+            )
+            metadata = None
+    
+    if metadata is None:
+        try:
+            attrs = h5f[name].attrs
+        except KeyError as e:
+            msg = "not found in file"
+            raise LH5DecodeError(msg, h5f, name) from e
+        except AttributeError as e:
+            msg = "missing 'datatype' attribute in file"
+            raise LH5DecodeError(msg, h5f, name) from e
 
-    lgdotype = datatype.datatype(attrs["datatype"])
+        lgdotype = datatype.datatype(attrs["datatype"])
 
     # scalars are dim-0 datasets
     if lgdotype is types.Scalar:
@@ -83,7 +102,8 @@ def read_n_rows(name: str, h5f: str | h5py.File) -> int | None:
         # read out each of the fields
         rows_read = None
         for field in datatype.get_struct_fields(attrs["datatype"]):
-            n_rows_read = read_n_rows(name + "/" + field, h5f)
+            n_rows_read = read_n_rows(name + "/" + field, h5f, 
+                                      metadata=metadata[field] if metadata is not None else None)
             if not rows_read:
                 rows_read = n_rows_read
             elif rows_read != n_rows_read:
@@ -95,11 +115,13 @@ def read_n_rows(name: str, h5f: str | h5py.File) -> int | None:
 
     # length of vector of vectors is the length of its cumulative_length
     if lgdotype is types.VectorOfVectors:
-        return read_n_rows(f"{name}/cumulative_length", h5f)
+        return read_n_rows(f"{name}/cumulative_length", h5f, 
+                           metadata=metadata["cumulative_length"] if metadata is not None else None)
 
     # length of vector of encoded vectors is the length of its decoded_size
     if lgdotype in (types.VectorOfEncodedVectors, types.ArrayOfEncodedEqualSizedArrays):
-        return read_n_rows(f"{name}/encoded_data", h5f)
+        return read_n_rows(f"{name}/encoded_data", h5f, 
+                           metadata=metadata["encoded_data"] if metadata is not None else None)
 
     # return array length (without reading the array!)
     if issubclass(lgdotype, types.Array):
