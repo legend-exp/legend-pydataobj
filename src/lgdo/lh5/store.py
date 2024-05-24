@@ -298,7 +298,10 @@ class LH5Store:
             # delete the old metadata if it exists
             if "metadata" in lh5_file:
                 del lh5_file["metadata"]
-            
+                log.debug(
+                    f"deleted old metadata from {lh5_file.filename}"
+                )    
+
             # get the new metadata from the file
             metadata = utils.get_metadata(lh5_file=lh5_file, force=True)
 
@@ -306,6 +309,9 @@ class LH5Store:
             jsontowrite = str(metadata).replace("'", "\"")
             lh5_file.create_dataset(f'metadata', dtype=f'S{len(str(jsontowrite))}', data=str(jsontowrite))
             lh5_file['metadata'].attrs['datatype'] = 'JSON'
+            log.debug(
+                f"wrote metadata to {lh5_file.filename}"
+            )   
 
         return None
 

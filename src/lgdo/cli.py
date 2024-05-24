@@ -303,7 +303,7 @@ Exclude the /data/table1/col1 Table column:
 def lh5meta(args=None):
     """Re-builds `metadata"` `Dataset` for an LH5 file."""
     parser = argparse.ArgumentParser(
-        prog="makemetadata", description="re-builds `'metadata'` `Dataset` for an LH5 file."
+        prog="lh5meta", description="re-builds `'metadata'` `Dataset` for an LH5 file."
     )   
 
     # global options
@@ -326,7 +326,8 @@ def lh5meta(args=None):
 
     parser.add_argument(
     "lh5_file",
-    help="""Input LH5 file""",
+    nargs="+",
+    help="""Input list LH5 files""",
     )  
 
     args = parser.parse_args(args) 
