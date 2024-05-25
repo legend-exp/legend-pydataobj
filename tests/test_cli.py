@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import numpy as np
+import h5py
 
 from lgdo import cli, lh5, types
 
@@ -32,6 +33,7 @@ def test_lh5concat(lgnd_test_data, tmptestdir):
         "ch1084803",
         "ch1084804",
         "ch1121600",
+        "metadata",
     ]
     assert lh5.ls(outfile, "ch1057600/raw/") == [
         "ch1057600/raw/abs_delta_mu_usec",
@@ -103,6 +105,7 @@ def test_lh5concat(lgnd_test_data, tmptestdir):
     cli.lh5concat(arg_list)
     assert lh5.ls(outfile) == [
         "ch1057600",
+        "metadata",
     ]
 
     arg_list[5] = "ch1057600/raw/waveform/values"
@@ -125,6 +128,7 @@ def test_lh5concat(lgnd_test_data, tmptestdir):
         "ch1084803",
         "ch1084804",
         "ch1121600",
+        "metadata",
     ]
     assert lh5.ls(outfile, "ch1059201/raw/waveform/") == [
         "ch1059201/raw/waveform/dt",
@@ -149,3 +153,21 @@ def test_lh5concat(lgnd_test_data, tmptestdir):
         assert tbl.packet_id[i] == tbl2.packet_id[i - 10]
         assert np.array_equal(tbl.tracelist[i], tbl2.tracelist[i - 10])
         assert np.array_equal(tbl.waveform.values[i], tbl2.waveform.values[i - 10])
+
+# def test_lh5meta(lgnd_test_data, tmptestdir):
+#     file = lgnd_test_data.get_path(
+#         "lh5/prod-ref-l200/generated/tier/raw/phy/p03/r001/l200-p03-r001-phy-20230322T160139Z-tier_raw.lh5"
+#     )
+#     cli.lh5meta([file])
+
+#     assert lh5.ls(file) == [
+#         "ch1057600",
+#         "ch1059201",
+#         "ch1062405",
+#         "ch1084803",
+#         "ch1084804",
+#         "ch1121600",
+#         "metadata",
+#     ]
+
+#     print('hiiii')

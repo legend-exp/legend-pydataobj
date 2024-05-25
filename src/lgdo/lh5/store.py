@@ -280,7 +280,7 @@ class LH5Store:
     def write_metadata(
         self,
         lh5_file: str | h5py.File | list,
-    ) -> None:
+    ) -> dict:
         """Writes the `"metadata"` dataset to an LH5 file. Gathers the metadata from the file and writes it.
         Overwrites any existing `"metadata"` dataset. Takes an LH5 file, path to file, or list of either.
 
@@ -313,7 +313,7 @@ class LH5Store:
                 f"wrote metadata to {lh5_file.filename}"
             )   
 
-        return None
+        return metadata
 
     def read_n_rows(
         self, 
@@ -335,46 +335,81 @@ class LH5Store:
         lh5_file: str | h5py.File,
         name: str,
     )-> dict:
-        """Gets metadata dataset from the store if it exists or else from the file. Returns None if metadata is not
-        found in the file."""
+        """Gets metadata dataset from the metadata cache in the store if it exists or else from the file. 
+        Returns `None` if metadata is not found in the file or if the request `name` is missing from the metadata."""
         metadata = None
 
         lh5_file = self.gimme_file(lh5_file, "r")
 
-        if lh5_file.filename not in self.metadata_cache:
+        incache = False
+        if lh5_file.filename in self.metadata_cache:
+            # if the file was modified since we read in the metadata, read in new metadata
+            if os.path.getmtime(lh5_file.filename) <= self.metadata_cache[lh5_file.filename]["timestamp"]:
+                metadata = self.metadata_cache[lh5_file.filename]["metadata"]
+                incache = True
+                log.debug(
+                    f"read metadata from cache for {lh5_file.filename}"
+                )
+            else:
+                log.debug(
+                    f"cached metadata for {lh5_file.filename} is old, getting new metadata"
+                )               
+
+        if not incache:
+            log.debug(
+                f"metadata for {lh5_file.filename} not in cache"
+            )
             # don't want to build the metadata because this is slow if you only want to grab a few datasets
             metadata = utils.get_metadata(lh5_file, build=False)
-            # it is possible that someone could read a file, then want to write to it, then read it again using the
-            # same store instance. If we keep the metadata from before the file were updated, we would not find some 
-            # newly written information. On the other hand, the redunancy is built into the reading so that if 
-            # something is not found in the metadata, it is looked for in the attributes of the file directly.
-            # Let us stick with the slightly faster way if someone does not want to or think to set the keep_open 
-            # flag to True. All that needs to be added here is: 
-            # if self.keep_open:
-            self.metadata_cache[lh5_file.filename] = metadata
-            # clear the cache if we write something so it is not too big
-            self.clear_metadata_cache()
-        else:
-            metadata = self.metadata_cache[lh5_file.filename]
+            
+            if metadata is not None:
+                # it is possible that someone could read a file, then want to write to it, then read it again using the
+                # same store instance. If we keep the metadata from before the file were updated, we would not find some 
+                # newly written information. We will check if the file has been modified since the last time we read
+                # in the metadata.
+                self.metadata_cache[lh5_file.filename] = {
+                    "metadata":metadata, 
+                    "timestamp":os.path.getmtime(lh5_file.filename)}
+                log.debug(
+                    f"added metadata to cache for {lh5_file.filename}"
+                )
+                # clear the cache if we store something to the metadata cache so it is not too big
+                self.clear_metadata_cache()
 
         if metadata is not None:
-            metadata = utils.getFromDict(metadata, list(filter(None, name.strip('/').split('/'))))
-                    
+            # in case the metadata is broken or missing something
+            try:
+                metadata = utils.getFromDict(metadata, list(filter(None, name.strip('/').split('/'))))
+                log.debug(
+                    f"found {name} in metadata for {lh5_file.filename}"
+                )
+            except KeyError as e:
+                metadata = None
+                log.debug(
+                    f"{e}"
+                    f"did not find {name} in metadata for {lh5_file.filename}, setting metadata to None"
+                )                    
         return metadata
 
     def clear_metadata_cache(
-        self
+        self,
+        forceclear: bool = False,
     ) -> None:
         """Removes entries from the metadata cache if the size is too large. Keeps at least one file in the cache
         regardless of its size. Default maximum size is 100 MB (specify `maxsize` in MB)."""
-        if len(self.metadata_cache) > 1 and (
+        if forceclear:
+            files = list(self.metadata_cache.keys())
+            for file in files:
+                del self.metadata_cache[file]    
+
+        elif len(self.metadata_cache) > 1 and (
             metadatasize := utils.getsize(self.metadata_cache)) > self.metacachesize:
             log.debug(
                 f"metadata cache is {utils.fmtbytes(metadatasize)}, larger than max size of "
                 f"{utils.fmtbytes(self.metacachesize)}, deleting entries to reduce size"
             )
-            # in order of how the files were added to the metadata (so presumably the access order)
             files = list(self.metadata_cache.keys())
+            # in order of how the files were added to the metadata (so presumably the access order)
             while len(self.metadata_cache) > 0 and (utils.getsize(self.metadata_cache) > self.metacachesize):
                 for file in files:
                     del self.metadata_cache[file]

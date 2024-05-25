@@ -30,7 +30,6 @@ from .exceptions import LH5DecodeError
 
 log = logging.getLogger(__name__)
 
-
 def get_buffer(
     name: str,
     lh5_file: str | h5py.File | Sequence[str | h5py.File],
@@ -347,6 +346,11 @@ def get_metadata(
                 f"metadata not found in {lh5_file.filename}, building it instead"
             )
         for obj in lh5_file:
+            # if "metadata" actually was in the file and was missed due to forcing a rebuild, then the metadata
+            # from the old file could be dragged along and updated and have outdated stuff in it
+            if obj == 'metadata':
+                pass
+
             metadata[obj] = {}
 
             metadata[obj]['attrs'] = {}
@@ -357,7 +361,7 @@ def get_metadata(
                 get_metadata(lh5_file[base+obj], metadata=metadata[obj], base=base+obj+'/', build=True, recursing=True)
     else:
         log.debug(
-            f"metadata not found in {lh5_file.filename} and did not build it"
+            f"metadata not found in {lh5_file.filename} and did not build it -> metadata is None"
         )
         return None
         

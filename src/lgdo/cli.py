@@ -10,6 +10,7 @@ import sys
 
 from . import Array, Table, VectorOfVectors, __version__, lh5
 from . import logging as lgdogging  # eheheh
+from .lh5.utils import get_metadata
 
 log = logging.getLogger(__name__)
 
@@ -44,7 +45,7 @@ def lh5ls(args=None):
     )
     parser.add_argument("lh5_group", nargs="?", help="""LH5 group.""", default="/")
     parser.add_argument(
-        "--attributes", "-a", action="store_true", help="""Print HDF5 attributes too"""
+        "--attributes", "-a", "--attrs", action="store_true", help="""Print HDF5 attributes too"""
     )
     parser.add_argument(
         "--depth",
@@ -203,6 +204,9 @@ Exclude the /data/table1/col1 Table column:
     else:
         obj_list = obj_list_full
 
+    # remove metadata if it exists - do not attempt to concatenate this
+    obj_list.discard("metadata")
+
     # sort
     obj_list = sorted(obj_list)
 
@@ -299,6 +303,11 @@ Exclude the /data/table1/col1 Table column:
                 _inplace_table_filter(name, obj, obj_list)
 
             store.write(obj, name, args.output, wo_mode="append")
+
+    # write the metadata for the new file at the very end
+    store.write_metadata(args.output)
+
+    return
 
 def lh5meta(args=None):
     """Re-builds `metadata"` `Dataset` for an LH5 file or list of files."""
