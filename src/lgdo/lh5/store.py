@@ -57,7 +57,7 @@ class LH5Store:
         self.keep_open = keep_open
         self.files = {}
         self.metadata_cache = {}
-        self.metacachesize = int(metacachesize * 1E6)
+        self.metacachesize = metacachesize
 
     def gimme_file(self, lh5_file: str | h5py.File, mode: str = "r") -> h5py.File:
         """Returns a :mod:`h5py` file object from the store or creates a new one.
@@ -146,6 +146,7 @@ class LH5Store:
         obj_buf: types.LGDO = None,
         obj_buf_start: int = 0,
         decompress: bool = True,
+        use_metadata: bool = True,
     ) -> tuple[types.LGDO, int]:
         """Read LH5 object data from a file in the store.
 
@@ -160,7 +161,8 @@ class LH5Store:
             lh5_file = [self.gimme_file(f, "r") for f in list(lh5_file)]
         else:
             lh5_file = self.gimme_file(lh5_file, "r")
-            metadata = self.load_metadata(lh5_file, name) 
+            if use_metadata:
+                metadata = self.load_metadata(lh5_file, name) 
 
         h5f = lh5_file
         # Handle list-of-files recursively - how about no?
@@ -169,7 +171,8 @@ class LH5Store:
             n_rows_read = 0
 
             for i, h5f in enumerate(thislh5_file):
-                metadata = self.load_metadata(h5f, name) 
+                if use_metadata:
+                    metadata = self.load_metadata(h5f, name) 
 
                 if isinstance(idx, list) and len(idx) > 0 and not np.isscalar(idx[0]):
                     # a list of lists: must be one per file
@@ -320,13 +323,14 @@ class LH5Store:
         name: str, 
         lh5_file: str | h5py.File,
         metadata: dict | None = None,
+        use_metadata: bool = True,
     ) -> int | None:
         """Look up the number of rows in an Array-like object called `name` in `lh5_file`.
 
         Return ``None`` if it is a :class:`.Scalar` or a :class:`.Struct`.
         """
         # check if metadata exists
-        if metadata is None:
+        if use_metadata and metadata is None:
             metadata = self.load_metadata(lh5_file, name)
         return utils.read_n_rows(name, self.gimme_file(lh5_file, "r"), metadata=metadata)
 
@@ -393,26 +397,30 @@ class LH5Store:
 
     def clear_metadata_cache(
         self,
-        forceclear: bool = False,
+        force: bool = False,
     ) -> None:
         """Removes entries from the metadata cache if the size is too large. Keeps at least one file in the cache
-        regardless of its size. Default maximum size is 100 MB (specify `maxsize` in MB)."""
-        if forceclear:
-            files = list(self.metadata_cache.keys())
-            for file in files:
-                del self.metadata_cache[file]    
+        regardless of its size. Default maximum size is 100 MB (specify `maxsize` in MB).
+        
+        Parameters
+        ----------
+        force
+            Boolean flag which clears the entire cache (default is `False`). Useful for testing/debugging."""
+        if force:
+            self.metadata_cache = {}
 
         elif len(self.metadata_cache) > 1 and (
-            metadatasize := utils.getsize(self.metadata_cache)) > self.metacachesize:
+            metadatasize := utils.getsize(self.metadata_cache)) > int(self.metacachesize * 1E6):
             log.debug(
                 f"metadata cache is {utils.fmtbytes(metadatasize)}, larger than max size of "
-                f"{utils.fmtbytes(self.metacachesize)}, deleting entries to reduce size"
+                f"{utils.fmtbytes(int(self.metacachesize * 1E6))}, deleting entries to reduce size"
             )
             files = list(self.metadata_cache.keys())
+            i = 0
             # in order of how the files were added to the metadata (so presumably the access order)
-            while len(self.metadata_cache) > 0 and (utils.getsize(self.metadata_cache) > self.metacachesize):
-                for file in files:
-                    del self.metadata_cache[file]
+            while len(self.metadata_cache) > 1 and (utils.getsize(self.metadata_cache) > int(self.metacachesize * 1E6)):
+                del self.metadata_cache[files[i]]
+                i += 1
 
         return
             

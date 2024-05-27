@@ -10,7 +10,7 @@ from numpy.typing import ArrayLike
 
 from .. import types
 from . import _serializers
-
+from . import utils
 
 def read(
     name: str,
@@ -23,6 +23,7 @@ def read(
     obj_buf: types.LGDO = None,
     obj_buf_start: int = 0,
     decompress: bool = True,
+    use_metadata: bool = True,
 ) -> types.LGDO | tuple[types.LGDO, int]:
     """Read LH5 object data from a file.
 
@@ -97,6 +98,10 @@ def read(
         Decompress data encoded with LGDO's compression routines right
         after reading. The option has no effect on data encoded with HDF5
         built-in filters, which is always decompressed upstream by HDF5.
+    use_metadata
+        Whether to use the `"metadata"` dataset if it exists in the file.
+        This special dataset will generally reduce data loading times if 
+        you are getting several (>~12) datasets (columns) from a file. 
 
     Returns
     -------
@@ -107,6 +112,11 @@ def read(
         `n_rows_read` will be``1``. For tables it is redundant with
         ``table.loc``. If `obj_buf` is ``None``, only `object` is returned.
     """
+
+    metadata = None
+    if use_metadata:
+        metadata = utils.get_metadata(lh5_file=lh5_file)
+        
     obj, n_rows_read = _serializers._h5_read_lgdo(
         name,
         lh5_file,
@@ -118,6 +128,7 @@ def read(
         obj_buf=obj_buf,
         obj_buf_start=obj_buf_start,
         decompress=decompress,
+        metadata=metadata,
     )
 
     return obj if obj_buf is None else (obj, n_rows_read)

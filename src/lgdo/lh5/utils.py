@@ -293,7 +293,7 @@ def getsize(obj):
 # function is recursive
 def get_metadata(
     lh5_file: str | h5py.Group | h5py.File,
-    build: bool = True,
+    build: bool = False,
     force: bool = False,
     metadata: dict = {}, 
     base: str = "/", 
@@ -315,7 +315,7 @@ def get_metadata(
     lh5_file
         path to an `LH5` file
     build
-        whether to build the metadata from the file if the `"metadata"` `Dataset` is not found; default is `True`
+        whether to build the metadata from the file if the `"metadata"` `Dataset` is not found; default is `False`
     force
         whether to ignore the `"metadata"` `Dataset` and build a `dict` from the file instead; default is `False`. 
         Ignores the `build` flag.
@@ -348,6 +348,7 @@ def get_metadata(
         for obj in lh5_file:
             # if "metadata" actually was in the file and was missed due to forcing a rebuild, then the metadata
             # from the old file could be dragged along and updated and have outdated stuff in it
+            # not 100% sure this is needed
             if obj == 'metadata':
                 pass
 
@@ -364,5 +365,9 @@ def get_metadata(
             f"metadata not found in {lh5_file.filename} and did not build it -> metadata is None"
         )
         return None
+    
+    # know thyself!
+    if not recursing:
+        metadata["metadata"] = {'attrs': {'datatype': 'JSON'}}
         
     return metadata

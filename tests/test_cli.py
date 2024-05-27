@@ -77,7 +77,9 @@ def test_lh5concat(lgnd_test_data, tmptestdir):
 
     store = lh5.LH5Store()
     tbl1, size = store.read("ch1057600/raw", infile1)
+    assert size == 10
     tbl2, size = store.read("ch1057600/raw", infile2)
+    assert size == 10
     tbl, size = store.read("ch1057600/raw", outfile)
     assert size == 20
 
@@ -154,20 +156,80 @@ def test_lh5concat(lgnd_test_data, tmptestdir):
         assert np.array_equal(tbl.tracelist[i], tbl2.tracelist[i - 10])
         assert np.array_equal(tbl.waveform.values[i], tbl2.waveform.values[i - 10])
 
-# def test_lh5meta(lgnd_test_data, tmptestdir):
-#     file = lgnd_test_data.get_path(
-#         "lh5/prod-ref-l200/generated/tier/raw/phy/p03/r001/l200-p03-r001-phy-20230322T160139Z-tier_raw.lh5"
-#     )
-#     cli.lh5meta([file])
+def test_lh5meta(lgnd_test_data, tmptestdir):
+    file = lgnd_test_data.get_path(
+        "lh5/prod-ref-l200/generated/tier/raw/phy/p03/r001/l200-p03-r001-phy-20230322T160139Z-tier_raw.lh5"
+    )
+    file2 = lgnd_test_data.get_path(
+        "lh5/prod-ref-l200/generated/tier/raw/phy/p03/r001/l200-p03-r001-phy-20230322T170202Z-tier_raw.lh5"
+    )
+    cli.lh5meta([file])
 
-#     assert lh5.ls(file) == [
-#         "ch1057600",
-#         "ch1059201",
-#         "ch1062405",
-#         "ch1084803",
-#         "ch1084804",
-#         "ch1121600",
-#         "metadata",
-#     ]
+    assert lh5.ls(file) == [
+        "ch1057600",
+        "ch1059201",
+        "ch1062405",
+        "ch1084803",
+        "ch1084804",
+        "ch1121600",
+        "metadata",
+    ]
+    
+    store = lh5.LH5Store(metacachesize=0)
+    tbl1, size = store.read("ch1057600/raw", file)
+    assert size == 10
+    assert store.metadata_cache[file]["metadata"] == lh5.utils.get_metadata(file, force=True)
 
-#     print('hiiii')
+    assert store.read_n_rows("ch1057600/raw", file, metadata=None, use_metadata=True) == 10
+
+    tbl2, size = store.read("ch1057600/raw", file, use_metadata=False)
+    assert size == 10
+    assert tbl1 == tbl2
+
+    store.clear_metadata_cache(force=True)
+    assert store.metadata_cache == {}
+    
+    with h5py.File(file, 'a') as f:
+        del f['metadata']
+        metadata = {'badmetadata':'bad'}
+        jsontowrite = str(metadata).replace("'", "\"")
+        f.create_dataset(f'metadata', dtype=f'S{len(str(jsontowrite))}', data=str(jsontowrite))
+        f['metadata'].attrs['datatype'] = 'JSON'
+
+    tbl1, size = store.read("ch1057600/raw", file)
+    assert size == 10
+
+    tbl2, size = store.read("ch1057600/raw", file, use_metadata=False)
+    assert size == 10
+    assert tbl1 == tbl2
+
+    with h5py.File(file2, 'a') as f:
+        if "metadata" in f:
+            del f["metadata"]
+        assert "metadata" not in f
+
+    _, _ = store.read("ch1057600/raw", file2)
+
+    # no metadata found yet
+    assert file2 not in store.metadata_cache
+
+    cli.lh5meta([file, file2])
+
+    # if cache is too small, we should replace the older file
+    _, _ = store.read("ch1057600/raw", file)
+    assert file in store.metadata_cache
+
+    _, _ = store.read("ch1057600/raw", file2)
+    assert file2 in store.metadata_cache
+    assert file not in store.metadata_cache
+
+    store.metacachesize = 100
+
+    # if cache is large, we should have both
+    _, _ = store.read("ch1057600/raw", file)
+    assert file in store.metadata_cache
+
+    _, _ = store.read("ch1057600/raw", file2)
+
+    assert file2 in store.metadata_cache
+    assert file in store.metadata_cache
