@@ -283,7 +283,7 @@ class LH5Store:
     def write_metadata(
         self,
         lh5_file: str | h5py.File | list,
-    ) -> dict:
+    ) -> None:
         """Writes the `"metadata"` dataset to an LH5 file. Gathers the metadata from the file and writes it.
         Overwrites any existing `"metadata"` dataset. Takes an LH5 file, path to file, or list of either.
 
@@ -316,7 +316,7 @@ class LH5Store:
                 f"wrote metadata to {lh5_file.filename}"
             )   
 
-        return metadata
+        return 
 
     def read_n_rows(
         self, 
