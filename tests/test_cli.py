@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import numpy as np
 import h5py
+import numpy as np
 
 from lgdo import cli, lh5, types
 
@@ -156,6 +156,7 @@ def test_lh5concat(lgnd_test_data, tmptestdir):
         assert np.array_equal(tbl.tracelist[i], tbl2.tracelist[i - 10])
         assert np.array_equal(tbl.waveform.values[i], tbl2.waveform.values[i - 10])
 
+
 def test_lh5meta(lgnd_test_data, tmptestdir):
     file = lgnd_test_data.get_path(
         "lh5/prod-ref-l200/generated/tier/raw/phy/p03/r001/l200-p03-r001-phy-20230322T160139Z-tier_raw.lh5"
@@ -174,13 +175,17 @@ def test_lh5meta(lgnd_test_data, tmptestdir):
         "ch1121600",
         "metadata",
     ]
-    
+
     store = lh5.LH5Store(metacachesize=0)
     tbl1, size = store.read("ch1057600/raw", file)
     assert size == 10
-    assert store.metadata_cache[file]["metadata"] == lh5.utils.get_metadata(file, force=True)
+    assert store.metadata_cache[file]["metadata"] == lh5.utils.get_metadata(
+        file, force=True
+    )
 
-    assert store.read_n_rows("ch1057600/raw", file, metadata=None, use_metadata=True) == 10
+    assert (
+        store.read_n_rows("ch1057600/raw", file, metadata=None, use_metadata=True) == 10
+    )
 
     tbl2, size = store.read("ch1057600/raw", file, use_metadata=False)
     assert size == 10
@@ -188,13 +193,15 @@ def test_lh5meta(lgnd_test_data, tmptestdir):
 
     store.clear_metadata_cache(force=True)
     assert store.metadata_cache == {}
-    
-    with h5py.File(file, 'a') as f:
-        del f['metadata']
-        metadata = {'badmetadata':'bad'}
-        jsontowrite = str(metadata).replace("'", "\"")
-        f.create_dataset(f'metadata', dtype=f'S{len(str(jsontowrite))}', data=str(jsontowrite))
-        f['metadata'].attrs['datatype'] = 'JSON'
+
+    with h5py.File(file, "a") as f:
+        del f["metadata"]
+        metadata = {"badmetadata": "bad"}
+        jsontowrite = str(metadata).replace("'", '"')
+        f.create_dataset(
+            "metadata", dtype=f"S{len(str(jsontowrite))}", data=str(jsontowrite)
+        )
+        f["metadata"].attrs["datatype"] = "JSON"
 
     tbl1, size = store.read("ch1057600/raw", file)
     assert size == 10
@@ -203,7 +210,7 @@ def test_lh5meta(lgnd_test_data, tmptestdir):
     assert size == 10
     assert tbl1 == tbl2
 
-    with h5py.File(file2, 'a') as f:
+    with h5py.File(file2, "a") as f:
         if "metadata" in f:
             del f["metadata"]
         assert "metadata" not in f

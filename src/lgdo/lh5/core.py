@@ -9,8 +9,8 @@ import h5py
 from numpy.typing import ArrayLike
 
 from .. import types
-from . import _serializers
-from . import utils
+from . import _serializers, utils
+
 
 def read(
     name: str,
@@ -100,8 +100,8 @@ def read(
         built-in filters, which is always decompressed upstream by HDF5.
     use_metadata
         Whether to use the `"metadata"` dataset if it exists in the file.
-        This special dataset will generally reduce data loading times if 
-        you are getting several (>~12) datasets (columns) from a file. 
+        This special dataset will generally reduce data loading times if
+        you are getting several (>~12) datasets (columns) from a file.
 
     Returns
     -------
@@ -116,7 +116,7 @@ def read(
     metadata = None
     if use_metadata:
         metadata = utils.get_metadata(lh5_file=lh5_file)
-        
+
     obj, n_rows_read = _serializers._h5_read_lgdo(
         name,
         lh5_file,

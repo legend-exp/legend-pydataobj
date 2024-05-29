@@ -22,6 +22,7 @@ from ....types import (
 )
 from ... import datatype as dtypeutils
 from ...exceptions import LH5DecodeError
+
 # from ...utils import read_n_rows, getFromDict
 from . import utils
 from .array import (
@@ -50,9 +51,8 @@ def _h5_read_lgdo(
     obj_buf=None,
     obj_buf_start=0,
     decompress=True,
-    metadata=None, # dict
+    metadata=None,  # dict
 ):
-
     if not isinstance(h5f, h5py.File):
         h5f = h5py.File(h5f, mode="r")
 
@@ -65,14 +65,11 @@ def _h5_read_lgdo(
     if not (isinstance(idx, tuple) and len(idx) == 1) and idx is not None:
         idx = (idx,)
 
-
     # this needs to be done for the requested object
     if metadata is not None:
         try:
-            lgdotype = dtypeutils.datatype(metadata['attrs']["datatype"])
-            log.debug(
-                f"{name}.attrs.datatype found in metadata"
-            )
+            lgdotype = dtypeutils.datatype(metadata["attrs"]["datatype"])
+            log.debug(f"{name}.attrs.datatype found in metadata")
         except KeyError as e:
             log.debug(
                 f"metadata key error in {h5f.filename}: {e} - will attempt to use file directly instead"

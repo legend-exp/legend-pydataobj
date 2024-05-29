@@ -9,10 +9,10 @@ log = logging.getLogger(__name__)
 
 
 def _h5_write_scalar(
-    obj, 
-    name, 
-    lh5_file, 
-    group="/", 
+    obj,
+    name,
+    lh5_file,
+    group="/",
     wo_mode="append",
 ) -> None:
     assert isinstance(obj, types.Scalar)

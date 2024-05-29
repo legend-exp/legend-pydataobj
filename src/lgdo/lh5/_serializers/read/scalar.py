@@ -14,7 +14,7 @@ def _h5_read_scalar(
     name,
     h5f,
     obj_buf=None,
-    metadata=None, # specific to requested object
+    metadata=None,  # specific to requested object
 ):
     value = h5f[name][()]
 
@@ -42,5 +42,5 @@ def _h5_read_scalar(
     if frommeta:
         thisattrs = metadata["attrs"]
     else:
-        thisattrs = h5f[name].attrs 
+        thisattrs = h5f[name].attrs
     return Scalar(value=value, attrs=thisattrs), 1

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from functools import reduce
 import glob
 import json
 import logging
@@ -11,11 +10,12 @@ import os
 import string
 import sys
 from collections.abc import Mapping, Sequence
-from typing import Any
+from functools import reduce
+from gc import get_referents
 
 # https://stackoverflow.com/a/30316760
-from types import ModuleType, FunctionType
-from gc import get_referents
+from types import FunctionType, ModuleType
+from typing import Any
 
 # Custom objects know their class.
 # Function objects seem to know way too much, including modules.
@@ -29,6 +29,7 @@ from . import _serializers, datatype
 from .exceptions import LH5DecodeError
 
 log = logging.getLogger(__name__)
+
 
 def get_buffer(
     name: str,
@@ -51,7 +52,7 @@ def get_buffer(
 
 
 def read_n_rows(
-    name: str, 
+    name: str,
     h5f: str | h5py.File,
     metadata: dict = None,
 ) -> int | None:
@@ -65,17 +66,15 @@ def read_n_rows(
     # this needs to be done for the requested object
     if metadata is not None:
         try:
-            attrs = metadata['attrs']
+            attrs = metadata["attrs"]
             lgdotype = datatype.datatype(attrs["datatype"])
-            log.debug(
-                f"{name}.attrs.datatype found in metadata"
-            )
+            log.debug(f"{name}.attrs.datatype found in metadata")
         except KeyError as e:
             log.debug(
                 f"metadata key error in {h5f.filename}: {e} - will attempt to use file directly instead"
             )
             metadata = None
-    
+
     if metadata is None:
         try:
             attrs = h5f[name].attrs
@@ -101,8 +100,11 @@ def read_n_rows(
         # read out each of the fields
         rows_read = None
         for field in datatype.get_struct_fields(attrs["datatype"]):
-            n_rows_read = read_n_rows(name + "/" + field, h5f, 
-                                      metadata=metadata[field] if metadata is not None else None)
+            n_rows_read = read_n_rows(
+                name + "/" + field,
+                h5f,
+                metadata=metadata[field] if metadata is not None else None,
+            )
             if not rows_read:
                 rows_read = n_rows_read
             elif rows_read != n_rows_read:
@@ -114,13 +116,19 @@ def read_n_rows(
 
     # length of vector of vectors is the length of its cumulative_length
     if lgdotype is types.VectorOfVectors:
-        return read_n_rows(f"{name}/cumulative_length", h5f, 
-                           metadata=metadata["cumulative_length"] if metadata is not None else None)
+        return read_n_rows(
+            f"{name}/cumulative_length",
+            h5f,
+            metadata=metadata["cumulative_length"] if metadata is not None else None,
+        )
 
     # length of vector of encoded vectors is the length of its decoded_size
     if lgdotype in (types.VectorOfEncodedVectors, types.ArrayOfEncodedEqualSizedArrays):
-        return read_n_rows(f"{name}/encoded_data", h5f, 
-                           metadata=metadata["encoded_data"] if metadata is not None else None)
+        return read_n_rows(
+            f"{name}/encoded_data",
+            h5f,
+            metadata=metadata["encoded_data"] if metadata is not None else None,
+        )
 
     # return array length (without reading the array!)
     if issubclass(lgdotype, types.Array):
@@ -266,17 +274,19 @@ def fmtbytes(num, suffix="B"):
         num /= 1024.0
     return f"{num:.1f} Y{suffix}"
 
+
 # https://stackoverflow.com/a/14692747
 def getFromDict(dataDict, mapList):
     if not mapList:
         return dataDict
     return reduce(operator.getitem, mapList, dataDict)
 
+
 # https://stackoverflow.com/a/30316760
 def getsize(obj):
     """sum size of object & members."""
     if isinstance(obj, BLACKLIST):
-        raise TypeError('getsize() does not take argument of type: '+ str(type(obj)))
+        raise TypeError("getsize() does not take argument of type: " + str(type(obj)))
     seen_ids = set()
     size = 0
     objects = [obj]
@@ -290,23 +300,24 @@ def getsize(obj):
         objects = get_referents(*need_referents)
     return size
 
+
 # function is recursive
 def get_metadata(
     lh5_file: str | h5py.Group | h5py.File,
     build: bool = False,
     force: bool = False,
-    metadata: dict = {}, 
-    base: str = "/", 
+    metadata: dict = {},
+    base: str = "/",
     recursing: bool = False,
 ) -> dict:
     """Get metadata from an LH5 file.
 
-    The `"metadata"` `Dataset` contains a `dict` (stored as a JSON string) of the `Attributes` of all `Datasets` 
+    The `"metadata"` `Dataset` contains a `dict` (stored as a JSON string) of the `Attributes` of all `Datasets`
     and `Groups` in the  `LH5` file. The structure of the `dict` matches the structure of the `LH5` file. It is used
-    for much faster loading of attributes. 
-    
+    for much faster loading of attributes.
+
     If the `"metadata"` `Dataset` is not found in the file, then the `dict` is generated from the `LH5` file itself by
-    default, controlled by the `build` flag. 
+    default, controlled by the `build` flag.
 
     If the `"metadata"` `Dataset` is not found in the file and the metadata is not built, then `None` is returned.
 
@@ -317,57 +328,57 @@ def get_metadata(
     build
         whether to build the metadata from the file if the `"metadata"` `Dataset` is not found; default is `False`
     force
-        whether to ignore the `"metadata"` `Dataset` and build a `dict` from the file instead; default is `False`. 
+        whether to ignore the `"metadata"` `Dataset` and build a `dict` from the file instead; default is `False`.
         Ignores the `build` flag.
     """
 
     # open file
     if isinstance(lh5_file, str):
         # expand_path gives an error if file does not exist
-        try: 
+        try:
             fullpath = expand_path(lh5_file)
         except FileNotFoundError:
-            log.debug(
-                f"{lh5_file} does not exist, metadata is None"
-            )
+            log.debug(f"{lh5_file} does not exist, metadata is None")
             return None
         lh5_file = h5py.File(fullpath, "r")
 
     # looks for "metadata" dataset and uses it if it exists
     # or you can force it to loop over the file to build it instead
-    if not recursing and not force and 'metadata' in lh5_file:
-        log.debug(
-            f"metadata found in {lh5_file.filename}"
-        )
-        return json.loads(lh5_file['metadata'][()])
-    elif build or force: # this is the recursive bit
+    if not recursing and not force and "metadata" in lh5_file:
+        log.debug(f"metadata found in {lh5_file.filename}")
+        return json.loads(lh5_file["metadata"][()])
+    elif build or force:  # this is the recursive bit
         if not recursing:
-            log.debug(
-                f"metadata not found in {lh5_file.filename}, building it instead"
-            )
+            log.debug(f"metadata not found in {lh5_file.filename}, building it instead")
         for obj in lh5_file:
             # if "metadata" actually was in the file and was missed due to forcing a rebuild, then the metadata
             # from the old file could be dragged along and updated and have outdated stuff in it
             # not 100% sure this is needed
-            if obj == 'metadata':
+            if obj == "metadata":
                 pass
 
             metadata[obj] = {}
 
-            metadata[obj]['attrs'] = {}
-            for attr in lh5_file[base+obj].attrs:
-                metadata[obj]['attrs'][attr] = lh5_file[base+obj].attrs[attr]
+            metadata[obj]["attrs"] = {}
+            for attr in lh5_file[base + obj].attrs:
+                metadata[obj]["attrs"][attr] = lh5_file[base + obj].attrs[attr]
 
             if isinstance(lh5_file[obj], h5py.Group):
-                get_metadata(lh5_file[base+obj], metadata=metadata[obj], base=base+obj+'/', build=True, recursing=True)
+                get_metadata(
+                    lh5_file[base + obj],
+                    metadata=metadata[obj],
+                    base=base + obj + "/",
+                    build=True,
+                    recursing=True,
+                )
     else:
         log.debug(
             f"metadata not found in {lh5_file.filename} and did not build it -> metadata is None"
         )
         return None
-    
+
     # know thyself!
     if not recursing:
-        metadata["metadata"] = {'attrs': {'datatype': 'JSON'}}
-        
+        metadata["metadata"] = {"attrs": {"datatype": "JSON"}}
+
     return metadata
