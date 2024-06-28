@@ -22,7 +22,6 @@ from ....types import (
 )
 from ... import datatype as dtypeutils
 from ...exceptions import LH5DecodeError
-
 from . import utils
 from .array import (
     _h5_read_array,
