@@ -166,7 +166,6 @@ class LH5Store:
                 metadata = self.load_metadata(lh5_file, name)
 
         h5f = lh5_file
-        # Handle list-of-files recursively - how about no?
         if not isinstance(h5f, (str, h5py.File)):
             thislh5_file = list(h5f)
             n_rows_read = 0
