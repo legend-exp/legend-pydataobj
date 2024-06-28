@@ -13,6 +13,7 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 import h5py
+import json
 import numpy as np
 from numpy.typing import ArrayLike
 
@@ -307,7 +308,7 @@ class LH5Store:
             metadata = utils.get_metadata(lh5_file=lh5_file, force=True)
 
             # write the metadata as a JSON string
-            jsontowrite = str(metadata).replace("'", '"')
+            jsontowrite = json.dumps(metadata)
             lh5_file.create_dataset(
                 "metadata", dtype=f"S{len(str(jsontowrite))}", data=str(jsontowrite)
             )
