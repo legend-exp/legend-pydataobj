@@ -25,7 +25,14 @@ def _h5_write_lgdo(
     write_start=0,
     **h5py_kwargs,
 ):
-    assert isinstance(obj, types.LGDO)
+    # make this exit a little more gracefully so it does not corrupt an open LH5 file if fails
+    try:
+        assert isinstance(obj, types.LGDO)
+    except AssertionError as e:
+        log.debug(f"AssertionError: {e}")
+        if isinstance(lh5_file, h5py.File):
+            lh5_file.close()
+        raise
 
     if wo_mode == "write_safe":
         wo_mode = "w"
@@ -48,6 +55,7 @@ def _h5_write_lgdo(
     # write_object:overwrite.
     mode = "w" if wo_mode == "of" else "a"
 
+    # this is where contents of file are deleted in mode='w' mode
     if not isinstance(lh5_file, h5py.File):
         lh5_file = h5py.File(lh5_file, mode=mode)
 
@@ -57,6 +65,8 @@ def _h5_write_lgdo(
         f"mode = {wo_mode}, h5py_kwargs = {h5py_kwargs}"
     )
 
+    # this is getting the structure of the LH5 file
+    # could use metadata instead
     group = utils.get_h5_group(group, lh5_file)
 
     if wo_mode == "w" and name in group:

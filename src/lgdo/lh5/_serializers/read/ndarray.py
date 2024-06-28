@@ -22,6 +22,7 @@ def _h5_read_ndarray(
     use_h5idx=False,
     obj_buf=None,
     obj_buf_start=0,
+    metadata=None,
 ):
     if obj_buf is not None and not isinstance(obj_buf, Array):
         msg = "object buffer is not an Array"
@@ -94,7 +95,10 @@ def _h5_read_ndarray(
         nda = h5f[name][...][source_sel]
 
     # Finally, set attributes and return objects
-    attrs = h5f[name].attrs
+    if metadata is not None:
+        attrs = metadata["attrs"]
+    else:
+        attrs = h5f[name].attrs
 
     # special handling for bools
     # (c and Julia store as uint8 so cast to bool)

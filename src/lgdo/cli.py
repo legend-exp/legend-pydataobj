@@ -43,7 +43,11 @@ def lh5ls(args=None):
     )
     parser.add_argument("lh5_group", nargs="?", help="""LH5 group.""", default="/")
     parser.add_argument(
-        "--attributes", "-a", action="store_true", help="""Print HDF5 attributes too"""
+        "--attributes",
+        "-a",
+        "--attrs",
+        action="store_true",
+        help="""Print HDF5 attributes too""",
     )
     parser.add_argument(
         "--depth",
@@ -202,6 +206,9 @@ Exclude the /data/table1/col1 Table column:
     else:
         obj_list = obj_list_full
 
+    # remove metadata if it exists - do not attempt to concatenate this
+    obj_list.discard("metadata")
+
     # sort
     obj_list = sorted(obj_list)
 
@@ -298,3 +305,54 @@ Exclude the /data/table1/col1 Table column:
                 _inplace_table_filter(name, obj, obj_list)
 
             store.write(obj, name, args.output, wo_mode="append")
+
+    # write the metadata for the new file at the very end
+    store.write_metadata(args.output)
+
+
+def lh5meta(args=None):
+    """Re-builds `metadata"` `Dataset` for an LH5 file or list of files."""
+    parser = argparse.ArgumentParser(
+        prog="lh5meta",
+        description="re-builds `'metadata'` `Dataset` for an LH5 file or list of files.",
+    )
+
+    # global options
+    parser.add_argument(
+        "--version",
+        action="store_true",
+        help="""Print legend-pydataobj version and exit""",
+    )
+    parser.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="""Increase the program verbosity""",
+    )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="""Increase the program verbosity to maximum""",
+    )
+
+    parser.add_argument(
+        "lh5_file",
+        nargs="+",
+        help="""Input list LH5 files""",
+    )
+
+    args = parser.parse_args(args)
+
+    if args.verbose:
+        lgdogging.setup(logging.DEBUG)
+    elif args.debug:
+        lgdogging.setup(logging.DEBUG, logging.root)
+    else:
+        lgdogging.setup()
+
+    if args.version:
+        print(__version__)  # noqa: T201
+        sys.exit()
+
+    store = lh5.LH5Store()
+    store.write_metadata(args.lh5_file)
