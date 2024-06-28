@@ -6,6 +6,7 @@ HDF5 files.
 from __future__ import annotations
 
 import bisect
+import json
 import logging
 import os
 import sys
@@ -13,7 +14,6 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 import h5py
-import json
 import numpy as np
 from numpy.typing import ArrayLike
 
