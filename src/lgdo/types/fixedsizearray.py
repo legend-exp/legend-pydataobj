@@ -50,4 +50,4 @@ class FixedSizeArray(Array):
         --------
         .LGDO.view_as
         """
-        return super.view_as(library, with_units=with_units)
+        return super().view_as(library, with_units=with_units)

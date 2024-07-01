@@ -268,7 +268,7 @@ def load_nda(
         f = sto.gimme_file(ff, "r")
         for par in par_list:
             if f"{lh5_group}/{par}" not in f:
-                msg = f"'{lh5_group}/{par}' not in file {f_list[ii]}"
+                msg = f"'{lh5_group}/{par}' not in file {ff}"
                 raise RuntimeError(msg)
 
             if idx_list is None:
