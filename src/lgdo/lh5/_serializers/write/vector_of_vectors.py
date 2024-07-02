@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import logging
 
+import numpy as np
+
 from .... import types
 from ... import utils
 from ...exceptions import LH5EncodeError
@@ -31,12 +33,15 @@ def _h5_write_vector_of_vectors(
 
     # if appending we need to add an appropriate offset to the
     # cumulative lengths as appropriate for the in-file object
-    offset = 0  # declare here because we have to subtract it off at the end
+    # declare here because we have to subtract it off at the end
+    offset = np.int64(0)
     if (wo_mode in ("a", "o")) and "cumulative_length" in group:
         len_cl = len(group["cumulative_length"])
+        # if append, ignore write_start and set it to total number of vectors
         if wo_mode == "a":
             write_start = len_cl
         if len_cl > 0:
+            # set offset to correct number of elements in flattened_data until write_start
             offset = group["cumulative_length"][write_start - 1]
 
     # First write flattened_data array. Only write rows with data.
@@ -71,15 +76,23 @@ def _h5_write_vector_of_vectors(
     )
 
     # now offset is used to give appropriate in-file values for
-    # cumulative_length. Need to adjust it for start_row
+    # cumulative_length. Need to adjust it for start_row, if different from zero
     if start_row > 0:
         offset -= obj.cumulative_length.nda[start_row - 1]
 
     # Add offset to obj.cumulative_length itself to avoid memory allocation.
     # Then subtract it off after writing! (otherwise it will be changed
     # upon return)
-    cl_dtype = obj.cumulative_length.nda.dtype.type
-    obj.cumulative_length.nda += cl_dtype(offset)
+
+    # NOTE: this operation is not numerically safe (uint overflow in the lower
+    # part of the array), but this is not a problem because those values are
+    # not written to disk and we are going to restore the offset at the end
+    np.add(
+        obj.cumulative_length.nda,
+        offset,
+        out=obj.cumulative_length.nda,
+        casting="unsafe",
+    )
 
     _h5_write_array(
         obj.cumulative_length,
@@ -92,4 +105,10 @@ def _h5_write_vector_of_vectors(
         write_start=write_start,
         **h5py_kwargs,
     )
-    obj.cumulative_length.nda -= cl_dtype(offset)
+
+    np.subtract(
+        obj.cumulative_length.nda,
+        offset,
+        out=obj.cumulative_length.nda,
+        casting="unsafe",
+    )

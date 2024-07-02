@@ -68,7 +68,7 @@ def test_uleb128zzdiff_encode_decode_equality():
         pos = varlen.uleb128_encode(varlen.zigzag_encode(int(s) - last), encx)
         assert np.array_equal(sig_out[offset : offset + pos], encx[:pos])
         offset += pos
-        last = s
+        last = int(s)
 
     sig_in_dec = np.empty(100, dtype="uint32")
     siglen = np.empty(1, dtype="uint32")
