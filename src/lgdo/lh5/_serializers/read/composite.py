@@ -56,7 +56,7 @@ def _h5_read_lgdo(
         lh5_file = list(h5f)
         n_rows_read = 0
 
-        for i, h5f in enumerate(lh5_file):
+        for i, _h5f in enumerate(lh5_file):
             if isinstance(idx, list) and len(idx) > 0 and not np.isscalar(idx[0]):
                 # a list of lists: must be one per file
                 idx_i = idx[i]
@@ -65,7 +65,7 @@ def _h5_read_lgdo(
                 if not (isinstance(idx, tuple) and len(idx) == 1):
                     idx = (idx,)
                 # idx is a long continuous array
-                n_rows_i = read_n_rows(name, h5f)
+                n_rows_i = read_n_rows(name, _h5f)
                 # find the length of the subset of idx that contains indices
                 # that are less than n_rows_i
                 n_rows_to_read_i = bisect.bisect_left(idx[0], n_rows_i)
@@ -78,7 +78,7 @@ def _h5_read_lgdo(
 
             obj_buf, n_rows_read_i = _h5_read_lgdo(
                 name,
-                h5f,
+                _h5f,
                 start_row=start_row,
                 n_rows=n_rows_i,
                 idx=idx_i,
