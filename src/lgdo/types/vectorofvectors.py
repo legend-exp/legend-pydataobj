@@ -480,7 +480,7 @@ class VectorOfVectors(LGDO):
                 lens = np.array([lens], dtype="u4")
 
             # calculate stop index in flattened_data
-            cum_lens = start + lens.cumsum()
+            cum_lens = np.add(start, lens.cumsum(), dtype=int)
 
             # fill with fast vectorized routine
             vovutils._nb_fill(vec, lens, self.flattened_data.nda[start : cum_lens[-1]])
