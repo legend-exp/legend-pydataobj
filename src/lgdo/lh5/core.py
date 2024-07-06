@@ -118,7 +118,7 @@ def read(
             if isinstance(lh5_file, str):
                 h5f = h5py.File(h5f, mode="r")
             lh5_obj += h5f[name]
-        
+
     obj, n_rows_read = _serializers._h5_read_lgdo(
         lh5_obj,
         start_row=start_row,

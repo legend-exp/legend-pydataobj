@@ -15,7 +15,7 @@ def _h5_read_scalar(
     obj_buf=None,
 ):
     value = h5d[()]
-    attrs=dict(h5d.attrs)
+    attrs = dict(h5d.attrs)
 
     # special handling for bools
     # (c and Julia store as uint8 so cast to bool)
