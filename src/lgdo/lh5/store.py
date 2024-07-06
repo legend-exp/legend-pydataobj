@@ -144,13 +144,12 @@ class LH5Store:
         """
         # grab files from store
         if not isinstance(lh5_file, (str, h5py.File)):
-            lh5_file = [self.gimme_file(f, "r") for f in list(lh5_file)]
+            lh5_obj = [self.gimme_file(f, "r")[name] for f in list(lh5_file)]
         else:
-            lh5_file = self.gimme_file(lh5_file, "r")
+            lh5_obj = self.gimme_file(lh5_file, "r")[name]
 
         return _serializers._h5_read_lgdo(
-            name,
-            lh5_file,
+            lh5_obj,
             start_row=start_row,
             n_rows=n_rows,
             idx=idx,

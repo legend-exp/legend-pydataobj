@@ -29,7 +29,7 @@ def get_buffer(
     Sets size to `size` if object has a size.
     """
     obj, n_rows = _serializers._h5_read_lgdo(
-        name, lh5_file, n_rows=0, field_mask=field_mask
+        lh5_file[name], n_rows=0, field_mask=field_mask
     )
 
     if hasattr(obj, "resize") and size is not None:

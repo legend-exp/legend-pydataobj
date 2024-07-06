@@ -14,8 +14,7 @@ log = logging.getLogger(__name__)
 
 
 def _h5_read_ndarray(
-    name,
-    h5f,
+    h5d,
     start_row=0,
     n_rows=sys.maxsize,
     idx=None,
@@ -25,16 +24,16 @@ def _h5_read_ndarray(
 ):
     if obj_buf is not None and not isinstance(obj_buf, Array):
         msg = "object buffer is not an Array"
-        raise LH5DecodeError(msg, h5f, name)
+        raise LH5DecodeError(msg, h5d)
 
     # compute the number of rows to read
     # we culled idx above for start_row and n_rows, now we have to apply
     # the constraint of the length of the dataset
     try:
-        ds_n_rows = h5f[name].shape[0]
+        ds_n_rows = h5d.shape[0]
     except AttributeError as e:
         msg = "does not seem to be an HDF5 dataset"
-        raise LH5DecodeError(msg, h5f, name) from e
+        raise LH5DecodeError(msg, h5d) from e
 
     if idx is not None:
         if len(idx[0]) > 0 and idx[0][-1] >= ds_n_rows:
@@ -78,23 +77,23 @@ def _h5_read_ndarray(
         # this is required to make the read of multiple files faster
         # until a better solution found.
         if change_idx_to_slice or idx is None or use_h5idx:
-            h5f[name].read_direct(obj_buf.nda, source_sel, dest_sel)
+            h5d.read_direct(obj_buf.nda, source_sel, dest_sel)
         else:
             # it is faster to read the whole object and then do fancy indexing
-            obj_buf.nda[dest_sel] = h5f[name][...][source_sel]
+            obj_buf.nda[dest_sel] = h5d[...][source_sel]
 
         nda = obj_buf.nda
     elif n_rows == 0:
-        tmp_shape = (0,) + h5f[name].shape[1:]
-        nda = np.empty(tmp_shape, h5f[name].dtype)
+        tmp_shape = (0,) + h5d.shape[1:]
+        nda = np.empty(tmp_shape, h5d.dtype)
     elif change_idx_to_slice or idx is None or use_h5idx:
-        nda = h5f[name][source_sel]
+        nda = h5d[source_sel]
     else:
         # it is faster to read the whole object and then do fancy indexing
-        nda = h5f[name][...][source_sel]
+        nda = h5d[...][source_sel]
 
     # Finally, set attributes and return objects
-    attrs = h5f[name].attrs
+    attrs = dict(h5d.attrs)
 
     # special handling for bools
     # (c and Julia store as uint8 so cast to bool)
