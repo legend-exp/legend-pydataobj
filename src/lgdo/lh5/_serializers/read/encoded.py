@@ -19,25 +19,22 @@ log = logging.getLogger(__name__)
 
 
 def _h5_read_array_of_encoded_equalsized_arrays(
-    name,
-    h5f,
+    h5g,
     **kwargs,
 ):
-    return _h5_read_encoded_array(ArrayOfEncodedEqualSizedArrays, name, h5f, **kwargs)
+    return _h5_read_encoded_array(ArrayOfEncodedEqualSizedArrays, h5g, **kwargs)
 
 
 def _h5_read_vector_of_encoded_vectors(
-    name,
-    h5f,
+    h5g,
     **kwargs,
 ):
-    return _h5_read_encoded_array(VectorOfEncodedVectors, name, h5f, **kwargs)
+    return _h5_read_encoded_array(VectorOfEncodedVectors, h5g, **kwargs)
 
 
 def _h5_read_encoded_array(
     lgdotype,
-    name,
-    h5f,
+    h5g,
     start_row=0,
     n_rows=sys.maxsize,
     idx=None,
@@ -48,11 +45,11 @@ def _h5_read_encoded_array(
 ):
     if lgdotype not in (ArrayOfEncodedEqualSizedArrays, VectorOfEncodedVectors):
         msg = f"unsupported read of encoded type {lgdotype.__name__}"
-        raise LH5DecodeError(msg, h5f, name)
+        raise LH5DecodeError(msg, h5g)
 
     if not decompress and obj_buf is not None and not isinstance(obj_buf, lgdotype):
         msg = f"object buffer is not a {lgdotype.__name__}"
-        raise LH5DecodeError(msg, h5f, name)
+        raise LH5DecodeError(msg, h5g)
 
     # read out decoded_size, either a Scalar or an Array
     decoded_size_buf = encoded_data_buf = None
@@ -62,8 +59,7 @@ def _h5_read_encoded_array(
 
     if lgdotype is VectorOfEncodedVectors:
         decoded_size, _ = _h5_read_array(
-            f"{name}/decoded_size",
-            h5f,
+            h5g["decoded_size"],
             start_row=start_row,
             n_rows=n_rows,
             idx=idx,
@@ -74,15 +70,13 @@ def _h5_read_encoded_array(
 
     else:
         decoded_size, _ = _h5_read_scalar(
-            f"{name}/decoded_size",
-            h5f,
+            h5g["decoded_size"],
             obj_buf=None if decompress else decoded_size_buf,
         )
 
     # read out encoded_data, a VectorOfVectors
     encoded_data, n_rows_read = _h5_read_vector_of_vectors(
-        f"{name}/encoded_data",
-        h5f,
+        h5g["encoded_data"],
         start_row=start_row,
         n_rows=n_rows,
         idx=idx,
@@ -99,7 +93,7 @@ def _h5_read_encoded_array(
     rawdata = lgdotype(
         encoded_data=encoded_data,
         decoded_size=decoded_size,
-        attrs=h5f[name].attrs,
+        attrs=dict(h5g.attrs),
     )
 
     # already return if no decompression is requested

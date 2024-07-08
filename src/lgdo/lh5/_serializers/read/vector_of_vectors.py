@@ -20,8 +20,7 @@ log = logging.getLogger(__name__)
 
 
 def _h5_read_vector_of_vectors(
-    name,
-    h5f,
+    h5g,
     start_row=0,
     n_rows=sys.maxsize,
     idx=None,
@@ -31,13 +30,12 @@ def _h5_read_vector_of_vectors(
 ):
     if obj_buf is not None and not isinstance(obj_buf, VectorOfVectors):
         msg = "object buffer is not a VectorOfVectors"
-        raise LH5DecodeError(msg, h5f, name)
+        raise LH5DecodeError(msg, h5g)
 
     # read out cumulative_length
     cumulen_buf = None if obj_buf is None else obj_buf.cumulative_length
     cumulative_length, n_rows_read = _h5_read_array(
-        f"{name}/cumulative_length",
-        h5f,
+        h5g["cumulative_length"],
         start_row=start_row,
         n_rows=n_rows,
         idx=idx,
@@ -63,8 +61,7 @@ def _h5_read_vector_of_vectors(
             fd_start = 0  # this variable avoids an ndarray append
 
         fd_starts, fds_n_rows_read = _h5_read_array(
-            f"{name}/cumulative_length",
-            h5f,
+            h5g["cumulative_length"],
             start_row=start_row,
             n_rows=n_rows,
             idx=idx2,
@@ -101,7 +98,7 @@ def _h5_read_vector_of_vectors(
             # need to read out the cumulen sample -before- the first sample
             # read above in order to get the starting row of the first
             # vector to read out in flattened_data
-            fd_start = h5f[f"{name}/cumulative_length"][start_row - 1]
+            fd_start = h5g["cumulative_length"][start_row - 1]
 
             # check limits for values that will be used subsequently
             if this_cumulen_nda[-1] < fd_start:
@@ -115,7 +112,7 @@ def _h5_read_vector_of_vectors(
                     f"cumulative_length non-increasing between entries "
                     f"{start_row} and {start_row+n_rows_read}"
                 )
-                raise LH5DecodeError(msg, h5f, name)
+                raise LH5DecodeError(msg, h5g)
 
         # determine the number of rows for the flattened_data readout
         fd_n_rows = this_cumulen_nda[-1] if n_rows_read > 0 else 0
@@ -147,18 +144,17 @@ def _h5_read_vector_of_vectors(
             fd_buf.resize(fdb_size)
 
     # now read
-    lgdotype = dtypeutils.datatype(h5f[f"{name}/flattened_data"].attrs["datatype"])
+    lgdotype = dtypeutils.datatype(h5g["flattened_data"].attrs["datatype"])
     if lgdotype is Array:
         _func = _h5_read_array
     elif lgdotype is VectorOfVectors:
         _func = _h5_read_vector_of_vectors
     else:
         msg = "type {lgdotype.__name__} is not supported"
-        raise LH5DecodeError(msg, h5f, f"{name}/flattened_data")
+        raise LH5DecodeError(msg, h5g, "flattened_data")
 
     flattened_data, _ = _func(
-        f"{name}/flattened_data",
-        h5f,
+        h5g["flattened_data"],
         start_row=fd_start,
         n_rows=fd_n_rows,
         idx=fd_idx,
@@ -180,7 +176,7 @@ def _h5_read_vector_of_vectors(
         VectorOfVectors(
             flattened_data=flattened_data,
             cumulative_length=cumulative_length,
-            attrs=h5f[name].attrs,
+            attrs=dict(h5g.attrs),
         ),
         n_rows_read,
     )

@@ -107,9 +107,20 @@ def read(
         `n_rows_read` will be``1``. For tables it is redundant with
         ``table.loc``. If `obj_buf` is ``None``, only `object` is returned.
     """
+    if isinstance(lh5_file, h5py.File):
+        lh5_obj = lh5_file[name]
+    elif isinstance(lh5_file, str):
+        lh5_file = h5py.File(lh5_file, mode="r")
+        lh5_obj = lh5_file[name]
+    else:
+        lh5_obj = []
+        for h5f in lh5_file:
+            if isinstance(lh5_file, str):
+                h5f = h5py.File(h5f, mode="r")  # noqa: PLW2901
+            lh5_obj += h5f[name]
+
     obj, n_rows_read = _serializers._h5_read_lgdo(
-        name,
-        lh5_file,
+        lh5_obj,
         start_row=start_row,
         n_rows=n_rows,
         idx=idx,
