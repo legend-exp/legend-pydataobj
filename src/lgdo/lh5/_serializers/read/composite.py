@@ -13,6 +13,7 @@ from ....types import (
     ArrayOfEncodedEqualSizedArrays,
     ArrayOfEqualSizedArrays,
     FixedSizeArray,
+    Histogram,
     Scalar,
     Struct,
     Table,
@@ -165,6 +166,17 @@ def _h5_read_lgdo(
             field_mask=field_mask,
             obj_buf=obj_buf,
             obj_buf_start=obj_buf_start,
+            decompress=decompress,
+        )
+
+    if lgdotype is Histogram:
+        return _h5_read_histogram(
+            h5o,
+            start_row=start_row,
+            n_rows=n_rows,
+            idx=idx,
+            use_h5idx=use_h5idx,
+            field_mask=field_mask,
             decompress=decompress,
         )
 
@@ -385,3 +397,33 @@ def _h5_read_table(
     utils.check_obj_buf_attrs(obj_buf.attrs, attrs, h5g)
 
     return obj_buf, n_rows_read
+
+
+def _h5_read_histogram(
+    h5g,
+    start_row=0,
+    n_rows=sys.maxsize,
+    idx=None,
+    use_h5idx=False,
+    field_mask=None,
+    decompress=True,
+):
+    struct, n_rows_read = _h5_read_struct(
+        h5g,
+        start_row,
+        n_rows,
+        idx,
+        use_h5idx,
+        field_mask,
+        decompress,
+    )
+    isdensity = struct.isdensity.value
+    binning = [
+        (a.binedges.first, a.binedges.last, a.binedges.step, a.closedleft)
+        for _, a in struct.binning.items()
+    ]
+    binning = [tuple(v.value for v in b) for b in binning]
+    weights = struct.weights.view_as("np")
+    histogram = Histogram(weights, binning, isdensity)
+
+    return histogram, n_rows_read

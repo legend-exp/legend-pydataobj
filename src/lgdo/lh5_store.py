@@ -20,6 +20,7 @@ from .types import (
     ArrayOfEncodedEqualSizedArrays,  # noqa: F401
     ArrayOfEqualSizedArrays,  # noqa: F401
     FixedSizeArray,  # noqa: F401
+    Histogram,  # noqa: F401
     Scalar,
     Struct,
     Table,  # noqa: F401
