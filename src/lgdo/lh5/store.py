@@ -12,6 +12,7 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 import h5py
+import numpy as np
 from numpy.typing import ArrayLike
 
 from .. import types
@@ -143,13 +144,58 @@ class LH5Store:
         .lh5.core.read
         """
         # grab files from store
-        if not isinstance(lh5_file, (str, h5py.File)):
-            lh5_obj = [self.gimme_file(f, "r")[name] for f in list(lh5_file)]
-        else:
+        if isinstance(lh5_file, (str, h5py.File)):
             lh5_obj = self.gimme_file(lh5_file, "r")[name]
+        else:
+            lh5_files = list(lh5_file)
+            n_rows_read = 0
+            
+            for i, h5f in enumerate(lh5_files):
+                if isinstance(idx, (list, tuple)) and len(idx) > 0 and not np.isscalar(idx[0]):
+                    # a list of lists: must be one per file
+                    idx_i = idx[i]
+                elif idx is not None:
+                    # make idx a proper tuple if it's not one already
+                    if not (isinstance(idx, tuple) and len(idx) == 1):
+                        idx = (idx,)
+                    # idx is a long continuous array
+                    n_rows_i = read_n_rows(_h5f)
+                    # find the length of the subset of idx that contains indices
+                    # that are less than n_rows_i
+                    n_rows_to_read_i = bisect.bisect_left(idx[0], n_rows_i)
+                    # now split idx into idx_i and the remainder
+                    idx_i = idx[0][:n_rows_to_read_i]
+                    idx = idx[0][n_rows_to_read_i:] - n_rows_i
+                else:
+                    idx_i = None
+                n_rows_i = n_rows - n_rows_read
+                
+                obj_buf, n_rows_read_i = self.read(
+                    name,
+                    h5f,
+                    start_row,
+                    n_rows_i,
+                    idx_i,
+                    use_h5idx,
+                    field_mask,
+                    obj_buf,
+                    obj_buf_start,
+                    decompress,
+                )
+                
+                n_rows_read += n_rows_read_i
+                if n_rows_read >= n_rows or obj_buf is None:
+                    return obj_buf, n_rows_read
+                start_row = 0
+                obj_buf_start += n_rows_read_i
+            return obj_buf, n_rows_read
 
+        if isinstance(idx, (list, tuple)) and len(idx) > 0 and not np.isscalar(idx[0]):
+            idx = idx[0]
         return _serializers._h5_read_lgdo(
-            lh5_obj,
+            lh5_obj.id,
+            lh5_obj.file.filename,
+            lh5_obj.name,
             start_row=start_row,
             n_rows=n_rows,
             idx=idx,
