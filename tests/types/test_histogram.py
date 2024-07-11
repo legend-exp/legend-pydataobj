@@ -4,7 +4,7 @@ import hist
 import numpy as np
 import pytest
 
-from lgdo import Histogram, HistogramAxis, Scalar
+from lgdo import Histogram, Scalar
 
 
 def test_init_hist():
@@ -31,6 +31,14 @@ def test_init_hist():
     h.fill([-1, 0.8, 2])
     with pytest.raises(ValueError, match="flow bins"):
         Histogram(h)
+
+    # assert that the hist data is not copied into the LGDO.
+    h = hist.Hist(hist.axis.Regular(bins=10, start=0, stop=10))
+    h.fill([1, 2, 3])
+    hi = Histogram(h)
+    assert np.sum(hi.weights.nda) == 3
+    h.fill([1, 2, 3])
+    assert np.sum(hi.weights.nda) == 6
 
 
 def test_init_np():
@@ -97,13 +105,13 @@ def test_axes():
 
     h = Histogram(
         np.array([[1, 1], [1, 1]]),
-        [HistogramAxis(1, 3, 1, True), HistogramAxis(4, 6, 1, False)],
+        [Histogram.Axis(1, 3, 1, True), Histogram.Axis(4, 6, 1, False)],
     )
 
     with pytest.raises(ValueError, match="invalid binning object"):
         h = Histogram(
             np.array([[1, 1], [1, 1]]),
-            [(1, 3, 1, True), HistogramAxis(4, 6, 1, False)],
+            [(1, 3, 1, True), Histogram.Axis(4, 6, 1, False)],
         )
 
 
