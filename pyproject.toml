@@ -34,7 +34,7 @@ dependencies = [
     "awkward>=2",
     "awkward-pandas",
     "colorlog",
-    "h5py>=3.2",
+    "h5py>=3.10",
     "hdf5plugin",
     "numba!=0.53.*,!=0.54.*",
     "numexpr",
