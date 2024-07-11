@@ -125,7 +125,12 @@ def get_h5_group(
         else:
             group = base_group.create_group(group)
             if grp_attrs is not None:
-                group.attrs.update({ k:v.encode('utf-8') if isinstance(v, str) else v for k, v in grp_attrs.items() })
+                group.attrs.update(
+                    {
+                        k: v.encode("utf-8") if isinstance(v, str) else v
+                        for k, v in grp_attrs.items()
+                    }
+                )
             return group
     if (
         grp_attrs is not None
@@ -142,7 +147,12 @@ def get_h5_group(
         for key in group.attrs:
             group.attrs.pop(key)
 
-        group.attrs.update({ k:v.encode('utf-8') if isinstance(v, str) else v for k, v in grp_attrs.items() })
+        group.attrs.update(
+            {
+                k: v.encode("utf-8") if isinstance(v, str) else v
+                for k, v in grp_attrs.items()
+            }
+        )
 
     return group
 

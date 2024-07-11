@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import logging
 import sys
+
 import h5py
 
-from .utils import read_attrs
 from .... import compression as compress
 from ....types import (
     ArrayOfEncodedEqualSizedArrays,
@@ -15,6 +15,7 @@ from .array import (
     _h5_read_array,
 )
 from .scalar import _h5_read_scalar
+from .utils import read_attrs
 from .vector_of_vectors import _h5_read_vector_of_vectors
 
 log = logging.getLogger(__name__)
@@ -26,7 +27,9 @@ def _h5_read_array_of_encoded_equalsized_arrays(
     oname,
     **kwargs,
 ):
-    return _h5_read_encoded_array(ArrayOfEncodedEqualSizedArrays, h5g, fname, oname, **kwargs)
+    return _h5_read_encoded_array(
+        ArrayOfEncodedEqualSizedArrays, h5g, fname, oname, **kwargs
+    )
 
 
 def _h5_read_vector_of_encoded_vectors(

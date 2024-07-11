@@ -1,15 +1,18 @@
 from __future__ import annotations
 
+import bisect
 import inspect
 import sys
 from collections.abc import Mapping, Sequence
 from typing import Any
 
 import h5py
+import numpy as np
 from numpy.typing import ArrayLike
 
 from .. import types
 from . import _serializers
+from .utils import read_n_rows
 
 
 def read(
@@ -115,9 +118,13 @@ def read(
     else:
         lh5_files = list(lh5_file)
         n_rows_read = 0
-        
+
         for i, h5f in enumerate(lh5_files):
-            if isinstance(idx, (list, tuple)) and len(idx) > 0 and not np.isscalar(idx[0]):
+            if (
+                isinstance(idx, (list, tuple))
+                and len(idx) > 0
+                and not np.isscalar(idx[0])
+            ):
                 # a list of lists: must be one per file
                 idx_i = idx[i]
             elif idx is not None:
@@ -125,7 +132,7 @@ def read(
                 if not (isinstance(idx, tuple) and len(idx) == 1):
                     idx = (idx,)
                 # idx is a long continuous array
-                n_rows_i = read_n_rows(_h5f)
+                n_rows_i = read_n_rows(h5f)
                 # find the length of the subset of idx that contains indices
                 # that are less than n_rows_i
                 n_rows_to_read_i = bisect.bisect_left(idx[0], n_rows_i)
@@ -155,8 +162,7 @@ def read(
             start_row = 0
             obj_buf_start += n_rows_read_i
         return obj_buf, n_rows_read
-                
-    
+
     if isinstance(idx, (list, tuple)) and len(idx) > 0 and not np.isscalar(idx[0]):
         idx = idx[0]
     obj, n_rows_read = _serializers._h5_read_lgdo(

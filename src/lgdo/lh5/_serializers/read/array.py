@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import logging
-import h5py
 
-from .utils import read_attrs
 from ....types import Array, ArrayOfEqualSizedArrays, FixedSizeArray
 from . import utils
 from .ndarray import _h5_read_ndarray

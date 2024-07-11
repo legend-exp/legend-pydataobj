@@ -22,7 +22,6 @@ from ....types import (
 )
 from ... import datatype as dtypeutils
 from ...exceptions import LH5DecodeError
-from ...utils import read_n_rows
 from . import utils
 from .array import (
     _h5_read_array,
@@ -265,7 +264,7 @@ def _h5_read_struct(
 def _h5_read_table(
     h5g,
     fname,
-    oname,    
+    oname,
     start_row=0,
     n_rows=sys.maxsize,
     idx=None,

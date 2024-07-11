@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import logging
 
-import numpy as np
 import h5py
+import numpy as np
 
-from .utils import read_attrs
 from ....types import Scalar
 from ...exceptions import LH5DecodeError
+from .utils import read_attrs
 
 log = logging.getLogger(__name__)
 

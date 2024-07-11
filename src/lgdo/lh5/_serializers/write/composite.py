@@ -51,13 +51,15 @@ def _h5_write_lgdo(
     if not isinstance(lh5_file, h5py.File):
         mode = "w" if wo_mode == "of" or not os.path.exists(lh5_file) else "a"
         if mode == "w":
-            file_kwargs.update({
-                "fs_strategy":"page",
-                "fs_page_size":65536,
-                "fs_persist":True,
-                "fs_threshold":1,
-                "libver":("latest", "latest")
-            })
+            file_kwargs.update(
+                {
+                    "fs_strategy": "page",
+                    "fs_page_size": 65536,
+                    "fs_persist": True,
+                    "fs_threshold": 1,
+                    "libver": ("latest", "latest"),
+                }
+            )
         lh5_file = h5py.File(lh5_file, mode=mode, **file_kwargs)
 
     log.debug(

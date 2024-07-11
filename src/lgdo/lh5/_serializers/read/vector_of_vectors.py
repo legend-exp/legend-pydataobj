@@ -3,11 +3,10 @@ from __future__ import annotations
 import logging
 import sys
 
+import h5py
 import numba
 import numpy as np
-import h5py
 
-from .utils import read_attrs
 from ....types import (
     Array,
     VectorOfVectors,
@@ -17,6 +16,7 @@ from ...exceptions import LH5DecodeError
 from .array import (
     _h5_read_array,
 )
+from .utils import read_attrs
 
 log = logging.getLogger(__name__)
 
@@ -108,7 +108,7 @@ def _h5_read_vector_of_vectors(
             # read above in order to get the starting row of the first
             # vector to read out in flattened_data
             fspace = h5d_cl.get_space()
-            fspace.select_elements([start_row-1])
+            fspace.select_elements([start_row - 1])
             mspace = h5py.h5s.create(h5py.h5s.SCALAR)
             fd_start = np.empty((), h5d_cl.dtype)
             h5d_cl.read(mspace, fspace, fd_start)
@@ -161,7 +161,7 @@ def _h5_read_vector_of_vectors(
     # now read
     h5o = h5py.h5o.open(h5g, b"flattened_data")
     h5a_dtype = h5py.h5a.open(h5o, b"datatype")
-    val = np.empty((), 'O')
+    val = np.empty((), "O")
     h5a_dtype.read(val)
     lgdotype = dtypeutils.datatype(val.item().decode())
     if lgdotype is Array:

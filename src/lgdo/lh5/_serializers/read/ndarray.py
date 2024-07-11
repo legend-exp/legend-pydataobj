@@ -4,13 +4,13 @@ import logging
 import sys
 from bisect import bisect_left
 
-import numpy as np
 import h5py
+import numpy as np
 
-from .utils import read_attrs
 from ....types import Array
 from ... import datatype
 from ...exceptions import LH5DecodeError
+from .utils import read_attrs
 
 log = logging.getLogger(__name__)
 
@@ -54,12 +54,23 @@ def _h5_read_ndarray(
         n_rows_to_read = n_rows
 
     if idx is None:
-        fspace.select_hyperslab((start_row,) + (0,)*(h5d.rank-1), (1,)*h5d.rank, None, (n_rows_to_read,) + fspace.shape[1:])
+        fspace.select_hyperslab(
+            (start_row,) + (0,) * (h5d.rank - 1),
+            (1,) * h5d.rank,
+            None,
+            (n_rows_to_read,) + fspace.shape[1:],
+        )
     elif use_h5idx:
         # Note that h5s will automatically merge adjacent elements into a range
         fspace.select_none()
         for i in idx:
-            fspace.select_hyperslab((i,) + (0,)*(h5d.rank-1), (1,)*h5d.rank, None, (1,) + fspace.shape[1:], h5py.h5s.SELECT_OR)
+            fspace.select_hyperslab(
+                (i,) + (0,) * (h5d.rank - 1),
+                (1,) * h5d.rank,
+                None,
+                (1,) + fspace.shape[1:],
+                h5py.h5s.SELECT_OR,
+            )
 
     # Now read the array
     if obj_buf is not None and n_rows_to_read > 0:
@@ -70,7 +81,12 @@ def _h5_read_ndarray(
 
         if idx is None or use_h5idx:
             mspace = h5py.h5s.create_simple(obj_buf.nda.shape)
-            mspace.select_hyperslab((obj_buf_start,) + (0,)*(h5d.rank-1), (1,)*h5d.rank, None, (n_rows_to_read,) + fspace.shape[1:])
+            mspace.select_hyperslab(
+                (obj_buf_start,) + (0,) * (h5d.rank - 1),
+                (1,) * h5d.rank,
+                None,
+                (n_rows_to_read,) + fspace.shape[1:],
+            )
             h5d.read(mspace, fspace, obj_buf.nda)
         else:
             tmp = np.empty(fspace.shape, h5d.dtype)

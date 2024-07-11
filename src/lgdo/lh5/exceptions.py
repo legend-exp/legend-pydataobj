@@ -4,7 +4,7 @@ import h5py
 
 
 class LH5DecodeError(Exception):
-    def __init__(self, message: str, fname: str, oname:str) -> None:
+    def __init__(self, message: str, fname: str, oname: str) -> None:
         super().__init__(message)
 
         self.file = fname
