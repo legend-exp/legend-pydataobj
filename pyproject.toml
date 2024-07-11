@@ -41,7 +41,7 @@ dependencies = [
     "numpy>=1.21",
     "pandas>=1.4.4",
     "parse",
-    "pint!=0.24",
+    "pint>0.24",
     "pint-pandas",
 ]
 dynamic = [
