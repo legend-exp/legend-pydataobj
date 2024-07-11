@@ -62,6 +62,7 @@ class LH5Store:
         if isinstance(lh5_file, h5py.File):
             return lh5_file
 
+        file_kwargs = {}
         if mode == "r":
             lh5_file = utils.expand_path(lh5_file, base_path=self.base_path)
 
@@ -73,20 +74,31 @@ class LH5Store:
         else:
             full_path = lh5_file
 
+        file_exists = os.path.exists(full_path)
         if mode != "r":
             directory = os.path.dirname(full_path)
             if directory != "" and not os.path.exists(directory):
                 log.debug(f"making path {directory}")
                 os.makedirs(directory)
 
-        if mode == "r" and not os.path.exists(full_path):
+        if mode == "r" and not file_exists:
             msg = f"file {full_path} not found"
             raise FileNotFoundError(msg)
+        if not file_exists:
+            mode = "w"
 
-        if mode != "r" and os.path.exists(full_path):
+        if mode != "r" and file_exists:
             log.debug(f"opening existing file {full_path} in mode '{mode}'")
 
-        h5f = h5py.File(full_path, mode)
+        if mode == "w":
+            file_kwargs.update({
+                "fs_strategy":"page",
+                "fs_page_size":65536,
+                "fs_persist":True,
+                "fs_threshold":1,
+                "libver":("latest", "latest"),
+            })
+        h5f = h5py.File(full_path, mode, **file_kwargs)
 
         if self.keep_open:
             self.files[lh5_file] = h5f
