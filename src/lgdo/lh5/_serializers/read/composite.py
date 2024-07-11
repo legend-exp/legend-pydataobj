@@ -418,11 +418,17 @@ def _h5_read_histogram(
         decompress,
     )
     isdensity = struct.isdensity.value
-    binning = [
-        (a.binedges.first, a.binedges.last, a.binedges.step, a.closedleft)
-        for _, a in struct.binning.items()
-    ]
-    binning = [tuple(v.value for v in b) for b in binning]
+    binning = []
+    for _, a in struct.binning.items():
+        be = a.binedges
+        if isinstance(be, Struct):
+            b = (None, be.first.value, be.last.value, be.step.value, a.closedleft.value)
+        elif isinstance(be, Array):
+            b = (be, None, None, None, a.closedleft.value)
+        else:
+            msg = "unexpected binning of histogram"
+            raise LH5DecodeError(msg, h5g)
+        binning.append(Histogram.Axis(*b))
     weights = struct.weights.view_as("np")
     histogram = Histogram(weights, binning, isdensity)
 

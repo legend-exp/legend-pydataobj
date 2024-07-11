@@ -15,9 +15,10 @@ class Histogram(Struct):
     class Axis(Struct):
         def __init__(
             self,
-            first: float,
-            last: float,
-            step: float,
+            edges: np.ndarray | Array | None,
+            first: float | None,
+            last: float | None,
+            step: float | None,
             closedleft: bool = True,
             binedge_attrs: dict[str, Any] | None = None,
         ) -> None:
@@ -39,38 +40,67 @@ class Histogram(Struct):
                 attributes that will be added to the ``binedges`` LGDO that
                 is part of the axis struct.
             """
-            super().__init__(
-                {
-                    "binedges": Struct(
-                        {
-                            "first": Scalar(first),
-                            "last": Scalar(last),
-                            "step": Scalar(step),
-                        },
-                        binedge_attrs,
-                    ),
-                    "closedleft": Scalar(closedleft),
-                },
-            )
+            if edges is not None and (
+                first is not None or last is not None or step is not None
+            ):
+                msg = "can only construct Axis either from edges or from range"
+                raise ValueError(msg)
+            if edges is None and (first is None or last is None or step is None):
+                msg = "did not pass all range parameters"
+                raise ValueError(msg)
+
+            if edges is None:
+                edges = Struct(
+                    {
+                        "first": Scalar(first),
+                        "last": Scalar(last),
+                        "step": Scalar(step),
+                    },
+                    binedge_attrs,
+                )
+            else:
+                if not isinstance(edges, Array):
+                    edges = Array(edges, attrs=binedge_attrs)
+                elif binedge_attrs is not None:
+                    msg = "passed both binedge types.Array instance and binedge_attrs"
+                    raise ValueError(msg)
+
+                if len(edges.nda.shape) != 1:
+                    msg = "must pass an array<1>{real} as edges vector"
+                    raise ValueError(msg)
+
+            super().__init__({"binedges": edges, "closedleft": Scalar(closedleft)})
 
         @classmethod
         def from_edges(cls, edges: np.ndarray) -> Histogram.Axis:
             edge_diff = np.diff(edges)
             if np.any(~np.isclose(edge_diff, edge_diff[0])):
-                msg = "only evenly distributed edges can be converted"
-                raise ValueError(msg)
-            return cls(edges[0], edges[-1], edge_diff[0], True)
+                return cls(edges, None, None, None, True)
+            return cls(None, edges[0], edges[-1], edge_diff[0], True)
+
+        @property
+        def is_range(self) -> bool:
+            return isinstance(self["binedges"], Struct)
 
         @property
         def first(self) -> float:
+            if not self.is_range:
+                msg = "Axis is not a range"
+                raise TypeError(msg)
             return self["binedges"]["first"].value
 
         @property
         def last(self) -> float:
+            if not self.is_range:
+                msg = "Axis is not a range"
+                raise TypeError(msg)
             return self["binedges"]["last"].value
 
         @property
         def step(self) -> float:
+            if not self.is_range:
+                msg = "Axis is not a range"
+                raise TypeError(msg)
             return self["binedges"]["step"].value
 
         @property
@@ -79,16 +109,35 @@ class Histogram(Struct):
 
         @property
         def nbins(self) -> int:
-            bins = (self.last - self.first) / self.step
-            bins_int = int(np.rint(bins))
-            assert np.isclose(bins, bins_int)
-            return bins_int
+            if self.is_range:
+                bins = (self.last - self.first) / self.step
+                bins_int = int(np.rint(bins))
+                assert np.isclose(bins, bins_int)
+                return bins_int
+            return len(self["binedges"].nda) - 1
+
+        @property
+        def edges(self) -> np.ndarray:
+            if self.is_range:
+                return np.linspace(self.first, self.last, self.nbins + 1)
+            return self["binedges"].nda
 
         def __str__(self) -> str:
-            return (
-                f"first={self.first}, last={self.last}, step={self.step}, "
-                + f"closedleft={self.closedleft}"
-            )
+            thr_orig = np.get_printoptions()["threshold"]
+            np.set_printoptions(threshold=8)
+
+            if self.is_range:
+                string = f"first={self.first}, last={self.last}, step={self.step}"
+            else:
+                string = f"edges={self.edges}"
+            string += f", closedleft={self.closedleft}"
+
+            attrs = self["binedges"].getattrs()
+            if attrs:
+                string += f" with attrs={attrs}"
+
+            np.set_printoptions(threshold=thr_orig)
+            return string
 
     def __init__(
         self,
@@ -96,7 +145,7 @@ class Histogram(Struct):
         binning: None
         | list[Histogram.Axis]
         | list[np.ndarray]
-        | list[tuple[float, float, float, bool]] = None,
+        | list[tuple[float, float, float]] = None,
         isdensity: bool = False,
         attrs: dict[str, Any] | None = None,
     ) -> None:
@@ -112,7 +161,7 @@ class Histogram(Struct):
         binning
             * has to by None if a :class:`hist.Hist` has been passed as ``weights``
             * can be a list of pre-initialized :class:`Histogram.Axis`
-            * can be a list of tuples, representing arguments to :meth:`Histogram.Axis.__init__()`
+            * can be a list of tuples, representing a range, ``(first, last, step)``
             * can be a list of numpy arrays, as returned by :func:`numpy.histogramdd`.
         """
         if isinstance(weights, hist.Hist):
@@ -127,15 +176,15 @@ class Histogram(Struct):
                 msg = "flow bins of hist.Hist cannot be represented"
                 raise ValueError(msg)
             weights_view = weights.view(flow=False)
-            if not isinstance(weights_view, np.ndarray):
-                msg = "only numpy-backed storages can be used in a hist.Hist"
+            if type(weights_view) is not np.ndarray:
+                msg = "only simple numpy-backed storages can be used in a hist.Hist"
                 raise ValueError(msg)
             w = Array(weights_view)
 
             b = []
             for ax in weights.axes:
-                if not isinstance(ax, hist.axis.Regular):
-                    msg = "only regular axes of hist.Hist can be converted"
+                if not isinstance(ax, (hist.axis.Regular, hist.axis.Variable)):
+                    msg = "only regular or variable axes of hist.Hist can be converted"
                     raise ValueError(msg)
                 b.append(Histogram.Axis.from_edges(ax.edges))
             b = self._create_binning(b)
@@ -150,7 +199,7 @@ class Histogram(Struct):
             elif all(isinstance(ax, np.ndarray) for ax in binning):
                 b = [Histogram.Axis.from_edges(ax) for ax in binning]
             elif all(isinstance(ax, tuple) for ax in binning):
-                b = [Histogram.Axis(*ax) for ax in binning]
+                b = [Histogram.Axis(None, *ax, True) for ax in binning]
             else:
                 msg = "invalid binning object passed"
                 raise ValueError(msg)
@@ -254,23 +303,27 @@ class Histogram(Struct):
                 if not a.closedleft:
                     msg = "hist.Hist cannot represent right-closed intervals"
                     raise ValueError(msg)
-                hist_axes.append(
-                    hist.axis.Regular(
+                if a.is_range:
+                    hist_ax = hist.axis.Regular(
                         bins=a.nbins,
                         start=a.first,
                         stop=a.last,
                         underflow=False,
                         overflow=False,
                     )
-                )
+                else:
+                    hist_ax = hist.axis.Variable(
+                        a.edges,
+                        underflow=False,
+                        overflow=False,
+                    )
+                hist_axes.append(hist_ax)
 
             return hist.Hist(*hist_axes, data=self.weights.view_as("np"))
 
         if library == "np":
-            edges = []
-            for a in self.binning:
-                edges.append(np.linspace(a.first, a.last, a.nbins))
-            return self.weights.view_as("np"), tuple(edges)
+            edges = tuple([a.edges for a in self.binning])
+            return self.weights.view_as("np"), edges
 
         msg = f"{library!r} is not a supported third-party format."
         raise TypeError(msg)

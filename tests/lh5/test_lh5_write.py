@@ -454,3 +454,49 @@ def test_write_histogram(caplog, tmptestdir):
             write_start=1,
             group="my_group",
         )
+
+
+def test_write_histogram_variable(caplog, tmptestdir):
+    caplog.set_level(logging.DEBUG)
+    caplog.clear()
+
+    # Start with an types.Histogram
+    if os.path.exists(f"{tmptestdir}/write_histogram_test.lh5"):
+        os.remove(f"{tmptestdir}/write_histogram_test.lh5")
+
+    h1 = types.Histogram(
+        np.array([[1, 1], [1, 1]]), (np.array([0, 1.2, 2]), np.array([2.1, 2.5, 2.3]))
+    )
+    h2 = types.Histogram(
+        np.array([[10, 10], [10, 10]]),
+        (np.array([2, 3.5, 4]), np.array([5, 6.5, 7])),
+        isdensity=True,
+    )  # Same field name, different values
+    store = lh5.LH5Store()
+    store.write(
+        h1,
+        "my_histogram",
+        f"{tmptestdir}/write_histogram_test.lh5",
+        group="my_group",
+        wo_mode="write_safe",
+    )
+    store.write(
+        h2,
+        "my_histogram",
+        f"{tmptestdir}/write_histogram_test.lh5",
+        wo_mode="overwrite",
+        group="my_group",
+    )
+
+    # Now, check that the data were overwritten
+    h3, _ = store.read(
+        "my_group/my_histogram", f"{tmptestdir}/write_histogram_test.lh5"
+    )
+    assert np.array_equal(h3.weights.nda, np.array([[10, 10], [10, 10]]))
+    assert np.array_equal(h3.binning[0].edges, np.array([2, 3.5, 4]))
+    with pytest.raises(TypeError):
+        x = h3.binning[0].first
+    with pytest.raises(TypeError):
+        x = h3.binning[1].last  # noqa: F841
+    assert not h3.binning[0].is_range
+    assert h3.isdensity

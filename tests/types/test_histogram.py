@@ -4,10 +4,10 @@ import hist
 import numpy as np
 import pytest
 
-from lgdo import Histogram, Scalar
+from lgdo import Array, Histogram, Scalar
 
 
-def test_init_hist():
+def test_init_hist_regular():
     h = hist.Hist(
         hist.axis.Regular(bins=10, start=0, stop=1, name="x"),
         hist.axis.Regular(bins=10, start=0, stop=1, name="y"),
@@ -19,7 +19,7 @@ def test_init_hist():
     assert len(h.binning) == 2
 
     h = hist.Hist(hist.axis.Integer(start=0, stop=10))
-    with pytest.raises(ValueError, match="only regular axes"):
+    with pytest.raises(ValueError, match="only regular or variable axes"):
         h = Histogram(h)
 
     h = hist.Hist(hist.axis.Regular(bins=10, start=0, stop=1))
@@ -39,6 +39,25 @@ def test_init_hist():
     assert np.sum(hi.weights.nda) == 3
     h.fill([1, 2, 3])
     assert np.sum(hi.weights.nda) == 6
+
+    h = hist.Hist(
+        hist.axis.Regular(bins=10, start=0, stop=10), storage=hist.storage.Mean()
+    )
+    h.fill([1, 2, 3], sample=[4, 4, 4])
+    with pytest.raises(ValueError, match="simple numpy-backed storages"):
+        hi = Histogram(h)
+
+
+def test_init_hist_variable():
+    h = hist.Hist(
+        hist.axis.Variable((0, 0.5, 5), name="x"),
+        hist.axis.Variable((0, 0.5, 5), name="y"),
+    )
+    rng = np.random.default_rng()
+    h.fill(rng.uniform(size=500), rng.uniform(size=500))
+    h = Histogram(h)
+
+    assert len(h.binning) == 2
 
 
 def test_init_np():
@@ -60,8 +79,7 @@ def test_init_np():
             np.array([[1, 1], [1, 1]]), (np.array([0, 1, 2]), np.array([0, 1]))
         )
 
-    with pytest.raises(ValueError, match="only evenly"):
-        h = Histogram(np.array([1, 1, 1]), (np.array([0, 1, 2.5, 3]),))
+    h = Histogram(np.array([1, 1, 1]), (np.array([0, 1, 2.5, 3]),))
 
 
 def test_datatype_name():
@@ -84,6 +102,7 @@ def test_axes():
     assert ax0.last == 2
     assert ax0.step == 1
     assert isinstance(ax0.nbins, int)
+    assert len(ax0.edges) == 3
     assert str(ax0) == "first=0, last=2, step=1, closedleft=True"
 
     ax1 = h.binning[1]
@@ -92,11 +111,17 @@ def test_axes():
     assert np.isclose(ax1.step, 0.1)
     assert isinstance(ax0.nbins, int)
 
-    h = Histogram(np.array([[1, 1], [1, 1]]), [(1, 3, 1, True), (4, 6, 1, False)])
+    h = Histogram(
+        np.array([[1, 1], [1, 1]]),
+        [(1, 3, 1), (4, 6, 1)],
+    )
     ax0 = h.binning[0]
     str(h)
 
-    h = Histogram(np.array([[1, 1], [1, 1]]), [(1, 3, 1, True), (4, 6, 1, False)])
+    h = Histogram(
+        np.array([[1, 1], [1, 1]]),
+        [Histogram.Axis(None, 1, 3, 1), Histogram.Axis(None, 4, 6, 1, False)],
+    )
     ax0 = h.binning[0]
     str(h)
 
@@ -105,32 +130,86 @@ def test_axes():
 
     h = Histogram(
         np.array([[1, 1], [1, 1]]),
-        [Histogram.Axis(1, 3, 1, True), Histogram.Axis(4, 6, 1, False)],
+        [Histogram.Axis(None, 1, 3, 1, True), Histogram.Axis(None, 4, 6, 1, False)],
     )
 
     with pytest.raises(ValueError, match="invalid binning object"):
         h = Histogram(
             np.array([[1, 1], [1, 1]]),
-            [(1, 3, 1, True), Histogram.Axis(4, 6, 1, False)],
+            [(1, 3, 1), Histogram.Axis(None, 4, 6, 1, False)],
         )
+
+    h = Histogram(np.array([1, 1, 1]), (np.array([0, 1, 2.5, 3]),))
+    with pytest.raises(TypeError, match="range"):
+        x = h.binning[0].first
+    with pytest.raises(TypeError, match="range"):
+        x = h.binning[0].last
+    with pytest.raises(TypeError, match="range"):
+        x = h.binning[0].step  # noqa: F841
+    assert h.binning[0].nbins == 3
+    assert str(h.binning[0]) == "edges=[0.  1.  2.5 3. ], closedleft=True"
+
+    Histogram.Axis(
+        np.array([0, 1, 2.5, 3]), None, None, None, binedge_attrs={"units": "m"}
+    )
+
+    with pytest.raises(ValueError, match="binedge_attrs"):
+        Histogram.Axis(
+            Array(np.array([0, 1, 2.5, 3])),
+            None,
+            None,
+            None,
+            binedge_attrs={"units": "m"},
+        )
+    with pytest.raises(ValueError, match=r"array<1>\{real\}"):
+        Histogram.Axis(Array(np.array([[0, 1], [2.5, 3]])), None, None, None)
+
+    ax = Histogram.Axis(
+        np.array([0, 1, 2.5, 3]),
+        None,
+        None,
+        None,
+        binedge_attrs={"units": "m"},
+    )
+    assert (
+        str(ax) == "edges=[0.  1.  2.5 3. ], closedleft=True with attrs={'units': 'm'}"
+    )
+
+    with pytest.raises(ValueError, match="either from edges or from range"):
+        Histogram.Axis(np.array([0, 1, 2.5, 3]), 0, 1, None)
+    with pytest.raises(ValueError, match="all range parameters"):
+        Histogram.Axis(None, 0, 1, None)
 
 
 def test_view_as_hist():
     h = Histogram(np.array([1, 1]), (np.array([0, 1, 2]),))
-    h.view_as("hist")
+    hi = h.view_as("hist")
+    assert isinstance(hi.axes[0], hist.axis.Regular)
 
     h = Histogram(np.array([1, 1]), (np.array([0, 1, 2]),), isdensity=True)
     with pytest.raises(ValueError, match="cannot represent density"):
         h.view_as("hist")
 
-    h = Histogram(np.array([[1, 1], [1, 1]]), [(1, 3, 1, True), (4, 6, 1, False)])
+    h = Histogram(
+        np.array([[1, 1], [1, 1]]),
+        [Histogram.Axis(None, 1, 3, 1, True), Histogram.Axis(None, 4, 6, 1, False)],
+    )
     with pytest.raises(ValueError, match="cannot represent right-closed"):
         h.view_as("hist")
+
+    h = Histogram(np.array([1, 1, 1]), (np.array([0, 1, 2.5, 3]),))
+    hi = h.view_as("hist")
+    assert isinstance(hi.axes[0], hist.axis.Variable)
 
 
 def test_view_as_np():
     h = Histogram(np.array([1, 1]), (np.array([0, 1, 2]),))
-    h.view_as("np")
+    assert h.binning[0].is_range
+    assert h.binning[0].nbins == 2
+    nda, axes = h.view_as("np")
+    assert isinstance(nda, np.ndarray)
+    assert len(axes) == 1
+    assert np.array_equal(axes[0], np.array([0, 1, 2]))
 
 
 def test_not_like_table():
