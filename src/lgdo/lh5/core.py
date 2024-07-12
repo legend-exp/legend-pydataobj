@@ -162,7 +162,7 @@ def read(
             else:
                 obj_buf = obj_ret
                 n_rows_read_i = len(obj_buf)
-            
+
             n_rows_read += n_rows_read_i
             if n_rows_read >= n_rows or obj_buf is None:
                 return obj_buf, n_rows_read
