@@ -118,6 +118,7 @@ def read(
     else:
         lh5_files = list(lh5_file)
         n_rows_read = 0
+        obj_buf_is_new = False
 
         for i, h5f in enumerate(lh5_files):
             if (
@@ -143,7 +144,7 @@ def read(
                 idx_i = None
             n_rows_i = n_rows - n_rows_read
 
-            obj, n_rows_read_i = read(
+            obj_ret = read(
                 name,
                 h5f,
                 start_row,
@@ -155,13 +156,19 @@ def read(
                 obj_buf_start,
                 decompress,
             )
-
+            if isinstance(obj_ret, tuple):
+                obj_buf, n_rows_read_i = obj_ret
+                obj_buf_is_new = True
+            else:
+                obj_buf = obj_ret
+                n_rows_read_i = len(obj_buf)
+            
             n_rows_read += n_rows_read_i
             if n_rows_read >= n_rows or obj_buf is None:
                 return obj_buf, n_rows_read
             start_row = 0
             obj_buf_start += n_rows_read_i
-        return obj_buf, n_rows_read
+        return obj_buf if obj_buf_is_new else (obj_buf, n_rows_read)
 
     if isinstance(idx, (list, tuple)) and len(idx) > 0 and not np.isscalar(idx[0]):
         idx = idx[0]
