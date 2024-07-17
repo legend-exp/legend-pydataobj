@@ -62,7 +62,7 @@ class Histogram(Struct):
                 if not isinstance(edges, Array):
                     edges = Array(edges, attrs=binedge_attrs)
                 elif binedge_attrs is not None:
-                    msg = "passed both binedge types.Array instance and binedge_attrs"
+                    msg = "passed both binedge as Array LGDO instance and binedge_attrs"
                     raise ValueError(msg)
 
                 if len(edges.nda.shape) != 1:
@@ -72,11 +72,13 @@ class Histogram(Struct):
             super().__init__({"binedges": edges, "closedleft": Scalar(closedleft)})
 
         @classmethod
-        def from_edges(cls, edges: np.ndarray) -> Histogram.Axis:
+        def from_edges(
+            cls, edges: np.ndarray, binedge_attrs: dict[str, Any] | None = None
+        ) -> Histogram.Axis:
             edge_diff = np.diff(edges)
             if np.any(~np.isclose(edge_diff, edge_diff[0])):
-                return cls(edges, None, None, None, True)
-            return cls(None, edges[0], edges[-1], edge_diff[0], True)
+                return cls(edges, None, None, None, True, binedge_attrs)
+            return cls(None, edges[0], edges[-1], edge_diff[0], True, binedge_attrs)
 
         @property
         def is_range(self) -> bool:
@@ -132,12 +134,23 @@ class Histogram(Struct):
                 string = f"edges={self.edges}"
             string += f", closedleft={self.closedleft}"
 
-            attrs = self["binedges"].getattrs()
+            attrs = self.get_binedgeattrs()
             if attrs:
                 string += f" with attrs={attrs}"
 
             np.set_printoptions(threshold=thr_orig)
             return string
+
+        def get_binedgeattrs(self, datatype: bool = False) -> dict:
+            """Return a copy of the LGDO attributes dictionary of the binedges
+
+            Parameters
+            ----------
+            datatype
+                if ``False``, remove ``datatype`` attribute from the output
+                dictionary.
+            """
+            return self["binedges"].getattrs(datatype)
 
     def __init__(
         self,
@@ -148,6 +161,7 @@ class Histogram(Struct):
         | list[tuple[float, float, float]] = None,
         isdensity: bool = False,
         attrs: dict[str, Any] | None = None,
+        binedge_attrs: dict[str, Any] | None = None,
     ) -> None:
         """A special struct to contain histogrammed data.
 
@@ -163,6 +177,8 @@ class Histogram(Struct):
             * can be a list of pre-initialized :class:`Histogram.Axis`
             * can be a list of tuples, representing a range, ``(first, last, step)``
             * can be a list of numpy arrays, as returned by :func:`numpy.histogramdd`.
+        binedge_attrs
+            attributes that will be added to the all ``binedges`` of all axes.
         """
         if isinstance(weights, hist.Hist):
             if binning is not None:
@@ -186,7 +202,7 @@ class Histogram(Struct):
                 if not isinstance(ax, (hist.axis.Regular, hist.axis.Variable)):
                     msg = "only regular or variable axes of hist.Hist can be converted"
                     raise ValueError(msg)
-                b.append(Histogram.Axis.from_edges(ax.edges))
+                b.append(Histogram.Axis.from_edges(ax.edges, binedge_attrs))
             b = self._create_binning(b)
         else:
             if binning is None:
@@ -195,11 +211,14 @@ class Histogram(Struct):
             w = Array(weights)
 
             if all(isinstance(ax, Histogram.Axis) for ax in binning):
+                if binedge_attrs is not None:
+                    msg = "passed both binedges as Axis instances and binedge_attrs"
+                    raise ValueError(msg)
                 b = binning
             elif all(isinstance(ax, np.ndarray) for ax in binning):
-                b = [Histogram.Axis.from_edges(ax) for ax in binning]
+                b = [Histogram.Axis.from_edges(ax, binedge_attrs) for ax in binning]
             elif all(isinstance(ax, tuple) for ax in binning):
-                b = [Histogram.Axis(None, *ax, True) for ax in binning]
+                b = [Histogram.Axis(None, *ax, True, binedge_attrs) for ax in binning]
             else:
                 msg = "invalid binning object passed"
                 raise ValueError(msg)

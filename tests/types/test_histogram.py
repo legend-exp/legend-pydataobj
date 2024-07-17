@@ -149,6 +149,13 @@ def test_axes():
     assert h.binning[0].nbins == 3
     assert str(h.binning[0]) == "edges=[0.  1.  2.5 3. ], closedleft=True"
 
+    with pytest.raises(ValueError, match="either from edges or from range"):
+        Histogram.Axis(np.array([0, 1, 2.5, 3]), 0, 1, None)
+    with pytest.raises(ValueError, match="all range parameters"):
+        Histogram.Axis(None, 0, 1, None)
+
+
+def test_ax_attributes():
     Histogram.Axis(
         np.array([0, 1, 2.5, 3]), None, None, None, binedge_attrs={"units": "m"}
     )
@@ -175,10 +182,21 @@ def test_axes():
         str(ax) == "edges=[0.  1.  2.5 3. ], closedleft=True with attrs={'units': 'm'}"
     )
 
-    with pytest.raises(ValueError, match="either from edges or from range"):
-        Histogram.Axis(np.array([0, 1, 2.5, 3]), 0, 1, None)
-    with pytest.raises(ValueError, match="all range parameters"):
-        Histogram.Axis(None, 0, 1, None)
+    h = Histogram(
+        np.array([[1, 1], [1, 1]]),
+        (np.array([0, 1, 2]), np.array([0, 1, 2])),
+        binedge_attrs={"units": "m"},
+    )
+    assert str(h.binning[0]).endswith(", closedleft=True with attrs={'units': 'm'}")
+    assert str(h.binning[1]).endswith(", closedleft=True with attrs={'units': 'm'}")
+    assert h.binning[0].get_binedgeattrs() == {"units": "m"}
+
+    with pytest.raises(ValueError):
+        h = Histogram(
+            np.array([[1, 1], [1, 1]]),
+            [Histogram.Axis(None, 1, 3, 1, True), Histogram.Axis(None, 4, 6, 1, False)],
+            binedge_attrs={"units": "m"},
+        )
 
 
 def test_view_as_hist():
