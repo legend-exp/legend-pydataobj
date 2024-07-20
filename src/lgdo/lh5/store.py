@@ -66,6 +66,7 @@ class LH5Store:
         file_kwargs = {}
         if mode == "r":
             lh5_file = utils.expand_path(lh5_file, base_path=self.base_path)
+            file_kwargs["locking"] = False
 
         if lh5_file in self.files:
             return self.files[lh5_file]

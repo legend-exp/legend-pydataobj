@@ -113,7 +113,7 @@ def read(
     if isinstance(lh5_file, h5py.File):
         lh5_obj = lh5_file[name]
     elif isinstance(lh5_file, str):
-        lh5_file = h5py.File(lh5_file, mode="r")
+        lh5_file = h5py.File(lh5_file, mode="r", locking=False)
         lh5_obj = lh5_file[name]
     else:
         lh5_files = list(lh5_file)
