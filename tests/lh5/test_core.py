@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import numpy as np
+
 import lgdo
 from lgdo import lh5
 
@@ -35,3 +37,10 @@ def test_read_as(lh5_file):
         "/data/struct/table", lh5_file, "pd", start_row=1, with_units=True
     )
     assert obj1.equals(obj2)
+
+
+def test_read_multiple_files(lh5_file):
+    lh5_obj = lh5.read("/data/struct/array", [lh5_file, lh5_file, lh5_file])
+    assert isinstance(lh5_obj, lgdo.Array)
+    assert len(lh5_obj) == 9
+    assert (lh5_obj.nda == np.array([2, 3, 4] * 3)).all()
