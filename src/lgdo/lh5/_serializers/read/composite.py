@@ -177,6 +177,8 @@ def _h5_read_lgdo(
             idx=idx,
             use_h5idx=use_h5idx,
             field_mask=field_mask,
+            obj_buf=obj_buf,
+            obj_buf_start=obj_buf_start,
             decompress=decompress,
         )
 
@@ -406,8 +408,14 @@ def _h5_read_histogram(
     idx=None,
     use_h5idx=False,
     field_mask=None,
+    obj_buf=None,
+    obj_buf_start=0,
     decompress=True,
 ):
+    if obj_buf is not None or obj_buf_start != 0:
+        msg = "reading a histogram into an existing object buffer is not supported"
+        raise LH5DecodeError(msg, h5g)
+
     struct, n_rows_read = _h5_read_struct(
         h5g,
         start_row,
