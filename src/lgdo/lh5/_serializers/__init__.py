@@ -7,6 +7,7 @@ from .read.array import (
     _h5_read_ndarray,
 )
 from .read.composite import (
+    _h5_read_histogram,
     _h5_read_lgdo,
     _h5_read_struct,
     _h5_read_table,
@@ -32,6 +33,7 @@ __all__ = [
     "_h5_read_array_of_equalsized_arrays",
     "_h5_read_struct",
     "_h5_read_table",
+    "_h5_read_histogram",
     "_h5_read_scalar",
     "_h5_read_array_of_encoded_equalsized_arrays",
     "_h5_read_vector_of_encoded_vectors",

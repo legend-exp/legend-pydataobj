@@ -33,6 +33,7 @@ def test_datatype2lgdo():
     assert d("struct{a,b,c,d}") == types.Struct
     assert d("struct{}") == types.Struct
     assert d("table{a,b,c,d}") == types.Table
+    assert d("struct{binning,weights,isdensity}") == types.Histogram
 
 
 def test_utils():
