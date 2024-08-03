@@ -11,7 +11,7 @@ def test_read(lh5_file):
     assert isinstance(lh5_obj, lgdo.Scalar)
     assert lh5_obj.value == 10
     assert lh5_obj.attrs["sth"] == 1
-
+    
 
 def test_write(tmptestdir):
     struct = lgdo.Struct()

@@ -108,7 +108,7 @@ def _h5_read_vector_of_vectors(
             # read above in order to get the starting row of the first
             # vector to read out in flattened_data
             fspace = h5d_cl.get_space()
-            fspace.select_elements([start_row - 1])
+            fspace.select_elements([[start_row - 1]])
             mspace = h5py.h5s.create(h5py.h5s.SCALAR)
             fd_start = np.empty((), h5d_cl.dtype)
             h5d_cl.read(mspace, fspace, fd_start)
