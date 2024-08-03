@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import sys
 
+import h5py
 import numba
 import numpy as np
 
@@ -15,12 +16,15 @@ from ...exceptions import LH5DecodeError
 from .array import (
     _h5_read_array,
 )
+from .utils import read_attrs
 
 log = logging.getLogger(__name__)
 
 
 def _h5_read_vector_of_vectors(
     h5g,
+    fname,
+    oname,
     start_row=0,
     n_rows=sys.maxsize,
     idx=None,
@@ -30,12 +34,15 @@ def _h5_read_vector_of_vectors(
 ):
     if obj_buf is not None and not isinstance(obj_buf, VectorOfVectors):
         msg = "object buffer is not a VectorOfVectors"
-        raise LH5DecodeError(msg, h5g)
+        raise LH5DecodeError(msg, fname, oname)
 
     # read out cumulative_length
     cumulen_buf = None if obj_buf is None else obj_buf.cumulative_length
+    h5d_cl = h5py.h5d.open(h5g, b"cumulative_length")
     cumulative_length, n_rows_read = _h5_read_array(
-        h5g["cumulative_length"],
+        h5d_cl,
+        fname,
+        f"{oname}/cumulative_length",
         start_row=start_row,
         n_rows=n_rows,
         idx=idx,
@@ -51,17 +58,19 @@ def _h5_read_vector_of_vectors(
     if idx is not None and n_rows_read > 0:
         # get the starting indices for each array in flattened data:
         # the starting index for array[i] is cumulative_length[i-1]
-        idx2 = (np.asarray(idx[0]).copy() - 1,)
+        idx2 = np.asarray(idx).copy() - 1
 
         # re-read cumulative_length with these indices
         # note this will allocate memory for fd_starts!
         fd_start = None
-        if idx2[0][0] == -1:
-            idx2 = (idx2[0][1:],)
+        if idx2[0] == -1:
+            idx2 = idx2[1:]
             fd_start = 0  # this variable avoids an ndarray append
 
         fd_starts, fds_n_rows_read = _h5_read_array(
-            h5g["cumulative_length"],
+            h5d_cl,
+            fname,
+            f"{oname}/cumulative_length",
             start_row=start_row,
             n_rows=n_rows,
             idx=idx2,
@@ -98,7 +107,11 @@ def _h5_read_vector_of_vectors(
             # need to read out the cumulen sample -before- the first sample
             # read above in order to get the starting row of the first
             # vector to read out in flattened_data
-            fd_start = h5g["cumulative_length"][start_row - 1]
+            fspace = h5d_cl.get_space()
+            fspace.select_elements([[start_row - 1]])
+            mspace = h5py.h5s.create(h5py.h5s.SCALAR)
+            fd_start = np.empty((), h5d_cl.dtype)
+            h5d_cl.read(mspace, fspace, fd_start)
 
             # check limits for values that will be used subsequently
             if this_cumulen_nda[-1] < fd_start:
@@ -112,7 +125,7 @@ def _h5_read_vector_of_vectors(
                     f"cumulative_length non-increasing between entries "
                     f"{start_row} and {start_row+n_rows_read}"
                 )
-                raise LH5DecodeError(msg, h5g)
+                raise LH5DecodeError(msg, fname, oname)
 
         # determine the number of rows for the flattened_data readout
         fd_n_rows = this_cumulen_nda[-1] if n_rows_read > 0 else 0
@@ -125,6 +138,8 @@ def _h5_read_vector_of_vectors(
         # First we need to subtract off the in-file offset for the start of
         # read for flattened_data
         this_cumulen_nda -= fd_start
+
+    h5d_cl.close()
 
     # If we started with a partially-filled buffer, add the
     # appropriate offset for the start of the in-memory flattened
@@ -144,17 +159,23 @@ def _h5_read_vector_of_vectors(
             fd_buf.resize(fdb_size)
 
     # now read
-    lgdotype = dtypeutils.datatype(h5g["flattened_data"].attrs["datatype"])
+    h5o = h5py.h5o.open(h5g, b"flattened_data")
+    h5a_dtype = h5py.h5a.open(h5o, b"datatype")
+    val = np.empty((), "O")
+    h5a_dtype.read(val)
+    lgdotype = dtypeutils.datatype(val.item().decode())
     if lgdotype is Array:
         _func = _h5_read_array
     elif lgdotype is VectorOfVectors:
         _func = _h5_read_vector_of_vectors
     else:
         msg = "type {lgdotype.__name__} is not supported"
-        raise LH5DecodeError(msg, h5g, "flattened_data")
+        raise LH5DecodeError(msg, fname, f"{oname}/flattened_data")
 
     flattened_data, _ = _func(
-        h5g["flattened_data"],
+        h5o,
+        fname,
+        f"{oname}/flattened_data",
         start_row=fd_start,
         n_rows=fd_n_rows,
         idx=fd_idx,
@@ -162,6 +183,7 @@ def _h5_read_vector_of_vectors(
         obj_buf=fd_buf,
         obj_buf_start=fd_buf_start,
     )
+    h5o.close()
 
     if obj_buf is not None:
         # if the buffer is partially filled, cumulative_length will be invalid
@@ -176,7 +198,7 @@ def _h5_read_vector_of_vectors(
         VectorOfVectors(
             flattened_data=flattened_data,
             cumulative_length=cumulative_length,
-            attrs=dict(h5g.attrs),
+            attrs=read_attrs(h5g, fname, oname),
         ),
         n_rows_read,
     )
@@ -194,4 +216,4 @@ def _make_fd_idx(starts, stops, idx):
         for i in range(starts[j], stops[j]):
             idx[k] = i
             k += 1
-    return (idx,)
+    return idx

@@ -2,20 +2,27 @@ from __future__ import annotations
 
 import logging
 
+import h5py
 import numpy as np
 
 from ....types import Scalar
 from ...exceptions import LH5DecodeError
+from .utils import read_attrs
 
 log = logging.getLogger(__name__)
 
 
 def _h5_read_scalar(
     h5d,
+    fname,
+    oname,
     obj_buf=None,
 ):
-    value = h5d[()]
-    attrs = dict(h5d.attrs)
+    value = np.empty((), h5d.dtype)
+    sp = h5py.h5s.create(h5py.h5s.SCALAR)
+    h5d.read(sp, sp, value)
+    value = value[()]
+    attrs = read_attrs(h5d, fname, oname)
 
     # special handling for bools
     # (c and Julia store as uint8 so cast to bool)
@@ -25,7 +32,7 @@ def _h5_read_scalar(
     if obj_buf is not None:
         if not isinstance(obj_buf, Scalar):
             msg = "object buffer a Scalar"
-            raise LH5DecodeError(msg, h5d)
+            raise LH5DecodeError(msg, fname, oname)
 
         obj_buf.value = value
         obj_buf.attrs.update(attrs)

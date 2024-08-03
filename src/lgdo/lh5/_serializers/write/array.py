@@ -71,7 +71,12 @@ def _h5_write_array(
         _attrs = obj.getattrs(datatype=True)
         _attrs.pop("compression", None)
         _attrs.pop("hdf5_settings", None)
-        ds.attrs.update(_attrs)
+        ds.attrs.update(
+            {
+                k: v.encode("utf-8") if isinstance(v, str) else v
+                for k, v in _attrs.items()
+            }
+        )
 
         return
 

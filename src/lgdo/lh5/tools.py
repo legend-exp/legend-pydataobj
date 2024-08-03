@@ -128,7 +128,7 @@ def show(
 
     # open file
     if isinstance(lh5_file, str):
-        lh5_file = h5py.File(utils.expand_path(lh5_file), "r")
+        lh5_file = h5py.File(utils.expand_path(lh5_file), "r", locking=False)
 
     # go to group
     if lh5_group != "/":
