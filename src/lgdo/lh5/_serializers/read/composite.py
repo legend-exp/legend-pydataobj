@@ -13,6 +13,7 @@ from ....types import (
     ArrayOfEncodedEqualSizedArrays,
     ArrayOfEqualSizedArrays,
     FixedSizeArray,
+    Histogram,
     Scalar,
     Struct,
     Table,
@@ -157,6 +158,19 @@ def _h5_read_lgdo(
 
     if lgdotype is Table:
         return _h5_read_table(
+            h5o,
+            start_row=start_row,
+            n_rows=n_rows,
+            idx=idx,
+            use_h5idx=use_h5idx,
+            field_mask=field_mask,
+            obj_buf=obj_buf,
+            obj_buf_start=obj_buf_start,
+            decompress=decompress,
+        )
+
+    if lgdotype is Histogram:
+        return _h5_read_histogram(
             h5o,
             start_row=start_row,
             n_rows=n_rows,
@@ -385,3 +399,49 @@ def _h5_read_table(
     utils.check_obj_buf_attrs(obj_buf.attrs, attrs, h5g)
 
     return obj_buf, n_rows_read
+
+
+def _h5_read_histogram(
+    h5g,
+    start_row=0,
+    n_rows=sys.maxsize,
+    idx=None,
+    use_h5idx=False,
+    field_mask=None,
+    obj_buf=None,
+    obj_buf_start=0,
+    decompress=True,
+):
+    if obj_buf is not None or obj_buf_start != 0:
+        msg = "reading a histogram into an existing object buffer is not supported"
+        raise LH5DecodeError(msg, h5g)
+
+    struct, n_rows_read = _h5_read_struct(
+        h5g,
+        start_row,
+        n_rows,
+        idx,
+        use_h5idx,
+        field_mask,
+        decompress,
+    )
+    isdensity = struct.isdensity.value
+    binning = []
+    for _, a in struct.binning.items():
+        be = a.binedges
+        if isinstance(be, Struct):
+            b = (None, be.first.value, be.last.value, be.step.value, a.closedleft.value)
+        elif isinstance(be, Array):
+            b = (be, None, None, None, a.closedleft.value)
+        else:
+            msg = "unexpected binning of histogram"
+            raise LH5DecodeError(msg, h5g)
+        ax = Histogram.Axis(*b)
+        # copy attrs to "clone" the "whole" struct.
+        ax.attrs = a.getattrs(datatype=True)
+        ax["binedges"].attrs = be.getattrs(datatype=True)
+        binning.append(ax)
+    weights = struct.weights.view_as("np")
+    histogram = Histogram(weights, binning, isdensity)
+
+    return histogram, n_rows_read

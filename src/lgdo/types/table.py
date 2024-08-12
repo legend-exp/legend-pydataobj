@@ -168,7 +168,7 @@ class Table(Struct):
         self.add_field(name, obj, use_obj_size=use_obj_size)
 
     def remove_column(self, name: str, delete: bool = False) -> None:
-        """Alias for :meth:`.remove_field` using table terminology 'column'."""
+        """Alias for :meth:`Struct.remove_field` using table terminology 'column'."""
         super().remove_field(name, delete)
 
     def join(
