@@ -409,7 +409,10 @@ def test_write_histogram(caplog, tmptestdir):
         np.array([[10, 10], [10, 10]]),
         (np.array([2, 3, 4]), np.array([5, 6, 7])),
         isdensity=True,
-    )  # Same field name, different values
+    )
+    h2.binning[0]["binedges"].attrs["units"] = "ns"
+
+    # Same field name, different values
     store = lh5.LH5Store()
     store.write(
         h1,
@@ -434,6 +437,7 @@ def test_write_histogram(caplog, tmptestdir):
     assert h3.binning[0].first == 2
     assert h3.binning[1].last == 7
     assert h3.isdensity
+    assert h3.binning[0].get_binedgeattrs() == {"units": "ns"}
 
     # Now, check that writing with other modes throws.
     for disallowed_wo_mode in ["append", "append_column"]:

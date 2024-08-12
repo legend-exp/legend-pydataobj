@@ -436,7 +436,11 @@ def _h5_read_histogram(
         else:
             msg = "unexpected binning of histogram"
             raise LH5DecodeError(msg, h5g)
-        binning.append(Histogram.Axis(*b))
+        ax = Histogram.Axis(*b)
+        # copy attrs to "clone" the "whole" struct.
+        ax.attrs = a.getattrs(datatype=True)
+        ax["binedges"].attrs = be.getattrs(datatype=True)
+        binning.append(ax)
     weights = struct.weights.view_as("np")
     histogram = Histogram(weights, binning, isdensity)
 
