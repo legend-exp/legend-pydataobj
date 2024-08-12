@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import Any
 
 import hist
 import numpy as np
+from numpy.typing import NDArray
 
 from .array import Array
 from .lgdo import LGDO
@@ -15,7 +17,7 @@ class Histogram(Struct):
     class Axis(Struct):
         def __init__(
             self,
-            edges: np.ndarray | Array | None,
+            edges: NDArray | Array | None,
             first: float | None,
             last: float | None,
             step: float | None,
@@ -73,7 +75,7 @@ class Histogram(Struct):
 
         @classmethod
         def from_edges(
-            cls, edges: np.ndarray, binedge_attrs: dict[str, Any] | None = None
+            cls, edges: NDArray, binedge_attrs: dict[str, Any] | None = None
         ) -> Histogram.Axis:
             edge_diff = np.diff(edges)
             if np.any(~np.isclose(edge_diff, edge_diff[0])):
@@ -119,7 +121,7 @@ class Histogram(Struct):
             return len(self["binedges"].nda) - 1
 
         @property
-        def edges(self) -> np.ndarray:
+        def edges(self) -> NDArray:
             if self.is_range:
                 return np.linspace(self.first, self.last, self.nbins + 1)
             return self["binedges"].nda
@@ -154,11 +156,11 @@ class Histogram(Struct):
 
     def __init__(
         self,
-        weights: hist.Hist | np.ndarray,
+        weights: hist.Hist | NDArray,
         binning: None
-        | list[Histogram.Axis]
-        | list[np.ndarray]
-        | list[tuple[float, float, float]] = None,
+        | Iterable[Histogram.Axis]
+        | Iterable[NDArray]
+        | Iterable[tuple[float, float, float]] = None,
         isdensity: bool = False,
         attrs: dict[str, Any] | None = None,
         binedge_attrs: dict[str, Any] | None = None,
@@ -237,7 +239,7 @@ class Histogram(Struct):
             attrs,
         )
 
-    def _create_binning(self, axes: list[Histogram.Axis]) -> Struct:
+    def _create_binning(self, axes: Iterable[Histogram.Axis]) -> Struct:
         return Struct({f"axis_{i}": a for i, a in enumerate(axes)})
 
     @property
@@ -287,7 +289,7 @@ class Histogram(Struct):
     def view_as(
         self,
         library: str,
-    ) -> tuple[np.ndarray] | hist.Hist:
+    ) -> tuple[NDArray] | hist.Hist:
         r"""View the histogram data as a third-party format data structure.
 
         This is typically a zero-copy or nearly zero-copy operation.

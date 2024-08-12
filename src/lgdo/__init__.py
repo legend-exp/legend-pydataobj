@@ -33,6 +33,8 @@ basic data object classes are:
   :class:`dict`
 * :class:`.Table`: a :class:`.Struct` whose elements ("columns") are all array
   types with the same length (number of rows)
+* :class:`.Histogram`: holds an array of histogrammed data, and the associated
+  binning of arbitrary dimensionality.
 
 Currently the primary on-disk format for LGDO object is LEGEND HDF5 (LH5) files. IO
 is done via the class :class:`.lh5_store.LH5Store`. LH5 files can also be
