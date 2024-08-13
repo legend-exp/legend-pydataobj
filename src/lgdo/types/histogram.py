@@ -75,8 +75,31 @@ class Histogram(Struct):
 
         @classmethod
         def from_edges(
-            cls, edges: NDArray, binedge_attrs: dict[str, Any] | None = None
+            cls,
+            edges: NDArray | Iterable[float],
+            binedge_attrs: dict[str, Any] | None = None,
         ) -> Histogram.Axis:
+            """Create a new axis with variable binning described by ``edges``."""
+            edges = np.array(edges)
+            return cls(edges, None, None, None, True, binedge_attrs)
+
+        @classmethod
+        def from_range_edges(
+            cls,
+            edges: NDArray | Iterable[float],
+            binedge_attrs: dict[str, Any] | None = None,
+        ) -> Histogram.Axis:
+            """Create a new axis from the binning described by ``edges``, but try to convert it to
+            a evenly-spaced range object first.
+
+            .. warning ::
+
+                This function might return a wrong binning, especially in the case of very small
+                magnitudes of the spacing. See the documentation of :func:`numpy.isclose` for
+                details. Use this function only with caution, if you know the binning's order of
+                magniutude.
+            """
+            edges = np.array(edges)
             edge_diff = np.diff(edges)
             if np.any(~np.isclose(edge_diff, edge_diff[0])):
                 return cls(edges, None, None, None, True, binedge_attrs)
@@ -204,7 +227,14 @@ class Histogram(Struct):
                 if not isinstance(ax, (hist.axis.Regular, hist.axis.Variable)):
                     msg = "only regular or variable axes of hist.Hist can be converted"
                     raise ValueError(msg)
-                b.append(Histogram.Axis.from_edges(ax.edges, binedge_attrs))
+                if isinstance(ax, hist.axis.Regular):
+                    step = (ax.edges[-1] - ax.edges[0]) / ax.size
+                    bax = Histogram.Axis(
+                        None, ax.edges[0], ax.edges[-1], step, True, binedge_attrs
+                    )
+                    b.append(bax)
+                else:
+                    b.append(Histogram.Axis.from_edges(ax.edges, binedge_attrs))
             b = self._create_binning(b)
         else:
             if binning is None:

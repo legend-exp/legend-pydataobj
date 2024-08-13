@@ -434,8 +434,8 @@ def test_write_histogram(caplog, tmptestdir):
         "my_group/my_histogram", f"{tmptestdir}/write_histogram_test.lh5"
     )
     assert np.array_equal(h3.weights.nda, np.array([[10, 10], [10, 10]]))
-    assert h3.binning[0].first == 2
-    assert h3.binning[1].last == 7
+    assert h3.binning[0].edges[0] == 2
+    assert h3.binning[1].edges[-1] == 7
     assert h3.isdensity
     assert h3.binning[0].get_binedgeattrs() == {"units": "ns"}
 
@@ -475,7 +475,9 @@ def test_write_histogram_variable(caplog, tmptestdir):
         np.array([[10, 10], [10, 10]]),
         (np.array([2, 3.5, 4]), np.array([5, 6.5, 7])),
         isdensity=True,
-    )  # Same field name, different values
+    )
+
+    # Same field name, different values
     store = lh5.LH5Store()
     store.write(
         h1,

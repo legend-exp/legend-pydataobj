@@ -18,6 +18,10 @@ def test_init_hist_regular():
     h = Histogram(h, None)
 
     assert len(h.binning) == 2
+    assert len(h.binning[0].edges) == 11
+    assert h.binning[0].first == 0
+    assert h.binning[0].last == 1
+    assert h.binning[0].step == 0.1
 
     h = hist.Hist(hist.axis.Integer(start=0, stop=10))
     with pytest.raises(ValueError, match="only regular or variable axes"):
@@ -92,7 +96,10 @@ def test_datatype_name():
 def test_axes():
     h = Histogram(
         np.array([[1, 1], [1, 1]]),
-        (np.array([0, 1, 2]), np.array([2.1, 2.2, 2.3])),
+        (
+            Histogram.Axis.from_range_edges([0, 1, 2]),
+            Histogram.Axis.from_range_edges([2.1, 2.2, 2.3]),
+        ),
         attrs={"units": "m"},
     )
     assert len(h.binning) == 2
@@ -114,10 +121,23 @@ def test_axes():
 
     h = Histogram(
         np.array([[1, 1], [1, 1]]),
+        (np.array([0, 1, 2]), np.array([2.1, 2.2, 2.3])),
+        attrs={"units": "m"},
+    )
+    assert len(h.binning) == 2
+    str(h)
+    assert not h.binning[0].is_range
+    assert not h.binning[1].is_range
+
+    h = Histogram(
+        np.array([[1, 1], [1, 1]]),
         [(1, 3, 1), (4, 6, 1)],
     )
     ax0 = h.binning[0]
     str(h)
+    assert ax0.first == 1
+    assert ax0.last == 3
+    assert len(ax0.edges) == 3
 
     h = Histogram(
         np.array([[1, 1], [1, 1]]),
@@ -201,7 +221,7 @@ def test_ax_attributes():
 
 
 def test_view_as_hist():
-    h = Histogram(np.array([1, 1]), (np.array([0, 1, 2]),))
+    h = Histogram(np.array([1, 1]), (Histogram.Axis.from_range_edges([0, 1, 2]),))
     hi = h.view_as("hist")
     assert isinstance(hi.axes[0], hist.axis.Regular)
 
@@ -220,9 +240,14 @@ def test_view_as_hist():
     hi = h.view_as("hist")
     assert isinstance(hi.axes[0], hist.axis.Variable)
 
+    # no auto-conversion from variable to regular.
+    h = Histogram(np.array([1, 1]), (np.array([0, 1, 2]),))
+    hi = h.view_as("hist")
+    assert isinstance(hi.axes[0], hist.axis.Variable)
+
 
 def test_view_as_np():
-    h = Histogram(np.array([1, 1]), (np.array([0, 1, 2]),))
+    h = Histogram(np.array([1, 1]), (Histogram.Axis.from_range_edges([0, 1, 2]),))
     assert h.binning[0].is_range
     assert h.binning[0].nbins == 2
     nda, axes = h.view_as("np")
