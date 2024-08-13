@@ -189,7 +189,7 @@ class Histogram(Struct):
 
     def __init__(
         self,
-        weights: hist.Hist | NDArray,
+        weights: hist.Hist | NDArray | Array,
         binning: None
         | Iterable[Histogram.Axis]
         | Iterable[NDArray]
@@ -256,7 +256,7 @@ class Histogram(Struct):
             if binning is None:
                 msg = "need to also pass binning if passing histogram as array"
                 raise ValueError(msg)
-            w = Array(weights)
+            w = weights if isinstance(weights, Array) else Array(weights)
 
             if all(isinstance(ax, Histogram.Axis) for ax in binning):
                 if binedge_attrs is not None:
@@ -271,11 +271,11 @@ class Histogram(Struct):
                 msg = "invalid binning object passed"
                 raise ValueError(msg)
 
-            if len(binning) != len(weights.shape):
+            if len(binning) != len(w.nda.shape):
                 msg = "binning and weight dimensions do not match"
                 raise ValueError(msg)
             for i, ax in enumerate(b):
-                if ax.nbins != weights.shape[i]:
+                if ax.nbins != w.nda.shape[i]:
                     msg = f"bin count does not match weight count along axis {i}"
                     raise ValueError(msg)
 
