@@ -27,8 +27,16 @@ class Histogram(Struct):
             """
             A special struct to group axis parameters for use in a :class:`Histogram`.
 
+            Depending on the parameters, an axis either can have
+
+            * a binning described by a range object, if ``first``, ``last`` and ``step``
+              are passed, or
+            * a variable binning described by the ``edges`` array.
+
             Parameters
             ----------
+            edges
+                an array of edges that describe the binning of this axis.
             first
                 left edge of the leftmost bin
             last
@@ -136,6 +144,7 @@ class Histogram(Struct):
 
         @property
         def nbins(self) -> int:
+            """Return the number of bins, both for variable and range binning."""
             if self.is_range:
                 bins = (self.last - self.first) / self.step
                 bins_int = int(np.rint(bins))
@@ -145,6 +154,7 @@ class Histogram(Struct):
 
         @property
         def edges(self) -> NDArray:
+            """Return all binedges, both for variable and range binning."""
             if self.is_range:
                 return np.linspace(self.first, self.last, self.nbins + 1)
             return self["binedges"].nda
@@ -200,10 +210,17 @@ class Histogram(Struct):
         binning
             * has to by None if a :class:`hist.Hist` has been passed as ``weights``
             * can be a list of pre-initialized :class:`Histogram.Axis`
-            * can be a list of tuples, representing a range, ``(first, last, step)``
+            * can be a list of tuples, each representing a range, ``(first, last, step)``
             * can be a list of numpy arrays, as returned by :func:`numpy.histogramdd`.
+        isdensity
+            If True, all bin contents represent a density (amount per volume), and not
+            an absolute amount.
         binedge_attrs
             attributes that will be added to the all ``binedges`` of all axes.
+            This does not work if :class:`Histogram.Axis` instances are directly passed
+            as binning.
+        attrs
+            a set of user attributes to be carried along with this LGDO.
         """
         if isinstance(weights, hist.Hist):
             if binning is not None:
@@ -235,7 +252,6 @@ class Histogram(Struct):
                     b.append(bax)
                 else:
                     b.append(Histogram.Axis.from_edges(ax.edges, binedge_attrs))
-            b = self._create_binning(b)
         else:
             if binning is None:
                 msg = "need to also pass binning if passing histogram as array"
@@ -262,15 +278,13 @@ class Histogram(Struct):
                 if ax.nbins != weights.shape[i]:
                     msg = f"bin count does not match weight count along axis {i}"
                     raise ValueError(msg)
-            b = self._create_binning(b)
+
+        b = Struct({f"axis_{i}": a for i, a in enumerate(b)})
 
         super().__init__(
             {"binning": b, "weights": w, "isdensity": Scalar(isdensity)},
             attrs,
         )
-
-    def _create_binning(self, axes: Iterable[Histogram.Axis]) -> Struct:
-        return Struct({f"axis_{i}": a for i, a in enumerate(axes)})
 
     @property
     def isdensity(self) -> bool:
@@ -297,10 +311,20 @@ class Histogram(Struct):
         raise TypeError(msg)
 
     def add_field(self, name: str | int, obj: LGDO) -> None:  # noqa: ARG002
+        """
+        .. error ::
+
+            Not applicable: A histogram cannot be used as a struct
+        """
         msg = "histogram fields cannot be mutated"
         raise TypeError(msg)
 
     def remove_field(self, name: str | int, delete: bool = False) -> None:  # noqa: ARG002
+        """
+        .. error ::
+
+            Not applicable: A histogram cannot be used as a struct
+        """
         msg = "histogram fields cannot be mutated"
         raise TypeError(msg)
 
@@ -333,7 +357,7 @@ class Histogram(Struct):
 
         Warning
         -------
-        Viewing as ``hist`` will perform a copy of the store histogram data.
+        Viewing as ``hist`` will perform a copy of the stored histogram data.
 
         Parameters
         ----------
