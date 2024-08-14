@@ -425,7 +425,6 @@ def _h5_read_histogram(
         field_mask,
         decompress,
     )
-    isdensity = struct.isdensity.value
     binning = []
     for _, a in struct.binning.items():
         be = a.binedges
@@ -441,7 +440,10 @@ def _h5_read_histogram(
         ax.attrs = a.getattrs(datatype=True)
         ax["binedges"].attrs = be.getattrs(datatype=True)
         binning.append(ax)
-    weights = struct.weights.view_as("np")
-    histogram = Histogram(weights, binning, isdensity)
+
+    isdensity = struct.isdensity.value
+    weights = struct.weights
+    attrs = struct.getattrs(datatype=True)
+    histogram = Histogram(weights, binning, isdensity, attrs=attrs)
 
     return histogram, n_rows_read
