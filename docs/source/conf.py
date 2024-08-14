@@ -57,6 +57,7 @@ intersphinx_mapping = {
     "pandas": ("https://pandas.pydata.org/docs", None),
     "h5py": ("https://docs.h5py.org/en/stable", None),
     "pint": ("https://pint.readthedocs.io/en/stable", None),
+    "hist": ("https://hist.readthedocs.io/en/latest", None),
     "dspeed": ("https://dspeed.readthedocs.io/en/stable", None),
     "daq2lh5": ("https://legend-daq2lh5.readthedocs.io/en/stable", None),
 }  # add new intersphinx mappings here
@@ -80,3 +81,14 @@ Jupyter_ notebook available in the `legend-pydataobj repository
 .. _nbsphinx: https://nbsphinx.readthedocs.io/
 .. _Jupyter: https://jupyter.org/
 """
+
+
+# Skip members that are created by the ABC metaclass.
+def maybe_skip_member(app, what, name, obj, skip, options):  # noqa: ARG001
+    if what == "class" and name == "_abc_impl":
+        return True
+    return skip
+
+
+def setup(app):
+    app.connect("autodoc-skip-member", maybe_skip_member)
