@@ -74,8 +74,15 @@ def _h5_write_lgdo(
         msg = f"can't overwrite '{name}' in wo_mode 'write_safe'"
         raise LH5EncodeError(msg, lh5_file, group, name)
 
-    # struct or table or waveform table
+    # struct, table, waveform table or histogram.
     if isinstance(obj, types.Struct):
+        if isinstance(obj, types.Histogram) and wo_mode not in ["w", "o", "of"]:
+            msg = f"can't append-write histogram in wo_mode '{wo_mode}'"
+            raise LH5EncodeError(msg, lh5_file, group, name)
+        if isinstance(obj, types.Histogram) and write_start != 0:
+            msg = f"can't write histogram in wo_mode '{wo_mode}' with write_start != 0"
+            raise LH5EncodeError(msg, lh5_file, group, name)
+
         return _h5_write_struct(
             obj,
             name,

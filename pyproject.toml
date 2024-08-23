@@ -36,6 +36,7 @@ dependencies = [
     "colorlog",
     "h5py>=3.10",
     "hdf5plugin",
+    "hist",
     "numba!=0.53.*,!=0.54.*",
     "numexpr",
     "numpy>=1.21",
