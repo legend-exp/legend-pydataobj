@@ -80,7 +80,7 @@ def _h5_read_lgdo(
         if len(field_mask) > 0:
             default = not field_mask[next(iter(field_mask.keys()))]
         field_mask = defaultdict(lambda: default, field_mask)
-    elif isinstance(field_mask, (list, tuple)):
+    elif isinstance(field_mask, (list, tuple, set)):
         field_mask = defaultdict(bool, {field: True for field in field_mask})
     elif not isinstance(field_mask, defaultdict):
         msg = "bad field_mask type"
