@@ -26,6 +26,7 @@ def read(
     obj_buf: types.LGDO = None,
     obj_buf_start: int = 0,
     decompress: bool = True,
+    locking: bool = False,
 ) -> types.LGDO | tuple[types.LGDO, int]:
     """Read LH5 object data from a file.
 
@@ -100,6 +101,8 @@ def read(
         Decompress data encoded with LGDO's compression routines right
         after reading. The option has no effect on data encoded with HDF5
         built-in filters, which is always decompressed upstream by HDF5.
+    locking
+        Lock HDF5 file while reading
 
     Returns
     -------
@@ -113,7 +116,7 @@ def read(
     if isinstance(lh5_file, h5py.File):
         lh5_obj = lh5_file[name]
     elif isinstance(lh5_file, str):
-        lh5_file = h5py.File(lh5_file, mode="r", locking=False)
+        lh5_file = h5py.File(lh5_file, mode="r", locking=locking)
         lh5_obj = lh5_file[name]
     else:
         lh5_files = list(lh5_file)

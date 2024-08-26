@@ -36,7 +36,7 @@ class LH5Store:
     lgdo.waveformtable.WaveformTable
     """
 
-    def __init__(self, base_path: str = "", keep_open: bool = False) -> None:
+    def __init__(self, base_path: str = "", keep_open: bool = False, locking: bool = False) -> None:
         """
         Parameters
         ----------
@@ -45,9 +45,12 @@ class LH5Store:
         keep_open
             whether to keep files open by storing the :mod:`h5py` objects as
             class attributes.
+        locking
+            whether to lock files when reading
         """
         self.base_path = "" if base_path == "" else utils.expand_path(base_path)
         self.keep_open = keep_open
+        self.locking = locking
         self.files = {}
 
     def gimme_file(self, lh5_file: str | h5py.File, mode: str = "r") -> h5py.File:
@@ -66,7 +69,7 @@ class LH5Store:
         file_kwargs = {}
         if mode == "r":
             lh5_file = utils.expand_path(lh5_file, base_path=self.base_path)
-            file_kwargs["locking"] = False
+            file_kwargs["locking"] = self.locking
 
         if lh5_file in self.files:
             return self.files[lh5_file]
