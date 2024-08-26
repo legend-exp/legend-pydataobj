@@ -131,6 +131,8 @@ def _h5_read_lgdo(
     if lgdotype is Histogram:
         return _h5_read_histogram(
             h5o,
+            fname,
+            oname,
             start_row=start_row,
             n_rows=n_rows,
             idx=idx,
@@ -386,6 +388,8 @@ def _h5_read_table(
 
 def _h5_read_histogram(
     h5g,
+    fname,
+    oname,
     start_row=0,
     n_rows=sys.maxsize,
     idx=None,
@@ -397,17 +401,20 @@ def _h5_read_histogram(
 ):
     if obj_buf is not None or obj_buf_start != 0:
         msg = "reading a histogram into an existing object buffer is not supported"
-        raise LH5DecodeError(msg, h5g)
+        raise LH5DecodeError(msg, fname, oname)
 
     struct, n_rows_read = _h5_read_struct(
         h5g,
-        start_row,
-        n_rows,
-        idx,
-        use_h5idx,
-        field_mask,
-        decompress,
+        fname,
+        oname,
+        start_row=start_row,
+        n_rows=n_rows,
+        idx=idx,
+        use_h5idx=use_h5idx,
+        field_mask=field_mask,
+        decompress=decompress,
     )
+
     binning = []
     for _, a in struct.binning.items():
         be = a.binedges
@@ -417,7 +424,7 @@ def _h5_read_histogram(
             b = (be, None, None, None, a.closedleft.value)
         else:
             msg = "unexpected binning of histogram"
-            raise LH5DecodeError(msg, h5g)
+            raise LH5DecodeError(msg, fname, oname)
         ax = Histogram.Axis(*b)
         # copy attrs to "clone" the "whole" struct.
         ax.attrs = a.getattrs(datatype=True)
