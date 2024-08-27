@@ -29,8 +29,10 @@ def _h5_write_lgdo(
 ):
     assert isinstance(obj, types.LGDO)
 
-    file_kwargs = { k:h5py_kwargs[k] for k in h5py_kwargs & signature(h5py.File).parameters.keys() }
-    h5py_kwargs = { k:h5py_kwargs[k] for k in h5py_kwargs - file_kwargs.keys() }
+    file_kwargs = {
+        k: h5py_kwargs[k] for k in h5py_kwargs & signature(h5py.File).parameters.keys()
+    }
+    h5py_kwargs = {k: h5py_kwargs[k] for k in h5py_kwargs - file_kwargs.keys()}
     if wo_mode == "write_safe":
         wo_mode = "w"
     if wo_mode == "append":

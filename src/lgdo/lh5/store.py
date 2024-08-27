@@ -10,8 +10,8 @@ import logging
 import os
 import sys
 from collections.abc import Mapping, Sequence
-from typing import Any
 from inspect import signature
+from typing import Any
 
 import h5py
 import numpy as np
@@ -56,7 +56,13 @@ class LH5Store:
         self.locking = locking
         self.files = {}
 
-    def gimme_file(self, lh5_file: str | h5py.File, mode: str = "r", page_buffer:int = 0, **file_kwargs) -> h5py.File:
+    def gimme_file(
+        self,
+        lh5_file: str | h5py.File,
+        mode: str = "r",
+        page_buffer: int = 0,
+        **file_kwargs,
+    ) -> h5py.File:
         """Returns a :mod:`h5py` file object from the store or creates a new one.
 
         Parameters
@@ -164,7 +170,7 @@ class LH5Store:
         obj_buf: types.LGDO = None,
         obj_buf_start: int = 0,
         decompress: bool = True,
-        **file_kwargs
+        **file_kwargs,
     ) -> tuple[types.LGDO, int]:
         """Read LH5 object data from a file in the store.
 
@@ -249,7 +255,7 @@ class LH5Store:
         n_rows: int | None = None,
         wo_mode: str = "append",
         write_start: int = 0,
-        page_buffer:int = 0,
+        page_buffer: int = 0,
         **h5py_kwargs,
     ) -> None:
         """Write an LGDO into an LH5 file.
@@ -279,7 +285,10 @@ class LH5Store:
         # write_object:overwrite.
         mode = "w" if wo_mode == "of" else "a"
 
-        file_kwargs = { k:h5py_kwargs[k] for k in h5py_kwargs & signature(h5py.File).parameters.keys() }
+        file_kwargs = {
+            k: h5py_kwargs[k]
+            for k in h5py_kwargs & signature(h5py.File).parameters.keys()
+        }
         if page_buffer:
             file_kwargs.update(
                 {
