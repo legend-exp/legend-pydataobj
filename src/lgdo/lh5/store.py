@@ -78,7 +78,7 @@ class LH5Store:
             (fs_stragety="page", fs_pagesize=[page_buffer], fs_persist=True,
             fs_threshold=1)
         file_kwargs
-            Keyword arguments for :ref:`h5py.File <https://docs.h5py.org/en/stable/high/file.html#reference>`
+            Keyword arguments for `h5py.File <https://docs.h5py.org/en/stable/high/file.html#reference>`_
         """
         if isinstance(lh5_file, h5py.File):
             return lh5_file
