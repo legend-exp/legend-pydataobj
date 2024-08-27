@@ -37,7 +37,9 @@ class LH5Store:
     lgdo.waveformtable.WaveformTable
     """
 
-    def __init__(self, base_path: str = "", keep_open: bool = False, locking: bool = False) -> None:
+    def __init__(
+        self, base_path: str = "", keep_open: bool = False, locking: bool = False
+    ) -> None:
         """
         Parameters
         ----------
