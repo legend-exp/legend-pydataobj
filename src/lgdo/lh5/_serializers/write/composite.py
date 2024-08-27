@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+from inspect import signature
 
 import h5py
 
@@ -28,7 +29,8 @@ def _h5_write_lgdo(
 ):
     assert isinstance(obj, types.LGDO)
 
-    file_kwargs = {}
+    file_kwargs = { k:h5py_kwargs[k] for k in h5py_kwargs & signature(h5py.File).parameters.keys() }
+    h5py_kwargs = { k:h5py_kwargs[k] for k in h5py_kwargs - file_kwargs.keys() }
     if wo_mode == "write_safe":
         wo_mode = "w"
     if wo_mode == "append":
@@ -50,16 +52,6 @@ def _h5_write_lgdo(
     # write_object:overwrite.
     if not isinstance(lh5_file, h5py.File):
         mode = "w" if wo_mode == "of" or not os.path.exists(lh5_file) else "a"
-        if mode == "w":
-            file_kwargs.update(
-                {
-                    "fs_strategy": "page",
-                    "fs_page_size": 65536,
-                    "fs_persist": True,
-                    "fs_threshold": 1,
-                    "libver": ("latest", "latest"),
-                }
-            )
         lh5_file = h5py.File(lh5_file, mode=mode, **file_kwargs)
 
     log.debug(

@@ -201,6 +201,7 @@ def write(
     n_rows: int | None = None,
     wo_mode: str = "append",
     write_start: int = 0,
+    page_buffer: int = 0,
     **h5py_kwargs,
 ) -> None:
     """Write an LGDO into an LH5 file.
@@ -276,6 +277,12 @@ def write(
     write_start
         row in the output file (if already existing) to start overwriting
         from.
+    page_buffer
+        enable paged aggregation with a buffer of this size in bytes
+        Only used when creating a new file. Useful when writing a file
+        with a large number of small datasets. This is a short-hand for
+        (fs_stragety="page", fs_pagesize=[page_buffer], fs_persist=True,
+        fs_threshold=1)
     **h5py_kwargs
         additional keyword arguments forwarded to
         :meth:`h5py.Group.create_dataset` to specify, for example, an HDF5
@@ -283,6 +290,15 @@ def write(
         datasets. **Note: `compression` Ignored if compression is specified
         as an `obj` attribute.**
     """
+    if wo_mode in ("w", "write", "of", "overwrite_file"):
+        h5py_kwargs.update(
+            {
+                "fs_strategy": "page",
+                "fs_page_size": page_buffer,
+                "fs_persist": True,
+                "fs_threshold": 1,
+            }
+        )
     return _serializers._h5_write_lgdo(
         obj,
         name,

@@ -11,6 +11,7 @@ import os
 import sys
 from collections.abc import Mapping, Sequence
 from typing import Any
+from inspect import signature
 
 import h5py
 import numpy as np
@@ -53,7 +54,7 @@ class LH5Store:
         self.locking = locking
         self.files = {}
 
-    def gimme_file(self, lh5_file: str | h5py.File, mode: str = "r") -> h5py.File:
+    def gimme_file(self, lh5_file: str | h5py.File, mode: str = "r", page_buffer:int = 0, **file_kwargs) -> h5py.File:
         """Returns a :mod:`h5py` file object from the store or creates a new one.
 
         Parameters
@@ -62,11 +63,18 @@ class LH5Store:
             LH5 file name.
         mode
             mode in which to open file. See :class:`h5py.File` documentation.
+        page_buffer
+            enable paged aggregation with a buffer of this size in bytes
+            Only used when creating a new file. Useful when writing a file
+            with a large number of small datasets. This is a short-hand for
+            (fs_stragety="page", fs_pagesize=[page_buffer], fs_persist=True,
+            fs_threshold=1)
+        file_kwargs
+            Keyword arguments for :ref:`h5py.File <https://docs.h5py.org/en/stable/high/file.html#reference>`
         """
         if isinstance(lh5_file, h5py.File):
             return lh5_file
 
-        file_kwargs = {}
         if mode == "r":
             lh5_file = utils.expand_path(lh5_file, base_path=self.base_path)
             file_kwargs["locking"] = self.locking
@@ -99,10 +107,9 @@ class LH5Store:
             file_kwargs.update(
                 {
                     "fs_strategy": "page",
-                    "fs_page_size": 65536,
+                    "fs_page_size": page_buffer,
                     "fs_persist": True,
                     "fs_threshold": 1,
-                    "libver": ("latest", "latest"),
                 }
             )
         h5f = h5py.File(full_path, mode, **file_kwargs)
@@ -155,6 +162,7 @@ class LH5Store:
         obj_buf: types.LGDO = None,
         obj_buf_start: int = 0,
         decompress: bool = True,
+        **file_kwargs
     ) -> tuple[types.LGDO, int]:
         """Read LH5 object data from a file in the store.
 
@@ -164,7 +172,7 @@ class LH5Store:
         """
         # grab files from store
         if isinstance(lh5_file, (str, h5py.File)):
-            lh5_obj = self.gimme_file(lh5_file, "r")[name]
+            lh5_obj = self.gimme_file(lh5_file, "r", **file_kwargs)[name]
         else:
             lh5_files = list(lh5_file)
             n_rows_read = 0
@@ -239,6 +247,7 @@ class LH5Store:
         n_rows: int | None = None,
         wo_mode: str = "append",
         write_start: int = 0,
+        page_buffer:int = 0,
         **h5py_kwargs,
     ) -> None:
         """Write an LGDO into an LH5 file.
@@ -268,10 +277,21 @@ class LH5Store:
         # write_object:overwrite.
         mode = "w" if wo_mode == "of" else "a"
 
+        file_kwargs = { k:h5py_kwargs[k] for k in h5py_kwargs & signature(h5py.File).parameters.keys() }
+        if page_buffer:
+            file_kwargs.update(
+                {
+                    "fs_strategy": "page",
+                    "fs_page_size": page_buffer,
+                    "fs_persist": True,
+                    "fs_threshold": 1,
+                }
+            )
+
         return _serializers._h5_write_lgdo(
             obj,
             name,
-            self.gimme_file(lh5_file, mode=mode),
+            self.gimme_file(lh5_file, mode=mode, **file_kwargs),
             group=group,
             start_row=start_row,
             n_rows=n_rows,
