@@ -198,13 +198,13 @@ class LH5Store:
                     if not (isinstance(idx, tuple) and len(idx) == 1):
                         idx = (idx,)
                     # idx is a long continuous array
-                    n_rows_i = utils.read_n_rows(h5f)
+                    n_rows_i = utils.read_n_rows(name, h5f)
                     # find the length of the subset of idx that contains indices
                     # that are less than n_rows_i
                     n_rows_to_read_i = bisect.bisect_left(idx[0], n_rows_i)
                     # now split idx into idx_i and the remainder
-                    idx_i = idx[0][:n_rows_to_read_i]
-                    idx = idx[0][n_rows_to_read_i:] - n_rows_i
+                    idx_i = np.array(idx[0])[:n_rows_to_read_i]
+                    idx = np.array(idx[0])[n_rows_to_read_i:] - n_rows_i
                 else:
                     idx_i = None
                 n_rows_i = n_rows - n_rows_read
