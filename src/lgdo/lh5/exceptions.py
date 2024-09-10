@@ -4,11 +4,11 @@ import h5py
 
 
 class LH5DecodeError(Exception):
-    def __init__(self, message: str, obj: h5py.Dataset | h5py.Group) -> None:
+    def __init__(self, message: str, fname: str, oname: str) -> None:
         super().__init__(message)
 
-        self.file = obj.file.filename
-        self.obj = obj.name
+        self.file = fname
+        self.obj = oname
 
     def __str__(self) -> str:
         return (

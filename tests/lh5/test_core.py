@@ -44,3 +44,9 @@ def test_read_multiple_files(lh5_file):
     assert isinstance(lh5_obj, lgdo.Array)
     assert len(lh5_obj) == 9
     assert (lh5_obj.nda == np.array([2, 3, 4] * 3)).all()
+
+    lh5_obj = lh5.read(
+        "/data/struct/array", [lh5_file, lh5_file, lh5_file], idx=[1, 3, 5, 7]
+    )
+    assert len(lh5_obj) == 4
+    assert (lh5_obj.nda == np.array([3, 2, 4, 3])).all()

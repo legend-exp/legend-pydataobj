@@ -1,15 +1,18 @@
 from __future__ import annotations
 
+import bisect
 import inspect
 import sys
 from collections.abc import Mapping, Sequence
 from typing import Any
 
 import h5py
+import numpy as np
 from numpy.typing import ArrayLike
 
 from .. import types
 from . import _serializers
+from .utils import read_n_rows
 
 
 def read(
@@ -23,6 +26,7 @@ def read(
     obj_buf: types.LGDO = None,
     obj_buf_start: int = 0,
     decompress: bool = True,
+    locking: bool = False,
 ) -> types.LGDO | tuple[types.LGDO, int]:
     """Read LH5 object data from a file.
 
@@ -97,6 +101,8 @@ def read(
         Decompress data encoded with LGDO's compression routines right
         after reading. The option has no effect on data encoded with HDF5
         built-in filters, which is always decompressed upstream by HDF5.
+    locking
+        Lock HDF5 file while reading
 
     Returns
     -------
@@ -110,17 +116,69 @@ def read(
     if isinstance(lh5_file, h5py.File):
         lh5_obj = lh5_file[name]
     elif isinstance(lh5_file, str):
-        lh5_file = h5py.File(lh5_file, mode="r")
+        lh5_file = h5py.File(lh5_file, mode="r", locking=locking)
         lh5_obj = lh5_file[name]
     else:
-        lh5_obj = []
-        for h5f in lh5_file:
-            if isinstance(h5f, str):
-                h5f = h5py.File(h5f, mode="r")  # noqa: PLW2901
-            lh5_obj += [h5f[name]]
+        lh5_files = list(lh5_file)
+        n_rows_read = 0
+        obj_buf_is_new = False
 
+        for i, h5f in enumerate(lh5_files):
+            if (
+                isinstance(idx, (list, tuple))
+                and len(idx) > 0
+                and not np.isscalar(idx[0])
+            ):
+                # a list of lists: must be one per file
+                idx_i = idx[i]
+            elif idx is not None:
+                # make idx a proper tuple if it's not one already
+                if not (isinstance(idx, tuple) and len(idx) == 1):
+                    idx = (idx,)
+                # idx is a long continuous array
+                n_rows_i = read_n_rows(name, h5f)
+                # find the length of the subset of idx that contains indices
+                # that are less than n_rows_i
+                n_rows_to_read_i = bisect.bisect_left(idx[0], n_rows_i)
+                # now split idx into idx_i and the remainder
+                idx_i = np.array(idx[0])[:n_rows_to_read_i]
+                idx = np.array(idx[0])[n_rows_to_read_i:] - n_rows_i
+            else:
+                idx_i = None
+            n_rows_i = n_rows - n_rows_read
+
+            obj_ret = read(
+                name,
+                h5f,
+                start_row,
+                n_rows_i,
+                idx_i,
+                use_h5idx,
+                field_mask,
+                obj_buf,
+                obj_buf_start,
+                decompress,
+            )
+            if isinstance(obj_ret, tuple):
+                obj_buf, n_rows_read_i = obj_ret
+                obj_buf_is_new = True
+            else:
+                obj_buf = obj_ret
+                n_rows_read_i = len(obj_buf)
+
+            n_rows_read += n_rows_read_i
+            if n_rows_read >= n_rows or obj_buf is None:
+                return obj_buf, n_rows_read
+            start_row = 0
+            obj_buf_start += n_rows_read_i
+        return obj_buf if obj_buf_is_new else (obj_buf, n_rows_read)
+
+    if isinstance(idx, (list, tuple)) and len(idx) > 0 and not np.isscalar(idx[0]):
+        idx = idx[0]
     obj, n_rows_read = _serializers._h5_read_lgdo(
-        lh5_obj,
+        lh5_obj.id,
+        lh5_obj.file.filename,
+        lh5_obj.name,
         start_row=start_row,
         n_rows=n_rows,
         idx=idx,
@@ -143,6 +201,7 @@ def write(
     n_rows: int | None = None,
     wo_mode: str = "append",
     write_start: int = 0,
+    page_buffer: int = 0,
     **h5py_kwargs,
 ) -> None:
     """Write an LGDO into an LH5 file.
@@ -218,6 +277,11 @@ def write(
     write_start
         row in the output file (if already existing) to start overwriting
         from.
+    page_buffer
+        enable paged aggregation with a buffer of this size in bytes
+        Only used when creating a new file. Useful when writing a file
+        with a large number of small datasets. This is a short-hand for
+        ``(fs_stragety="page", fs_pagesize=[page_buffer])``
     **h5py_kwargs
         additional keyword arguments forwarded to
         :meth:`h5py.Group.create_dataset` to specify, for example, an HDF5
@@ -225,6 +289,13 @@ def write(
         datasets. **Note: `compression` Ignored if compression is specified
         as an `obj` attribute.**
     """
+    if wo_mode in ("w", "write", "of", "overwrite_file"):
+        h5py_kwargs.update(
+            {
+                "fs_strategy": "page",
+                "fs_page_size": page_buffer,
+            }
+        )
     return _serializers._h5_write_lgdo(
         obj,
         name,

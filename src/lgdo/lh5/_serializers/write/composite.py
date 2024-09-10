@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import logging
+import os
+from inspect import signature
 
 import h5py
 
@@ -27,6 +29,10 @@ def _h5_write_lgdo(
 ):
     assert isinstance(obj, types.LGDO)
 
+    file_kwargs = {
+        k: h5py_kwargs[k] for k in h5py_kwargs & signature(h5py.File).parameters.keys()
+    }
+    h5py_kwargs = {k: h5py_kwargs[k] for k in h5py_kwargs - file_kwargs.keys()}
     if wo_mode == "write_safe":
         wo_mode = "w"
     if wo_mode == "append":
@@ -46,10 +52,9 @@ def _h5_write_lgdo(
     # In hdf5, 'a' is really "modify" -- in addition to appending, you can
     # change any object in the file. So we use file:append for
     # write_object:overwrite.
-    mode = "w" if wo_mode == "of" else "a"
-
     if not isinstance(lh5_file, h5py.File):
-        lh5_file = h5py.File(lh5_file, mode=mode)
+        mode = "w" if wo_mode == "of" or not os.path.exists(lh5_file) else "a"
+        lh5_file = h5py.File(lh5_file, mode=mode, **file_kwargs)
 
     log.debug(
         f"writing {obj!r}[{start_row}:{n_rows}] as "

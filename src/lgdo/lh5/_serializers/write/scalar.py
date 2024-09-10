@@ -20,4 +20,9 @@ def _h5_write_scalar(obj, name, lh5_file, group="/", wo_mode="append"):
             raise LH5EncodeError(msg, lh5_file, group, name)
 
     ds = group.create_dataset(name, shape=(), data=obj.value)
-    ds.attrs.update(obj.attrs)
+    ds.attrs.update(
+        {
+            k: v.encode("utf-8") if isinstance(v, str) else v
+            for k, v in obj.attrs.items()
+        }
+    )
