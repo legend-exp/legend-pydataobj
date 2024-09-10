@@ -290,7 +290,9 @@ class LH5Store:
         return _serializers._h5_write_lgdo(
             obj,
             name,
-            self.gimme_file(lh5_file, mode=mode, **file_kwargs),
+            self.gimme_file(
+                lh5_file, mode=mode, page_buffer=page_buffer, **file_kwargs
+            ),
             group=group,
             start_row=start_row,
             n_rows=n_rows,
