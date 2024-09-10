@@ -75,8 +75,7 @@ class LH5Store:
             enable paged aggregation with a buffer of this size in bytes
             Only used when creating a new file. Useful when writing a file
             with a large number of small datasets. This is a short-hand for
-            ``(fs_stragety="page", fs_pagesize=[page_buffer], fs_persist=True,
-            fs_threshold=1)``
+            ``(fs_stragety="page", fs_pagesize=[page_buffer])``
         file_kwargs
             Keyword arguments for :class:`h5py.File`
         """
@@ -116,8 +115,6 @@ class LH5Store:
                 {
                     "fs_strategy": "page",
                     "fs_page_size": page_buffer,
-                    "fs_persist": True,
-                    "fs_threshold": 1,
                 }
             )
         h5f = h5py.File(full_path, mode, **file_kwargs)
@@ -289,15 +286,6 @@ class LH5Store:
             k: h5py_kwargs[k]
             for k in h5py_kwargs & signature(h5py.File).parameters.keys()
         }
-        if page_buffer:
-            file_kwargs.update(
-                {
-                    "fs_strategy": "page",
-                    "fs_page_size": page_buffer,
-                    "fs_persist": True,
-                    "fs_threshold": 1,
-                }
-            )
 
         return _serializers._h5_write_lgdo(
             obj,
