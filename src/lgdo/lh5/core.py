@@ -281,8 +281,8 @@ def write(
         enable paged aggregation with a buffer of this size in bytes
         Only used when creating a new file. Useful when writing a file
         with a large number of small datasets. This is a short-hand for
-        (fs_stragety="page", fs_pagesize=[page_buffer], fs_persist=True,
-        fs_threshold=1)
+        ``(fs_stragety="page", fs_pagesize=[page_buffer], fs_persist=True,
+        fs_threshold=1)``
     **h5py_kwargs
         additional keyword arguments forwarded to
         :meth:`h5py.Group.create_dataset` to specify, for example, an HDF5
