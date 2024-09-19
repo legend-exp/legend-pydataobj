@@ -414,13 +414,23 @@ def test_write_histogram(caplog, tmptestdir):
 
     # Same field name, different values
     store = lh5.LH5Store()
+    # "appending" to a non-existing histogram should work.
     store.write(
         h1,
         "my_histogram",
         f"{tmptestdir}/write_histogram_test.lh5",
         group="my_group",
-        wo_mode="write_safe",
+        wo_mode="append",
     )
+    with pytest.raises(lh5.exceptions.LH5EncodeError):
+        # appending to an existing histogram should not work.
+        store.write(
+            h1,
+            "my_histogram",
+            f"{tmptestdir}/write_histogram_test.lh5",
+            group="my_group",
+            wo_mode="append",
+        )
     store.write(
         h2,
         "my_histogram",
