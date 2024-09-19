@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 import hist
 import numpy as np
 import pytest
@@ -8,7 +10,9 @@ from lgdo import Array, Histogram, Scalar, lh5
 from lgdo.lh5.exceptions import LH5DecodeError
 
 
-def test_init_hist_regular():
+def test_init_hist_regular(caplog):
+    caplog.set_level(logging.WARNING)
+
     h = hist.Hist(
         hist.axis.Regular(bins=10, start=0, stop=1, name="x"),
         hist.axis.Regular(bins=10, start=0, stop=1, name="y"),
@@ -34,8 +38,10 @@ def test_init_hist_regular():
         Histogram(h, binning=(np.array([0, 1, 2]),))
 
     h.fill([-1, 0.8, 2])
-    with pytest.raises(ValueError, match="flow bins"):
-        Histogram(h)
+    caplog.clear()
+    Histogram(h)
+    assert "flow bins" in caplog.text
+    caplog.clear()
 
     # assert that the hist data is not copied into the LGDO.
     h = hist.Hist(hist.axis.Regular(bins=10, start=0, stop=10))

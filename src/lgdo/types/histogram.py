@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterable
 from typing import Any
 
@@ -11,6 +12,8 @@ from .array import Array
 from .lgdo import LGDO
 from .scalar import Scalar
 from .struct import Struct
+
+log = logging.getLogger(__name__)
 
 
 class Histogram(Struct):
@@ -231,8 +234,9 @@ class Histogram(Struct):
                 raise ValueError(msg)
 
             if weights.sum(flow=True) != weights.sum(flow=False):
-                msg = "flow bins of hist.Hist cannot be represented"
-                raise ValueError(msg)
+                log.warning(
+                    "flow bins of hist.Hist cannot be represented, their counts are discarded"
+                )
             weights_view = weights.view(flow=False)
             if type(weights_view) is not np.ndarray:
                 msg = "only simple numpy-backed storages can be used in a hist.Hist"
