@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterable
 from typing import Any
 
@@ -11,6 +12,8 @@ from .array import Array
 from .lgdo import LGDO
 from .scalar import Scalar
 from .struct import Struct
+
+log = logging.getLogger(__name__)
 
 
 class Histogram(Struct):
@@ -197,6 +200,7 @@ class Histogram(Struct):
         isdensity: bool = False,
         attrs: dict[str, Any] | None = None,
         binedge_attrs: dict[str, Any] | None = None,
+        flow: bool = True,
     ) -> None:
         """A special struct to contain histogrammed data.
 
@@ -221,6 +225,16 @@ class Histogram(Struct):
             as binning.
         attrs
             a set of user attributes to be carried along with this LGDO.
+        flow
+            If ``False``, discard counts in over-/underflow bins of the passed
+            :class:`hist.Hist` instance. If ``True``, this data will also be discarded,
+            but a warning is emitted.
+
+            .. note ::
+
+                :class:`Histogram` does not support storing counts in overflow or
+                underflow bins. This parameter just controls, whether a warning will
+                be emitted.
         """
         if isinstance(weights, hist.Hist):
             if binning is not None:
@@ -230,9 +244,10 @@ class Histogram(Struct):
                 msg = "not allowed to pass isdensity=True if constructing from hist.Hist instance"
                 raise ValueError(msg)
 
-            if weights.sum(flow=True) != weights.sum(flow=False):
-                msg = "flow bins of hist.Hist cannot be represented"
-                raise ValueError(msg)
+            if weights.sum(flow=True) != weights.sum(flow=False) and flow:
+                log.warning(
+                    "flow bins of hist.Hist cannot be represented, their counts are discarded"
+                )
             weights_view = weights.view(flow=False)
             if type(weights_view) is not np.ndarray:
                 msg = "only simple numpy-backed storages can be used in a hist.Hist"
