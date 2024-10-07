@@ -12,7 +12,7 @@ from lgdo.types import vovutils
 VovColl = namedtuple("VovColl", ["v2d", "v3d", "v4d"])
 
 
-@pytest.fixture()
+@pytest.fixture
 def testvov():
     v2d = VectorOfVectors([[1, 2], [3, 4, 5], [2], [4, 8, 9, 7], [5, 3, 1]])
     v3d = VectorOfVectors([[[1, 2], [3, 4, 5]], [[2], [4, 8, 9, 7]], [[5, 3, 1]]])

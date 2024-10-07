@@ -103,8 +103,7 @@ def _h5_read_lgdo(
     if idx is not None:
         # check if idx is just an ordered list of the integers if so can ignore
         if (idx == np.arange(0, len(idx), 1)).all():
-            if n_rows > len(idx):
-                n_rows = len(idx)
+            n_rows = min(n_rows, len(idx))
             idx = None
         else:
             # chop off indices < start_row

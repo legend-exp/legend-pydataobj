@@ -441,15 +441,11 @@ def _radware_sigcompress_encode(
         while (i < sig_in.size) and (i < j + 48):
             si_i = int16(sig_in[i] + shift)
             si_im1 = int16(sig_in[i - 1] + shift)
-            if max1 < si_i:
-                max1 = si_i
-            if min1 > si_i:
-                min1 = si_i
+            max1 = max(max1, si_i)
+            min1 = min(min1, si_i)
             ds = si_i - si_im1
-            if max2 < ds:
-                max2 = ds
-            if min2 > ds:
-                min2 = ds
+            max2 = max(max2, ds)
+            min2 = min(min2, ds)
             nw += 1
             i += 1
         if max1 - min1 <= max2 - min2:  # use absolute values
@@ -460,15 +456,13 @@ def _radware_sigcompress_encode(
                 i < j + 128
             ):  # FIXME: 128 could be tuned better?
                 si_i = int16(sig_in[i] + shift)
-                if max1 < si_i:
-                    max1 = si_i
+                max1 = max(max1, si_i)
                 dd1 = max1 - min1
                 if min1 > si_i:
                     dd1 = max1 - si_i
                 if dd1 > mask[nb1]:
                     break
-                if min1 > si_i:
-                    min1 = si_i
+                min1 = min(min1, si_i)
                 nw += 1
                 i += 1
         else:  # use difference values
@@ -481,15 +475,13 @@ def _radware_sigcompress_encode(
                 si_i = int16(sig_in[i] + shift)
                 si_im1 = int16(sig_in[i - 1] + shift)
                 ds = si_i - si_im1
-                if max2 < ds:
-                    max2 = ds
+                max2 = max(max2, ds)
                 dd2 = max2 - min2
                 if min2 > ds:
                     dd2 = max2 - ds
                 if dd2 > mask[nb2]:
                     break
-                if min2 > ds:
-                    min2 = ds
+                min2 = min(min2, ds)
                 nw += 1
                 i += 1
 

@@ -50,8 +50,7 @@ def _h5_read_ndarray(
         n_rows_to_read = len(idx)
     else:
         n_rows_to_read = ds_n_rows - start_row
-    if n_rows_to_read > n_rows:
-        n_rows_to_read = n_rows
+    n_rows_to_read = min(n_rows_to_read, n_rows)
 
     if idx is None:
         fspace.select_hyperslab(
