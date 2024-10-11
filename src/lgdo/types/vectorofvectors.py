@@ -209,9 +209,6 @@ class VectorOfVectors(LGDO):
             elif self.flattened_data is None:
                 self.flattened_data = flattened_data
 
-            # finally set dtype
-            self.dtype = self.flattened_data.dtype
-
         # set ndim
         self.ndim = 2
         pointer = self.flattened_data
@@ -223,6 +220,10 @@ class VectorOfVectors(LGDO):
             pointer = pointer.flattened_data
 
         super().__init__(attrs)
+
+    @property
+    def dtype(self):
+        return self.flattened_data.dtype
 
     def datatype_name(self) -> str:
         return "array"
