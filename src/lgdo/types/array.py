@@ -78,11 +78,7 @@ class Array(LGDO):
         elif isinstance(nda, Array):
             nda = nda.nda
 
-        elif not isinstance(nda, np.ndarray):
-            nda = np.array(nda)
-
         self.nda = nda
-        self.dtype = self.nda.dtype
 
         super().__init__(attrs)
 
@@ -96,18 +92,72 @@ class Array(LGDO):
         return dt + "<" + nd + ">{" + et + "}"
 
     def __len__(self) -> int:
-        return len(self.nda)
+        return self._size
 
-    def resize(self, new_size: int) -> None:
-        new_shape = (new_size,) + self.nda.shape[1:]
-        return self.nda.resize(new_shape, refcheck=True)
+    @property
+    def nda(self):
+        return self._nda[: self._size, ...] if self._nda.shape != () else self._nda
+
+    @nda.setter
+    def nda(self, value):
+        self._nda = value if isinstance(value, np.ndarray) else np.array(value)
+        self._size = len(self._nda) if self._nda.shape != () else 0
+
+    @property
+    def dtype(self):
+        return self._nda.dtype
+
+    @property
+    def shape(self):
+        return (len(self),) + self._nda.shape[1:]
+
+    def set_capacity(self, capacity: int) -> None:
+        "Set size (number of rows) of internal memory buffer"
+        if capacity < len(self):
+            msg = "Cannot reduce capacity below Array length"
+            raise ValueError(msg)
+        self._nda.resize((capacity,) + self._nda.shape[1:], refcheck=True)
+
+    def get_capacity(self) -> int:
+        "Get capacity (i.e. max size before memory must be re-allocated)"
+        return len(self._nda)
+
+    def trim_capacity(self) -> None:
+        "Set capacity to be minimum needed to support Array size"
+        self.set_capacity(np.prod(self.shape))
+
+    def resize(self, new_size: int, trim=False) -> None:
+        """Set size of Array in rows. Only change capacity if it must be
+        increased to accommodate new rows; in this case double capacity.
+        If trim is True, capacity will be set to match size."""
+
+        if trim and new_size != self.get_capacity:
+            self.set_capacity(new_size)
+
+        # If capacity is not big enough, set to next power of 2 big enough
+        if new_size > self.get_capacity():
+            self.set_capacity(int(2 ** (np.ceil(np.log2(new_size)))))
+
+        self._size = new_size
 
     def append(self, value: np.ndarray) -> None:
-        self.resize(len(self) + 1)
-        self.nda[-1] = value
+        "Append value to end of array (with copy)"
+        self.insert(len(self), value)
 
     def insert(self, i: int, value: int | float) -> None:
-        self.nda = np.insert(self.nda, i, value)
+        "Insert value into row i (with copy)"
+        value = np.array(value)
+        if value.shape == self.shape[1:]:
+            self.resize(len(self) + 1)
+            self[i + 1 :] = self[i:-1]
+            self[i] = value
+        elif value.shape[1:] == self.shape[1:]:
+            self.resize(len(self) + len(value))
+            self[i + len(value) :] = self[i : -len(value)]
+            self[i : i + len(value)] = value
+        else:
+            msg = f"Could not insert value with shape {value.shape} into Array with shape {self.shape}"
+            raise ValueError(msg)
 
     def __getitem__(self, key):
         return self.nda[key]
