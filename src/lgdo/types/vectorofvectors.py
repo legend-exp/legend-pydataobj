@@ -209,20 +209,14 @@ class VectorOfVectors(LGDO):
             elif self.flattened_data is None:
                 self.flattened_data = flattened_data
 
-        # set ndim
-        self.ndim = 2
-        pointer = self.flattened_data
-        while True:
-            if isinstance(pointer, Array):
-                break
-
-            self.ndim += 1
-            pointer = pointer.flattened_data
-
         super().__init__(attrs)
 
     @property
-    def dtype(self):
+    def ndim(self):
+        return 1 + (1 if isinstance(self.flattened_data, Array) else self.flattened_data.ndim)
+    
+    @property
+    def dtype(self) -> np.dtype:
         return self.flattened_data.dtype
 
     def datatype_name(self) -> str:
@@ -276,7 +270,27 @@ class VectorOfVectors(LGDO):
         else:
             raise NotImplementedError
 
-    def resize(self, new_size: int) -> None:
+    def set_capacity(self, cap_cl, *cap_args) -> None:
+        """Set capacity of internal data arrays. Expect number of args to
+        equal `self.n_dim`. First arg is capacity of cumulative length array.
+        If `self.n_dim` is 2, second argument is capacity of flattened data,
+        otherwise arguments are fed recursively to remaining dimensions.
+        """
+        self.cumulative_length.set_capacity(cap_cl)
+        self.flattened_data.set_capacity(*cap_args)
+
+    def get_capacity(self) -> Tuple[int]:
+        """Get tuple containing capacity of each dimension. First dimension
+        is cumulative length array. Last dimension is flattened data.
+        """
+        return (self.cumulative_length.get_capacity(), *self.flattened_data.get_capacity())
+
+    def trim_capacity(self) -> None:
+        "Set capacity for all dimensions to minimum needed to hold data"
+        self.cumulative_length.trim_capacity()
+        self.flattened_data.trim_capacity()
+
+    def resize(self, new_size: int, trim: bool = False) -> None:
         """Resize vector along the first axis.
 
         `self.flattened_data` is resized only if `new_size` is smaller than the
@@ -285,6 +299,8 @@ class VectorOfVectors(LGDO):
         If `new_size` is larger than the current vector length,
         `self.cumulative_length` is padded with its last element.  This
         corresponds to appending empty vectors.
+        
+        If `trim` is ``True``, resize capacity to match new size
 
         Examples
         --------
@@ -303,23 +319,20 @@ class VectorOfVectors(LGDO):
          [3],
         ]
         """
-        vidx = self.cumulative_length
         old_s = len(self)
-        dlen = new_size - old_s
-        csum = vidx[-1] if len(self) > 0 else 0
 
         # first resize the cumulative length
-        self.cumulative_length.resize(new_size)
+        self.cumulative_length.resize(new_size, trim)
 
         # if new_size > size, new elements are filled with zeros, let's fix
         # that
-        if dlen > 0:
-            self.cumulative_length[old_s:] = csum
+        if new_size > old_s:
+            self.cumulative_length[old_s:] = self.cumulative_length[old_s-1]
 
         # then resize the data array
         # if dlen > 0 this has no effect
         if len(self.cumulative_length) > 0:
-            self.flattened_data.resize(self.cumulative_length[-1])
+            self.flattened_data.resize(self.cumulative_length[-1], trim)
 
     def append(self, new: NDArray) -> None:
         """Append a 1D vector `new` at the end.
@@ -334,20 +347,7 @@ class VectorOfVectors(LGDO):
          [8 9],
         ]
         """
-        if self.ndim == 2:
-            # first extend cumulative_length by +1
-            self.cumulative_length.resize(len(self) + 1)
-            # set it at the right value
-            newlen = (
-                self.cumulative_length[-2] + len(new) if len(self) > 1 else len(new)
-            )
-            self.cumulative_length[-1] = newlen
-            # then resize flattened_data to accommodate the new vector
-            self.flattened_data.resize(len(self.flattened_data) + len(new))
-            # finally set it
-            self[-1] = new
-        else:
-            raise NotImplementedError
+        self.insert(len(self), new)
 
     def insert(self, i: int, new: NDArray) -> None:
         """Insert a vector at index `i`.
@@ -364,23 +364,15 @@ class VectorOfVectors(LGDO):
          [8 9],
          [4 5],
         ]
-
-        Warning
-        -------
-        This method involves a significant amount of memory re-allocation and
-        is expected to perform poorly on large vectors.
         """
         if self.ndim == 2:
-            if i >= len(self):
-                msg = f"index {i} is out of bounds for vector owith size {len(self)}"
+            if i > len(self):
+                msg = f"index {i} is out of bounds for vector with size {len(self)}"
                 raise IndexError(msg)
 
-            self.flattened_data = Array(
-                np.insert(self.flattened_data, self.cumulative_length[i - 1], new)
-            )
-            self.cumulative_length = Array(
-                np.insert(self.cumulative_length, i, self.cumulative_length[i - 1])
-            )
+            i_start = 0 if i==0 else self.cumulative_length[i-1]
+            self.flattened_data.insert(i_start, new)
+            self.cumulative_length.insert(i, i_start)
             self.cumulative_length[i:] += np.uint32(len(new))
         else:
             raise NotImplementedError
@@ -400,11 +392,6 @@ class VectorOfVectors(LGDO):
         [[8 9],
          [4 5],
         ]
-
-        Warning
-        -------
-        This method involves a significant amount of memory re-allocation and
-        is expected to perform poorly on large vectors.
         """
         if self.ndim == 2:
             if i >= len(self):
@@ -414,27 +401,15 @@ class VectorOfVectors(LGDO):
             vidx = self.cumulative_length
             dlen = len(new) - len(self[i])
 
-            if dlen == 0:
-                # don't waste resources
-                self[i] = new
-            elif dlen < 0:
-                start = vidx[i - 1]
-                stop = start + len(new)
-                # set the already allocated indices
-                self.flattened_data[start:stop] = new
-                # then delete the extra indices
-                self.flattened_data = Array(
-                    np.delete(self.flattened_data, np.s_[stop : vidx[i]])
-                )
-            else:
-                # set the already allocated indices
-                self.flattened_data[vidx[i - 1] : vidx[i]] = new[: len(self[i])]
-                # then insert the remaining
-                self.flattened_data = Array(
-                    np.insert(self.flattened_data, vidx[i], new[len(self[i]) :])
-                )
-
-            vidx[i:] = vidx[i:] + dlen
+            if dlen != 0:
+                # move the subsequent entries
+                vidx[i:] += dlen
+                self.flattened_data.resize(vidx[-1])
+                self.flattened_data._nda[vidx[i]:vidx[-1]] = self.flattened_data._nda[vidx[i]-dlen:vidx[-1]-dlen]
+            
+            # set the already allocated indices
+            start = vidx[i - 1] if i>0 else 0
+            self.flattened_data[start:vidx[i]] = new
         else:
             raise NotImplementedError
 
