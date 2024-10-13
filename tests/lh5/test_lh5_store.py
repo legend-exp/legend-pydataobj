@@ -309,7 +309,7 @@ def test_read_wftable_encoded(lh5_file):
     lh5_obj_chain = store.read(
         "/data/struct/wftable_enc", [lh5_file, lh5_file], decompress=False
     )
-    assert len(lh5_obj) == 6
+    assert len(lh5_obj_chain) == 6
     assert isinstance(lh5_obj_chain.values, lgdo.ArrayOfEncodedEqualSizedArrays)
 
     lh5_obj_chain = store.read(
@@ -318,7 +318,7 @@ def test_read_wftable_encoded(lh5_file):
     assert isinstance(lh5_obj_chain.values, lgdo.ArrayOfEqualSizedArrays)
     assert np.array_equal(lh5_obj_chain.values[:3], lh5_obj.values)
     assert np.array_equal(lh5_obj_chain.values[3:], lh5_obj.values)
-    assert len(lh5_obj) == 6
+    assert len(lh5_obj_chain) == 6
 
     with h5py.File(lh5_file) as h5f:
         assert (

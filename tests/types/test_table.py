@@ -14,7 +14,6 @@ from lgdo import Table
 def test_init():
     tbl = Table()
     assert not tbl.size
-    assert tbl.loc == 0
 
     tbl = Table(size=10)
     assert tbl.size == 10
