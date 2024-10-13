@@ -100,7 +100,30 @@ class Table(Struct):
         """Provides ``__len__`` for this array-like class."""
         return self.size
 
-    def resize(self, new_size: int | None = None, do_warn: bool = False) -> None:
+    def set_capacity(self, capacity: int | ArrayLike) -> None:
+        "Set size (number of rows) of internal memory buffer"
+        if isinstance(capacity, int):
+            for obj in self.values():
+                obj.set_capacity(capacity)
+        else:
+            if len(capacity) != len(self.keys()):
+                msg = "List of capacities must have same length as number of keys"
+                raise ValueError(msg)
+            
+            for obj, cap in zip(self.values(), capacity):
+                obj.set_capacity(cap)
+
+    def get_capacity(self) -> int:
+        "Get list of capacities for each key"
+        return [ v.get_capacity() for v in self.values() ]
+
+    def trim_capacity(self) -> int:
+        "Set capacity to be minimum needed to support Array size"
+        for v in self.values():
+            v.trim_capacity()
+        
+
+    def resize(self, new_size: int | None = None, do_warn: bool = False, trim: bool = False) -> None:
         # if new_size = None, use the size from the first field
         for field, obj in self.items():
             if new_size is None:
@@ -112,19 +135,20 @@ class Table(Struct):
                         f"with size {len(obj)} != {new_size}"
                     )
                 if isinstance(obj, Table):
-                    obj.resize(new_size)
+                    obj.resize(new_size, trim)
                 else:
-                    obj.resize(new_size)
+                    obj.resize(new_size, trim)
         self.size = new_size
 
-    def push_row(self) -> None:
-        self.loc += 1
+    def append(self, vals: Dict) -> None:
+        "Append vals to end of table. Vals is a mapping from table key to val"
+        self.insert(len(self), vals)
 
-    def is_full(self) -> bool:
-        return self.loc >= self.size
-
-    def clear(self) -> None:
-        self.loc = 0
+    def insert(self, i: int, vals: Dict) -> None:
+        "Insert vals into table at row i. Vals is a mapping from table key to val"
+        for k, ar in self.items():
+            ar.insert(i, vals[k])
+        self.size += 1
 
     def add_field(self, name: str, obj: LGDO, use_obj_size: bool = False) -> None:
         """Add a field (column) to the table.

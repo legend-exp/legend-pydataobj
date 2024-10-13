@@ -92,8 +92,7 @@ def read(
         will be set to ``True``, while the rest will default to ``False``.
     obj_buf
         Read directly into memory provided in `obj_buf`. Note: the buffer
-        will be expanded to accommodate the data requested. To maintain the
-        buffer length, send in ``n_rows = len(obj_buf)``.
+        will be resized to accommodate the data retrieved.
     obj_buf_start
         Start location in ``obj_buf`` for read. For concatenating data to
         array-like objects.
@@ -106,12 +105,8 @@ def read(
 
     Returns
     -------
-    (object, n_rows_read)
-        `object` is the read-out object `n_rows_read` is the number of rows
-        successfully read out. Essential for arrays when the amount of data
-        is smaller than the object buffer.  For scalars and structs
-        `n_rows_read` will be``1``. For tables it is redundant with
-        ``table.loc``. If `obj_buf` is ``None``, only `object` is returned.
+    object
+        `the read-out object
     """
     if isinstance(lh5_file, h5py.File):
         lh5_obj = lh5_file[name]

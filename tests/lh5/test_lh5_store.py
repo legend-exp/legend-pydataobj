@@ -132,6 +132,12 @@ def test_read_vov(lh5_file):
     assert len(lh5_obj) == 3
     assert lh5_obj.attrs["myattr"] == 2
 
+    lh5_obj = store.read("/data/struct/vov", [lh5_file, lh5_file])
+    assert len(lh5_obj) == 6
+    assert lh5_obj == lgdo.VectorOfVectors(
+        [[3, 4, 5], [2], [4, 8, 9, 7], [3, 4, 5], [2], [4, 8, 9, 7]], attrs={"myattr": 2}
+    )
+
     with h5py.File(lh5_file) as h5f:
         assert (
             h5f["/data/struct/vov/cumulative_length"].compression
