@@ -18,7 +18,7 @@ from pandas.io.formats import format as fmt
 
 from .array import Array
 from .arrayofequalsizedarrays import ArrayOfEqualSizedArrays
-from .lgdo import LGDOCollection
+from .lgdo import LGDO, LGDOCollection
 from .scalar import Scalar
 from .struct import Struct
 from .vectorofvectors import VectorOfVectors
@@ -97,7 +97,7 @@ class Table(Struct, LGDOCollection):
         """Provides ``__len__`` for this array-like class."""
         return self.size
 
-    def reserve_capacity(self, capacity: int | ArrayLike) -> None:
+    def reserve_capacity(self, capacity: int | list) -> None:
         "Set size (number of rows) of internal memory buffer"
         if isinstance(capacity, int):
             for obj in self.values():
@@ -138,11 +138,11 @@ class Table(Struct, LGDOCollection):
                     obj.resize(new_size, trim)
         self.size = new_size
 
-    def append(self, vals: Dict) -> None:
+    def append(self, vals: dict) -> None:
         "Append vals to end of table. Vals is a mapping from table key to val"
         self.insert(len(self), vals)
 
-    def insert(self, i: int, vals: Dict) -> None:
+    def insert(self, i: int, vals: dict) -> None:
         "Insert vals into table at row i. Vals is a mapping from table key to val"
         for k, ar in self.items():
             ar.insert(i, vals[k])

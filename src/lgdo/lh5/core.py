@@ -4,6 +4,7 @@ import bisect
 import inspect
 import sys
 from collections.abc import Mapping, Sequence
+from contextlib import suppress
 from typing import Any
 
 import h5py
@@ -177,10 +178,8 @@ def read(
         obj_buf_start=obj_buf_start,
         decompress=decompress,
     )
-    try:
+    with suppress(AttributeError):
         obj.resize(obj_buf_start + n_rows_read)
-    except AttributeError:
-        pass
 
     return obj
 

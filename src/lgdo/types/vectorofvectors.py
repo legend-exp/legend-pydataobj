@@ -281,7 +281,7 @@ class VectorOfVectors(LGDOCollection):
         self.cumulative_length.reserve_capacity(cap_cl)
         self.flattened_data.reserve_capacity(*cap_args)
 
-    def get_capacity(self) -> Tuple[int]:
+    def get_capacity(self) -> tuple[int]:
         """Get tuple containing capacity of each dimension. First dimension
         is cumulative length array. Last dimension is flattened data.
         """

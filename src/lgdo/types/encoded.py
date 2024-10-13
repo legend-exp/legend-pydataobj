@@ -96,7 +96,7 @@ class VectorOfEncodedVectors(LGDOCollection):
         self.encoded_data.reserve_capacity(*capacity)
         self.decoded_size.reserve_capacity(capacity[0])
 
-    def get_capacity(self) -> Tuple:
+    def get_capacity(self) -> tuple:
         return (self.decoded_size.get_capacity, *self.encoded_data.get_capacity())
 
     def trim_capacity(self) -> None:
@@ -348,7 +348,7 @@ class ArrayOfEncodedEqualSizedArrays(LGDOCollection):
     def reserve_capacity(self, *capacity: int) -> None:
         self.encoded_data.reserve_capacity(capacity)
 
-    def get_capacity(self) -> Tuple:
+    def get_capacity(self) -> tuple:
         return self.encoded_data.get_capacity()
 
     def trim_capacity(self) -> None:
@@ -361,7 +361,7 @@ class ArrayOfEncodedEqualSizedArrays(LGDOCollection):
         --------
         .VectorOfVectors.resize
         """
-        self.encoded_data.resize(new_size)
+        self.encoded_data.resize(new_size, trim)
 
     def append(self, value: NDArray) -> None:
         """Append a 1D encoded array at the end.
