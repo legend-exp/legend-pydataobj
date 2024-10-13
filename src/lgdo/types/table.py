@@ -106,21 +106,22 @@ class Table(Struct, LGDOCollection):
             if len(capacity) != len(self.keys()):
                 msg = "List of capacities must have same length as number of keys"
                 raise ValueError(msg)
-            
+
             for obj, cap in zip(self.values(), capacity):
                 obj.reserve_capacity(cap)
 
     def get_capacity(self) -> int:
         "Get list of capacities for each key"
-        return [ v.get_capacity() for v in self.values() ]
+        return [v.get_capacity() for v in self.values()]
 
     def trim_capacity(self) -> int:
         "Set capacity to be minimum needed to support Array size"
         for v in self.values():
             v.trim_capacity()
-        
 
-    def resize(self, new_size: int | None = None, do_warn: bool = False, trim: bool = False) -> None:
+    def resize(
+        self, new_size: int | None = None, do_warn: bool = False, trim: bool = False
+    ) -> None:
         # if new_size = None, use the size from the first field
         for field, obj in self.items():
             if new_size is None:
@@ -147,7 +148,9 @@ class Table(Struct, LGDOCollection):
             ar.insert(i, vals[k])
         self.size += 1
 
-    def add_field(self, name: str, obj: LGDOCollection, use_obj_size: bool = False) -> None:
+    def add_field(
+        self, name: str, obj: LGDOCollection, use_obj_size: bool = False
+    ) -> None:
         """Add a field (column) to the table.
 
         Use the name "field" here to match the terminology used in
@@ -184,7 +187,9 @@ class Table(Struct, LGDOCollection):
             new_size = len(obj) if use_obj_size else self.size
             self.resize(new_size=new_size)
 
-    def add_column(self, name: str, obj: LGDOCollection, use_obj_size: bool = False) -> None:
+    def add_column(
+        self, name: str, obj: LGDOCollection, use_obj_size: bool = False
+    ) -> None:
         """Alias for :meth:`.add_field` using table terminology 'column'."""
         self.add_field(name, obj, use_obj_size=use_obj_size)
 
@@ -216,7 +221,9 @@ class Table(Struct, LGDOCollection):
             `loc` parameter or :meth:`add_column` warnings.
         """
         if len(other_table) != len(self) and do_warn:
-            log.warning(f"len(other_table) ({len(other_table)}) != len(self) ({len(self)})")
+            log.warning(
+                f"len(other_table) ({len(other_table)}) != len(self) ({len(self)})"
+            )
         if cols is None:
             cols = other_table.keys()
         for name in cols:

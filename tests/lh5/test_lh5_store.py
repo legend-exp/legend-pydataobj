@@ -90,9 +90,7 @@ def test_read_array(lh5_file):
 
 def test_read_array_slice(lh5_file):
     store = lh5.LH5Store()
-    lh5_obj = store.read(
-        "/data/struct_full/array", lh5_file, start_row=1, n_rows=3
-    )
+    lh5_obj = store.read("/data/struct_full/array", lh5_file, start_row=1, n_rows=3)
     assert isinstance(lh5_obj, types.Array)
     assert len(lh5_obj) == 3
     assert lh5_obj == lgdo.Array([2, 3, 4])
@@ -135,7 +133,8 @@ def test_read_vov(lh5_file):
     lh5_obj = store.read("/data/struct/vov", [lh5_file, lh5_file])
     assert len(lh5_obj) == 6
     assert lh5_obj == lgdo.VectorOfVectors(
-        [[3, 4, 5], [2], [4, 8, 9, 7], [3, 4, 5], [2], [4, 8, 9, 7]], attrs={"myattr": 2}
+        [[3, 4, 5], [2], [4, 8, 9, 7], [3, 4, 5], [2], [4, 8, 9, 7]],
+        attrs={"myattr": 2},
     )
 
     with h5py.File(lh5_file) as h5f:
@@ -188,9 +187,7 @@ def test_read_voev(lh5_file):
 
     assert len(lh5_obj) == 3
 
-    lh5_obj = store.read(
-        "/data/struct/voev", [lh5_file, lh5_file], decompress=False
-    )
+    lh5_obj = store.read("/data/struct/voev", [lh5_file, lh5_file], decompress=False)
     assert isinstance(lh5_obj, types.VectorOfEncodedVectors)
     assert len(lh5_obj) == 6
 
@@ -344,14 +341,10 @@ def test_read_with_field_mask(lh5_file):
     lh5_obj = store.read("/data/struct_full", lh5_file, field_mask=["array"])
     assert list(lh5_obj.keys()) == ["array"]
 
-    lh5_obj = store.read(
-        "/data/struct_full", lh5_file, field_mask=("array", "table")
-    )
+    lh5_obj = store.read("/data/struct_full", lh5_file, field_mask=("array", "table"))
     assert sorted(lh5_obj.keys()) == ["array", "table"]
 
-    lh5_obj = store.read(
-        "/data/struct_full", lh5_file, field_mask={"array": True}
-    )
+    lh5_obj = store.read("/data/struct_full", lh5_file, field_mask={"array": True})
     assert list(lh5_obj.keys()) == ["array"]
 
     lh5_obj = store.read(
@@ -384,9 +377,7 @@ def test_read_lgnd_array(lgnd_file):
 def test_read_lgnd_array_fancy_idx(lgnd_file):
     store = lh5.LH5Store()
 
-    lh5_obj = store.read(
-        "/geds/raw/baseline", lgnd_file, idx=[2, 4, 6, 9, 11, 16, 68]
-    )
+    lh5_obj = store.read("/geds/raw/baseline", lgnd_file, idx=[2, 4, 6, 9, 11, 16, 68])
     assert isinstance(lh5_obj, types.Array)
     assert len(lh5_obj) == 7
     assert (lh5_obj.nda == [13508, 14353, 14525, 14341, 15079, 11675, 13995]).all()
@@ -403,9 +394,7 @@ def test_read_lgnd_vov(lgnd_file):
 def test_read_lgnd_vov_fancy_idx(lgnd_file):
     store = lh5.LH5Store()
 
-    lh5_obj = store.read(
-        "/geds/raw/tracelist", lgnd_file, idx=[2, 4, 6, 9, 11, 16, 68]
-    )
+    lh5_obj = store.read("/geds/raw/tracelist", lgnd_file, idx=[2, 4, 6, 9, 11, 16, 68])
     assert isinstance(lh5_obj, types.VectorOfVectors)
     assert len(lh5_obj) == 7
     assert (lh5_obj.cumulative_length.nda == [1, 2, 3, 4, 5, 6, 7]).all()

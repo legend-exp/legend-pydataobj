@@ -102,7 +102,7 @@ class VectorOfEncodedVectors(LGDOCollection):
     def trim_capacity(self) -> None:
         self.encoded_data.trim_capacity()
         self.decoded_size.trim_capacity()
-    
+
     def resize(self, new_size: int) -> None:
         """Resize vector along the first axis.
 

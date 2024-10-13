@@ -5,7 +5,6 @@ HDF5 files.
 
 from __future__ import annotations
 
-import bisect
 import logging
 import os
 import sys
@@ -14,7 +13,6 @@ from inspect import signature
 from typing import Any
 
 import h5py
-import numpy as np
 from numpy.typing import ArrayLike
 
 from .. import types

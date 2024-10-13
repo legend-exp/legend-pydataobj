@@ -86,10 +86,13 @@ def test_append():
     tbl = Table(col_dict=col_dict)
     tbl.append({"a": -1, "b": -1})
     assert len(tbl) == 5
-    assert tbl == Table( {
-        "a": lgdo.Array(nda=np.array([1, 2, 3, 4, -1])),
-        "b": lgdo.Array(nda=np.array([5, 6, 7, 8, -1])),
-    } )
+    assert tbl == Table(
+        {
+            "a": lgdo.Array(nda=np.array([1, 2, 3, 4, -1])),
+            "b": lgdo.Array(nda=np.array([5, 6, 7, 8, -1])),
+        }
+    )
+
 
 def test_insert():
     col_dict = {
@@ -100,10 +103,12 @@ def test_insert():
     tbl = Table(col_dict=col_dict)
     tbl.insert(1, {"a": -1, "b": -1})
     assert len(tbl) == 5
-    assert tbl == Table( {
-        "a": lgdo.Array(nda=np.array([1, -1, 2, 3, 4])),
-        "b": lgdo.Array(nda=np.array([5, -1, 6, 7, 8])),
-    } )
+    assert tbl == Table(
+        {
+            "a": lgdo.Array(nda=np.array([1, -1, 2, 3, 4])),
+            "b": lgdo.Array(nda=np.array([5, -1, 6, 7, 8])),
+        }
+    )
 
 
 def test_add_field():

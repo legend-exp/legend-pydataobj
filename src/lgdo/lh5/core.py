@@ -118,7 +118,7 @@ def read(
             obj_buf.resize(obj_buf_start)
         else:
             obj_buf_start = 0
-        
+
         for i, h5f in enumerate(lh5_file):
             if (
                 isinstance(idx, (list, tuple))
@@ -148,7 +148,7 @@ def read(
             obj_buf = read(
                 name,
                 h5f,
-                start_row if i==0 else 0,
+                start_row if i == 0 else 0,
                 n_rows_i,
                 idx_i,
                 use_h5idx,

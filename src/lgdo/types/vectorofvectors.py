@@ -213,8 +213,10 @@ class VectorOfVectors(LGDOCollection):
 
     @property
     def ndim(self):
-        return 1 + (1 if isinstance(self.flattened_data, Array) else self.flattened_data.ndim)
-    
+        return 1 + (
+            1 if isinstance(self.flattened_data, Array) else self.flattened_data.ndim
+        )
+
     @property
     def dtype(self) -> np.dtype:
         return self.flattened_data.dtype
@@ -283,7 +285,10 @@ class VectorOfVectors(LGDOCollection):
         """Get tuple containing capacity of each dimension. First dimension
         is cumulative length array. Last dimension is flattened data.
         """
-        return (self.cumulative_length.get_capacity(), *self.flattened_data.get_capacity())
+        return (
+            self.cumulative_length.get_capacity(),
+            *self.flattened_data.get_capacity(),
+        )
 
     def trim_capacity(self) -> None:
         "Set capacity for all dimensions to minimum needed to hold data"
@@ -299,7 +304,7 @@ class VectorOfVectors(LGDOCollection):
         If `new_size` is larger than the current vector length,
         `self.cumulative_length` is padded with its last element.  This
         corresponds to appending empty vectors.
-        
+
         If `trim` is ``True``, resize capacity to match new size
 
         Examples
@@ -327,7 +332,7 @@ class VectorOfVectors(LGDOCollection):
         # if new_size > size, new elements are filled with zeros, let's fix
         # that
         if new_size > old_s:
-            self.cumulative_length[old_s:] = self.cumulative_length[old_s-1]
+            self.cumulative_length[old_s:] = self.cumulative_length[old_s - 1]
 
         # then resize the data array
         # if dlen > 0 this has no effect
@@ -370,7 +375,7 @@ class VectorOfVectors(LGDOCollection):
                 msg = f"index {i} is out of bounds for vector with size {len(self)}"
                 raise IndexError(msg)
 
-            i_start = 0 if i==0 else self.cumulative_length[i-1]
+            i_start = 0 if i == 0 else self.cumulative_length[i - 1]
             self.flattened_data.insert(i_start, new)
             self.cumulative_length.insert(i, i_start)
             self.cumulative_length[i:] += np.uint32(len(new))
@@ -405,11 +410,13 @@ class VectorOfVectors(LGDOCollection):
                 # move the subsequent entries
                 vidx[i:] += dlen
                 self.flattened_data.resize(vidx[-1])
-                self.flattened_data._nda[vidx[i]:vidx[-1]] = self.flattened_data._nda[vidx[i]-dlen:vidx[-1]-dlen]
-            
+                self.flattened_data._nda[vidx[i] : vidx[-1]] = self.flattened_data._nda[
+                    vidx[i] - dlen : vidx[-1] - dlen
+                ]
+
             # set the already allocated indices
-            start = vidx[i - 1] if i>0 else 0
-            self.flattened_data[start:vidx[i]] = new
+            start = vidx[i - 1] if i > 0 else 0
+            self.flattened_data[start : vidx[i]] = new
         else:
             raise NotImplementedError
 

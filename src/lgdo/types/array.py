@@ -149,7 +149,7 @@ class Array(LGDOCollection):
         if i > len(self):
             msg = f"index {i} is out of bounds for array with size {len(self)}"
             raise IndexError(msg)
-        
+
         value = np.array(value)
         if value.shape == self.shape[1:]:
             self.resize(len(self) + 1)
