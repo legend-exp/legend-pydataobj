@@ -265,9 +265,9 @@ def test_view_as_np():
 def test_not_like_table():
     h = Histogram(np.array([1, 1]), (np.array([0, 1, 2]),))
     assert h.form_datatype() == "struct{binning,weights,isdensity}"
-    with pytest.raises(TypeError):
+    with pytest.raises(AttributeError):
         x = h.x  # noqa: F841
-    with pytest.raises(TypeError):
+    with pytest.raises(AttributeError):
         h["x"] = Scalar(1.0)
     with pytest.raises(TypeError):
         h.add_field("x", Scalar(1.0))

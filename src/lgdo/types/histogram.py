@@ -318,12 +318,12 @@ class Histogram(Struct):
     def __setitem__(self, name: str, obj: LGDO) -> None:
         # do not allow for new attributes on this
         msg = "histogram fields cannot be mutated"
-        raise TypeError(msg)
+        raise AttributeError(msg)
 
     def __getattr__(self, name: str) -> None:
         # do not allow for new attributes on this
         msg = "histogram fields cannot be mutated"
-        raise TypeError(msg)
+        raise AttributeError(msg)
 
     def add_field(self, name: str | int, obj: LGDO) -> None:  # noqa: ARG002
         """

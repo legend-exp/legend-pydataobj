@@ -23,17 +23,16 @@ def test_basics(lgnd_file):
         buffer_len=5,
     )
 
-    lh5_obj, n_rows = lh5_it.read(4)
-    assert n_rows == 5
+    lh5_obj = lh5_it.read(4)
+    assert len(lh5_obj) == 5
     assert isinstance(lh5_obj, lgdo.Table)
     assert list(lh5_obj.keys()) == ["baseline"]
     assert (
         lh5_obj["baseline"].nda == np.array([14353, 14254, 14525, 11656, 13576])
     ).all()
 
-    for lh5_obj, entry, n_rows in lh5_it:
+    for lh5_obj, entry in lh5_it:
         assert len(lh5_obj) == 5
-        assert n_rows == 5
         assert entry % 5 == 0
 
 
@@ -73,7 +72,7 @@ def test_lgnd_waveform_table_fancy_idx(lgnd_file):
         buffer_len=5,
     )
 
-    lh5_obj, n_rows = lh5_it.read(0)
+    lh5_obj = lh5_it.read(0)
     assert isinstance(lh5_obj, lgdo.WaveformTable)
     assert len(lh5_obj) == 5
 
@@ -115,9 +114,9 @@ def test_friend(more_lgnd_files):
         friend=lh5_raw_it,
     )
 
-    lh5_obj, n_rows = lh5_it.read(0)
+    lh5_obj = lh5_it.read(0)
 
-    assert n_rows == 5
+    assert len(lh5_obj) == 5
     assert isinstance(lh5_obj, lgdo.Table)
     assert set(lh5_obj.keys()) == {"waveform", "baseline", "is_valid_0vbb"}
 
@@ -133,7 +132,7 @@ def test_iterate(more_lgnd_files):
         buffer_len=5,
     )
 
-    for lh5_out, entry, n_rows in lh5_it:
+    for lh5_out, entry in lh5_it:
         assert set(lh5_out.keys()) == {"is_valid_0vbb", "timestamp", "zacEmax_ctc_cal"}
         assert entry % 5 == 0
-        assert n_rows == 5
+        assert len(lh5_out) == 5

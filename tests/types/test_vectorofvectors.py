@@ -439,5 +439,5 @@ def test_lh5_iterator_view_as(lgnd_test_data):
         "ch1067205/dsp/energies",
     )
 
-    for obj, _, _ in it:
+    for obj, _ in it:
         assert ak.is_valid(obj.view_as("ak"))
