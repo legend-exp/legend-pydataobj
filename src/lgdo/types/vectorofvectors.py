@@ -19,12 +19,12 @@ from .. import utils
 from . import arrayofequalsizedarrays as aoesa
 from . import vovutils
 from .array import Array
-from .lgdo import LGDO
+from .lgdo import LGDOCollection
 
 log = logging.getLogger(__name__)
 
 
-class VectorOfVectors(LGDO):
+class VectorOfVectors(LGDOCollection):
     """A n-dimensional variable-length 1D array of variable-length 1D arrays.
 
     If the vector is 2-dimensional, the internal representation is as two NumPy
@@ -270,14 +270,14 @@ class VectorOfVectors(LGDO):
         else:
             raise NotImplementedError
 
-    def set_capacity(self, cap_cl, *cap_args) -> None:
+    def reserve_capacity(self, cap_cl, *cap_args) -> None:
         """Set capacity of internal data arrays. Expect number of args to
         equal `self.n_dim`. First arg is capacity of cumulative length array.
         If `self.n_dim` is 2, second argument is capacity of flattened data,
         otherwise arguments are fed recursively to remaining dimensions.
         """
-        self.cumulative_length.set_capacity(cap_cl)
-        self.flattened_data.set_capacity(*cap_args)
+        self.cumulative_length.reserve_capacity(cap_cl)
+        self.flattened_data.reserve_capacity(*cap_args)
 
     def get_capacity(self) -> Tuple[int]:
         """Get tuple containing capacity of each dimension. First dimension

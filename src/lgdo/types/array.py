@@ -17,12 +17,12 @@ import pint_pandas  # noqa: F401
 
 from .. import utils
 from ..units import default_units_registry as u
-from .lgdo import LGDO
+from .lgdo import LGDOCollection
 
 log = logging.getLogger(__name__)
 
 
-class Array(LGDO):
+class Array(LGDOCollection):
     r"""Holds an :class:`numpy.ndarray` and attributes.
 
     :class:`Array` (and the other various array types) holds an `nda` instead
@@ -111,7 +111,7 @@ class Array(LGDO):
     def shape(self):
         return (len(self),) + self._nda.shape[1:]
 
-    def set_capacity(self, capacity: int) -> None:
+    def reserve_capacity(self, capacity: int) -> None:
         "Set size (number of rows) of internal memory buffer"
         if capacity < len(self):
             msg = "Cannot reduce capacity below Array length"
@@ -124,7 +124,7 @@ class Array(LGDO):
 
     def trim_capacity(self) -> None:
         "Set capacity to be minimum needed to support Array size"
-        self.set_capacity(np.prod(self.shape))
+        self.reserve_capacity(np.prod(self.shape))
 
     def resize(self, new_size: int, trim=False) -> None:
         """Set size of Array in rows. Only change capacity if it must be
@@ -132,11 +132,11 @@ class Array(LGDO):
         If trim is True, capacity will be set to match size."""
 
         if trim and new_size != self.get_capacity:
-            self.set_capacity(new_size)
+            self.reserve_capacity(new_size)
 
         # If capacity is not big enough, set to next power of 2 big enough
         if new_size > self.get_capacity():
-            self.set_capacity(int(2 ** (np.ceil(np.log2(new_size)))))
+            self.reserve_capacity(int(2 ** (np.ceil(np.log2(new_size)))))
 
         self._size = new_size
 
@@ -162,6 +162,13 @@ class Array(LGDO):
         else:
             msg = f"Could not insert value with shape {value.shape} into Array with shape {self.shape}"
             raise ValueError(msg)
+
+    def replace(self, i: int, value: int | float) -> None:
+        "Replace value at row i"
+        if i >= len(self):
+            msg = f"index {i} is out of bounds for array with size {len(self)}"
+            raise IndexError(msg)
+        self[i] = value
 
     def __getitem__(self, key):
         return self.nda[key]
