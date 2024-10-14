@@ -107,7 +107,7 @@ def read(
     Returns
     -------
     object
-        `the read-out object
+        the read-out object
     """
     if isinstance(lh5_file, h5py.File):
         lh5_obj = lh5_file[name]
