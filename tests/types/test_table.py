@@ -93,7 +93,8 @@ def test_resize_and_capacity():
 
     tbl.resize(6)
     assert len(tbl) == 6
-    assert tbl.get_capacity()[0] >= 6 and tbl.get_capacity()[1] == 7
+    assert tbl.get_capacity()[0] >= 6
+    assert tbl.get_capacity()[1] == 7
 
     tbl.trim_capacity()
     assert len(tbl) == 6

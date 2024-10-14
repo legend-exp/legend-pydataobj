@@ -288,8 +288,7 @@ class VectorOfVectors(LGDOCollection):
         fd_cap = self.flattened_data.get_capacity()
         if isinstance(fd_cap, int):
             return (self.cumulative_length.get_capacity(), fd_cap)
-        else:
-            return (self.cumulative_length.get_capacity(), *fd_cap)
+        return (self.cumulative_length.get_capacity(), *fd_cap)
 
     def trim_capacity(self) -> None:
         "Set capacity for all dimensions to minimum needed to hold data"
