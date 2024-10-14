@@ -177,7 +177,7 @@ def test_resize_and_capacity(testvov):
     vov = testvov.v2d
 
     assert vov.get_capacity() == (5, 13)
-    
+
     vov.resize(3)
     assert ak.is_valid(vov.view_as("ak"))
     assert vov.get_capacity() == (5, 13)
@@ -195,7 +195,7 @@ def test_resize_and_capacity(testvov):
     vov.reserve_capacity(5, 10)
     vov.resize(5)
     assert ak.is_valid(vov.view_as("ak"))
-    assert vov.get_capacity()[0] >= 5 and  vov.get_capacity()[1] >= 7
+    assert vov.get_capacity()[0] >= 5 and vov.get_capacity()[1] >= 7
     assert len(vov) == 5
     assert len(vov[3]) == 0
     assert len(vov[4]) == 0
@@ -205,7 +205,7 @@ def test_resize_and_capacity(testvov):
     assert ak.is_valid(vov.view_as("ak"))
     assert vov.get_capacity() == (0, 0)
     assert len(vov) == 0
-    
+
     vov = testvov.v3d
 
     assert vov.get_capacity() == (3, 5, 13)
