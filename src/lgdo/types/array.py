@@ -131,14 +131,14 @@ class Array(LGDOCollection):
         increased to accommodate new rows; in this case double capacity.
         If trim is True, capacity will be set to match size."""
 
+        self._size = new_size
+
         if trim and new_size != self.get_capacity:
             self.reserve_capacity(new_size)
 
         # If capacity is not big enough, set to next power of 2 big enough
         if new_size > self.get_capacity():
             self.reserve_capacity(int(2 ** (np.ceil(np.log2(new_size)))))
-
-        self._size = new_size
 
     def append(self, value: np.ndarray) -> None:
         "Append value to end of array (with copy)"

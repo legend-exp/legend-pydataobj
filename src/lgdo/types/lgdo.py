@@ -135,24 +135,4 @@ class LGDOCollection(LGDO):
 
     def clear(self, trim: bool = False) -> None:
         "set size of LGDOCollection to zero"
-        self.resize(0, trim)
-
-    def getattrs(self, datatype: bool = False) -> dict:
-        """Return a copy of the LGDO attributes dictionary.
-
-        Parameters
-        ----------
-        datatype
-            if ``False``, remove ``datatype`` attribute from the output
-            dictionary.
-        """
-        d = dict(self.attrs)
-        if not datatype:
-            d.pop("datatype", None)
-        return d
-
-    def __str__(self) -> str:
-        return repr(self)
-
-    def __repr__(self) -> str:
-        return self.__class__.__name__ + f"(attrs={self.attrs!r})"
+        self.resize(0, trim=trim)

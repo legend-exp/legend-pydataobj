@@ -29,10 +29,6 @@ log = logging.getLogger(__name__)
 class Table(Struct, LGDOCollection):
     """A special struct of arrays or subtable columns of equal length.
 
-    Holds onto an internal read/write location ``loc`` that is useful in
-    managing table I/O using functions like :meth:`push_row`, :meth:`is_full`,
-    and :meth:`clear`.
-
     Note
     ----
     If you write to a table and don't fill it up to its total size, be sure to
@@ -78,7 +74,8 @@ class Table(Struct, LGDOCollection):
             col_dict = _ak_to_lgdo_or_col_dict(col_dict)
 
         # call Struct constructor
-        super().__init__(obj_dict=col_dict, attrs=attrs)
+        Struct.__init__(self, obj_dict=col_dict)
+        LGDOCollection.__init__(self, attrs=attrs)
 
         # if col_dict is not empty, set size according to it
         # if size is also supplied, resize all fields to match it
@@ -137,10 +134,6 @@ class Table(Struct, LGDOCollection):
                 else:
                     obj.resize(new_size, trim)
         self.size = new_size
-
-    def append(self, vals: dict) -> None:
-        "Append vals to end of table. Vals is a mapping from table key to val"
-        self.insert(len(self), vals)
 
     def insert(self, i: int, vals: dict) -> None:
         "Insert vals into table at row i. Vals is a mapping from table key to val"

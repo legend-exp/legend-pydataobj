@@ -285,10 +285,11 @@ class VectorOfVectors(LGDOCollection):
         """Get tuple containing capacity of each dimension. First dimension
         is cumulative length array. Last dimension is flattened data.
         """
-        return (
-            self.cumulative_length.get_capacity(),
-            *self.flattened_data.get_capacity(),
-        )
+        fd_cap = self.flattened_data.get_capacity()
+        if isinstance(fd_cap, int):
+            return (self.cumulative_length.get_capacity(), fd_cap)
+        else:
+            return (self.cumulative_length.get_capacity(), *fd_cap)
 
     def trim_capacity(self) -> None:
         "Set capacity for all dimensions to minimum needed to hold data"
@@ -338,6 +339,8 @@ class VectorOfVectors(LGDOCollection):
         # if dlen > 0 this has no effect
         if len(self.cumulative_length) > 0:
             self.flattened_data.resize(self.cumulative_length[-1], trim)
+        else:
+            self.flattened_data.resize(0, trim)
 
     def append(self, new: NDArray) -> None:
         """Append a 1D vector `new` at the end.

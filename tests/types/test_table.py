@@ -76,6 +76,34 @@ def test_datatype_name():
     tbl = Table()
     assert tbl.datatype_name() == "table"
 
+def test_resize_and_capacity():
+    col_dict = {
+        "a": lgdo.Array(nda=np.array([1, 2, 3, 4])),
+        "b": lgdo.Array(nda=np.array([5, 6, 7, 8])),
+    }
+    tbl = Table(col_dict=col_dict)
+
+    assert(len(tbl) == 4)
+    assert(tbl.get_capacity() == [4, 4])
+
+    tbl.reserve_capacity([5, 7])
+    assert(len(tbl) == 4)
+    assert(tbl.get_capacity() == [5, 7])
+
+    tbl.resize(6)
+    assert(len(tbl) == 6)
+    assert(tbl.get_capacity()[0] >= 6 and tbl.get_capacity()[1] == 7)
+
+    tbl.trim_capacity()
+    assert(len(tbl) == 6)
+    assert(tbl.get_capacity() == [6, 6])
+
+    with pytest.raises(ValueError):
+        tbl.reserve_capacity(3)
+    
+    tbl.clear(trim=True)
+    assert(len(tbl) == 0)
+    assert(tbl.get_capacity() == [0, 0])
 
 def test_append():
     col_dict = {
