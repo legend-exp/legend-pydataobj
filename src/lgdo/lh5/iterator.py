@@ -176,11 +176,17 @@ class LH5Iterator(typing.Iterator):
         if i_file < 0:
             return 0
         fcl = self.file_map[i_file]
+
+        # if we haven't already calculated, calculate for all files up to i_file
         if fcl == np.iinfo("i").max:
-            fcl = self._get_file_cumlen(i_file - 1) + self.lh5_st.read_n_rows(
-                self.groups[i_file], self.lh5_files[i_file]
-            )
-            self.file_map[i_file] = fcl
+            i_start = np.searchsorted(self.file_map, np.iinfo("i").max)
+            fcl = self.file_map[i_start - 1] if i_start > 0 else 0
+
+            for i in range(i_start, i_file + 1):
+                fcl += self.lh5_st.read_n_rows(
+                    self.groups[i], self.lh5_files[i]
+                )
+                self.file_map[i] = fcl
         return fcl
 
     def _get_file_cumentries(self, i_file: int) -> int:
@@ -188,21 +194,25 @@ class LH5Iterator(typing.Iterator):
         if i_file < 0:
             return 0
         n = self.entry_map[i_file]
+
+        # if we haven't already calculated, calculate for all files up to i_file
         if n == np.iinfo("i").max:
-            elist = self.get_file_entrylist(i_file)
-            fcl = self._get_file_cumlen(i_file)
-            if elist is None:
-                # no entry list provided
-                n = fcl
-            else:
-                file_entries = self.get_file_entrylist(i_file)
-                n = len(file_entries)
-                # check that file entries fall inside of file
-                if n > 0 and file_entries[-1] >= fcl:
-                    logging.warning(f"Found entries out of range for file {i_file}")
-                    n = np.searchsorted(file_entries, fcl, "right")
-                n += self._get_file_cumentries(i_file - 1)
-            self.entry_map[i_file] = n
+            i_start = np.searchsorted(self.entry_map, np.iinfo("i").max)
+            n = self.entry_map[i_start - 1] if i_start > 0 else 0
+
+            for i in range(i_start, i_file + 1):
+                elist = self.get_file_entrylist(i)
+                fcl = self._get_file_cumlen(i)
+                if elist is None:
+                    # no entry list provided
+                    n += fcl
+                else:
+                    n += len(elist)
+                    # check that file entries fall inside of file
+                    if len(elist) > 0 and elist[-1] >= fcl:
+                        logging.warning(f"Found entries out of range for file {i}")
+                        n += np.searchsorted(elist, fcl, "right") - len(elist)
+                self.entry_map[i] = n
         return n
 
     def get_file_entrylist(self, i_file: int) -> np.ndarray:
