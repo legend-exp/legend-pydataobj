@@ -21,7 +21,7 @@ class LH5Iterator(typing.Iterator):
 
     This class can be used either for random access:
 
-    >>> lh5_obj, n_rows = lh5_it.read(entry)
+    >>> lh5_obj = lh5_it.read(entry)
 
     to read the block of entries starting at entry. In case of multiple files
     or the use of an event selection, entry refers to a global event index
@@ -29,7 +29,7 @@ class LH5Iterator(typing.Iterator):
 
     This can also be used as an iterator:
 
-    >>> for lh5_obj, entry, n_rows in LH5Iterator(...):
+    >>> for lh5_obj, entry in LH5Iterator(...):
     >>>    # do the thing!
 
     This is intended for if you are reading a large quantity of data but
@@ -129,7 +129,6 @@ class LH5Iterator(typing.Iterator):
             msg = f"can't open any files from {lh5_files}"
             raise RuntimeError(msg)
 
-        self.n_rows = 0
         self.current_entry = 0
         self.next_entry = 0
 
@@ -235,11 +234,10 @@ class LH5Iterator(typing.Iterator):
                 )
         return self.global_entry_list
 
-    def read(self, entry: int) -> tuple[LGDO, int]:
-        """Read the nextlocal chunk of events, starting at entry. Return the
-        LH5 buffer and number of rows read."""
-        self.n_rows = 0
+    def read(self, entry: int) -> LGDO:
+        "Read the nextlocal chunk of events, starting at entry."
         i_file = np.searchsorted(self.entry_map, entry, "right")
+        self.lh5_buffer.resize(0)
 
         # if file hasn't been opened yet, search through files
         # sequentially until we find the right one
@@ -250,10 +248,10 @@ class LH5Iterator(typing.Iterator):
                 i_file += 1
 
         if i_file == len(self.lh5_files):
-            return (self.lh5_buffer, self.n_rows)
+            return self.lh5_buffer
         local_entry = entry - self._get_file_cumentries(i_file - 1)
 
-        while self.n_rows < self.buffer_len and i_file < len(self.file_map):
+        while len(self.lh5_buffer) < self.buffer_len and i_file < len(self.file_map):
             # Loop through files
             local_idx = self.get_file_entrylist(i_file)
             if local_idx is not None and len(local_idx) == 0:
@@ -262,18 +260,17 @@ class LH5Iterator(typing.Iterator):
                 continue
 
             i_local = local_idx[local_entry] if local_idx is not None else local_entry
-            self.lh5_buffer, n_rows = self.lh5_st.read(
+            self.lh5_buffer = self.lh5_st.read(
                 self.groups[i_file],
                 self.lh5_files[i_file],
                 start_row=i_local,
-                n_rows=self.buffer_len - self.n_rows,
+                n_rows=self.buffer_len - len(self.lh5_buffer),
                 idx=local_idx,
                 field_mask=self.field_mask,
                 obj_buf=self.lh5_buffer,
-                obj_buf_start=self.n_rows,
+                obj_buf_start=len(self.lh5_buffer),
             )
 
-            self.n_rows += n_rows
             i_file += 1
             local_entry = 0
 
@@ -282,7 +279,7 @@ class LH5Iterator(typing.Iterator):
         if self.friend is not None:
             self.friend.read(entry)
 
-        return (self.lh5_buffer, self.n_rows)
+        return self.lh5_buffer
 
     def reset_field_mask(self, mask):
         """Replaces the field mask of this iterator and any friends with mask"""
@@ -307,8 +304,8 @@ class LH5Iterator(typing.Iterator):
     def __next__(self) -> tuple[LGDO, int, int]:
         """Read next buffer_len entries and return lh5_table, iterator entry
         and n_rows read."""
-        buf, n_rows = self.read(self.next_entry)
-        self.next_entry = self.current_entry + n_rows
-        if n_rows == 0:
+        buf = self.read(self.next_entry)
+        if len(buf) == 0:
             raise StopIteration
-        return (buf, self.current_entry, n_rows)
+        self.next_entry = self.current_entry + len(buf)
+        return (buf, self.current_entry)

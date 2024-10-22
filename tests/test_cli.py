@@ -74,10 +74,10 @@ def test_lh5concat(lgnd_test_data, tmptestdir):
     ]
 
     store = lh5.LH5Store()
-    tbl1, size = store.read("ch1057600/raw", infile1)
-    tbl2, size = store.read("ch1057600/raw", infile2)
-    tbl, size = store.read("ch1057600/raw", outfile)
-    assert size == 20
+    tbl1 = store.read("ch1057600/raw", infile1)
+    tbl2 = store.read("ch1057600/raw", infile2)
+    tbl = store.read("ch1057600/raw", outfile)
+    assert len(tbl) == 20
 
     for i in range(10):
         assert tbl.packet_id[i] == tbl1.packet_id[i]
@@ -111,7 +111,7 @@ def test_lh5concat(lgnd_test_data, tmptestdir):
         "ch1057600/raw/waveform/values",
     ]
 
-    tbl, _ = store.read("ch1057600/raw", outfile)
+    tbl = store.read("ch1057600/raw", outfile)
     assert isinstance(tbl, types.Table)
 
     arg_list[4] = "--exclude"
@@ -136,10 +136,10 @@ def test_lh5concat(lgnd_test_data, tmptestdir):
         "ch1057600/raw/waveform/t0",
     ]
 
-    tbl1, size = store.read("ch1059201/raw", infile1)
-    tbl2, size = store.read("ch1059201/raw", infile2)
-    tbl, size = store.read("ch1059201/raw", outfile)
-    assert size == 20
+    tbl1 = store.read("ch1059201/raw", infile1)
+    tbl2 = store.read("ch1059201/raw", infile2)
+    tbl = store.read("ch1059201/raw", outfile)
+    assert len(tbl) == 20
 
     for i in range(10):
         assert tbl.packet_id[i] == tbl1.packet_id[i]
