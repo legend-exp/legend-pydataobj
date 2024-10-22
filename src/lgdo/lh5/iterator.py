@@ -77,7 +77,7 @@ class LH5Iterator(typing.Iterator):
             The friend should have the same length and entry list. A single
             LH5 table containing columns from both iterators will be returned.
         """
-        self.lh5_st = LH5Store(base_path=base_path, keep_open=True)
+        self.lh5_st = LH5Store(base_path=base_path, keep_open=3)
 
         # List of files, with wildcards and env vars expanded
         if isinstance(lh5_files, str):
@@ -183,9 +183,7 @@ class LH5Iterator(typing.Iterator):
             fcl = self.file_map[i_start - 1] if i_start > 0 else 0
 
             for i in range(i_start, i_file + 1):
-                fcl += self.lh5_st.read_n_rows(
-                    self.groups[i], self.lh5_files[i]
-                )
+                fcl += self.lh5_st.read_n_rows(self.groups[i], self.lh5_files[i])
                 self.file_map[i] = fcl
         return fcl
 

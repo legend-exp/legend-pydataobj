@@ -9,6 +9,7 @@ import bisect
 import logging
 import os
 import sys
+from collections import OrderedDict
 from collections.abc import Mapping, Sequence
 from inspect import signature
 from typing import Any
@@ -47,14 +48,15 @@ class LH5Store:
             directory path to prepend to LH5 files.
         keep_open
             whether to keep files open by storing the :mod:`h5py` objects as
-            class attributes.
+            class attributes. If ``keep_open`` is an ``int``, keep only the
+            ``n`` most recently opened files; if ``True``, no limit
         locking
             whether to lock files when reading
         """
         self.base_path = "" if base_path == "" else utils.expand_path(base_path)
         self.keep_open = keep_open
         self.locking = locking
-        self.files = {}
+        self.files = OrderedDict()
 
     def gimme_file(
         self,
@@ -87,6 +89,7 @@ class LH5Store:
             file_kwargs["locking"] = self.locking
 
         if lh5_file in self.files:
+            self.files.move_to_end(lh5_file)
             return self.files[lh5_file]
 
         if self.base_path != "":
@@ -120,6 +123,8 @@ class LH5Store:
         h5f = h5py.File(full_path, mode, **file_kwargs)
 
         if self.keep_open:
+            if isinstance(self.keep_open, int) and len(self.files) >= self.keep_open:
+                self.files.popitem(last=False)
             self.files[lh5_file] = h5f
 
         return h5f
