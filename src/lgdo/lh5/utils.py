@@ -12,7 +12,7 @@ from typing import Any
 import h5py
 
 from .. import types
-from . import _serializers, datatype
+from . import _serializers
 from .exceptions import LH5DecodeError
 
 log = logging.getLogger(__name__)
@@ -47,54 +47,12 @@ def read_n_rows(name: str, h5f: str | h5py.File) -> int | None:
         h5f = h5py.File(h5f, "r")
 
     try:
-        attrs = h5f[name].attrs
+        h5o = h5f[name].id
     except KeyError as e:
         msg = "not found"
         raise LH5DecodeError(msg, h5f, name) from e
-    except AttributeError as e:
-        msg = "missing 'datatype' attribute"
-        raise LH5DecodeError(msg, h5f, name) from e
 
-    lgdotype = datatype.datatype(attrs["datatype"])
-
-    # scalars are dim-0 datasets
-    if lgdotype is types.Scalar:
-        return None
-
-    # structs don't have rows
-    if lgdotype is types.Struct:
-        return None
-
-    # tables should have elements with all the same length
-    if lgdotype is types.Table:
-        # read out each of the fields
-        rows_read = None
-        for field in datatype.get_struct_fields(attrs["datatype"]):
-            n_rows_read = read_n_rows(name + "/" + field, h5f)
-            if not rows_read:
-                rows_read = n_rows_read
-            elif rows_read != n_rows_read:
-                log.warning(
-                    f"'{field}' field in table '{name}' has {rows_read} rows, "
-                    f"{n_rows_read} was expected"
-                )
-        return rows_read
-
-    # length of vector of vectors is the length of its cumulative_length
-    if lgdotype is types.VectorOfVectors:
-        return read_n_rows(f"{name}/cumulative_length", h5f)
-
-    # length of vector of encoded vectors is the length of its decoded_size
-    if lgdotype in (types.VectorOfEncodedVectors, types.ArrayOfEncodedEqualSizedArrays):
-        return read_n_rows(f"{name}/encoded_data", h5f)
-
-    # return array length (without reading the array!)
-    if issubclass(lgdotype, types.Array):
-        # compute the number of rows to read
-        return h5f[name].shape[0]
-
-    msg = f"don't know how to read rows of LGDO {lgdotype.__name__}"
-    raise LH5DecodeError(msg, h5f, name)
+    return _serializers.read.utils.read_n_rows(h5o, h5f.name, name)
 
 
 def get_h5_group(
