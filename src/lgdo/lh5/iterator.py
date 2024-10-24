@@ -244,9 +244,9 @@ class LH5Iterator(typing.Iterator):
         if self.global_entry_list is None and self.local_entry_list is not None:
             self.global_entry_list = np.zeros(len(self), "q")
             for i_file in range(len(self.lh5_files)):
-                i_start = self.get_file_cumentries(i_file - 1)
-                i_stop = self.get_file_cumentries(i_file)
-                f_start = self.get_file_cumlen(i_file - 1)
+                i_start = self._get_file_cumentries(i_file - 1)
+                i_stop = self._get_file_cumentries(i_file)
+                f_start = self._get_file_cumlen(i_file - 1)
                 self.global_entry_list[i_start:i_stop] = (
                     self.get_file_entrylist(i_file) + f_start
                 )

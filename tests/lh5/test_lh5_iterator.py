@@ -44,6 +44,14 @@ def test_errors(lgnd_file):
     with pytest.raises(ValueError):
         lh5.LH5Iterator(1, 2)
 
+    with pytest.raises(ValueError):
+        lh5.LH5Iterator(
+            lgnd_file,
+            "/geds/raw",
+            entry_list=range(100),
+            entry_mask=np.ones(100, "bool"),
+        )
+
 
 def test_lgnd_waveform_table_fancy_idx(lgnd_file):
     lh5_it = lh5.LH5Iterator(
@@ -126,8 +134,8 @@ def test_iterate(more_lgnd_files):
     # iterate through all hit groups in all files; there are 10 entries in
     # each group/file
     lh5_it = lh5.LH5Iterator(
-        more_lgnd_files[1] * 3,
-        ["ch1084803/hit"] * 2 + ["ch1084804/hit"] * 2 + ["ch1121600/hit"] * 2,
+        more_lgnd_files[1],
+        ["ch1084803/hit", "ch1084804/hit", "ch1121600/hit"],
         field_mask=["is_valid_0vbb", "timestamp", "zacEmax_ctc_cal"],
         entry_list=[0, 1, 2, 3, 5, 8, 13, 21, 34, 55],
         buffer_len=5,
@@ -137,3 +145,51 @@ def test_iterate(more_lgnd_files):
         assert set(lh5_out.keys()) == {"is_valid_0vbb", "timestamp", "zacEmax_ctc_cal"}
         assert entry % 5 == 0
         assert n_rows == 5
+
+    lh5_it = lh5.LH5Iterator(
+        more_lgnd_files[1],
+        ["ch1084803/hit", "ch1084804/hit", "ch1121600/hit"],
+        field_mask=["is_valid_0vbb", "timestamp", "zacEmax_ctc_cal"],
+        entry_list=[[0, 1, 2, 3, 5, 8], [3], [1], [4], [], [5]],
+        buffer_len=5,
+    )
+
+    for lh5_out, entry, n_rows in lh5_it:
+        assert set(lh5_out.keys()) == {"is_valid_0vbb", "timestamp", "zacEmax_ctc_cal"}
+        assert entry % 5 == 0
+        assert n_rows == 5
+    print(lh5_it.get_global_entrylist())
+    assert all(
+        i == j
+        for i, j in zip(
+            lh5_it.get_global_entrylist(), [0, 1, 2, 3, 5, 8, 13, 21, 34, 55]
+        )
+    )
+
+    lh5_it = lh5.LH5Iterator(
+        more_lgnd_files[1],
+        [["ch1084803/hit", "ch1084804/hit"], ["ch1084803/hit", "ch1121600/hit"]],
+        field_mask=["is_valid_0vbb", "timestamp", "zacEmax_ctc_cal"],
+        buffer_len=5,
+    )
+
+    for lh5_out, entry, n_rows in lh5_it:
+        assert set(lh5_out.keys()) == {"is_valid_0vbb", "timestamp", "zacEmax_ctc_cal"}
+        assert entry % 5 == 0
+        assert n_rows == 5
+
+    with pytest.raises(ValueError):
+        lh5.LH5Iterator(
+            more_lgnd_files[1],
+            [["ch1084803/hit", "ch1084804/hit"], "ch1084803/hit"],
+            field_mask=["is_valid_0vbb", "timestamp", "zacEmax_ctc_cal"],
+            buffer_len=5,
+        )
+
+    with pytest.raises(ValueError):
+        lh5.LH5Iterator(
+            more_lgnd_files[1],
+            [["ch1084803/hit"], ["ch1084804/hit"], ["ch1084803/hit"]],
+            field_mask=["is_valid_0vbb", "timestamp", "zacEmax_ctc_cal"],
+            buffer_len=5,
+        )
