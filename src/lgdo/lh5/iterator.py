@@ -42,7 +42,7 @@ class LH5Iterator(typing.Iterator):
     def __init__(
         self,
         lh5_files: str | list[str],
-        groups: str | list[str],
+        groups: str | list[str] | list[list[str]],
         base_path: str = "",
         entry_list: list[int] | list[list[int]] | None = None,
         entry_mask: list[bool] | list[list[bool]] | None = None,
@@ -57,9 +57,10 @@ class LH5Iterator(typing.Iterator):
             file or files to read from. May include wildcards and environment
             variables.
         groups
-            HDF5 group(s) to read. If a list is provided for both lh5_files
-            and group, they must be the same size. If a file is wild-carded,
-            the same group will be assigned to each file found
+            HDF5 group(s) to read. If a list of strings is provided, use
+            same groups for each file. If a list of lists is provided, size
+            of outer list must match size of file list, and each inner list
+            will apply to a single file (or set of wildcarded files)
         entry_list
             list of entry numbers to read. If a nested list is provided,
             expect one top-level list for each file, containing a list of
@@ -82,28 +83,34 @@ class LH5Iterator(typing.Iterator):
         # List of files, with wildcards and env vars expanded
         if isinstance(lh5_files, str):
             lh5_files = [lh5_files]
-            if isinstance(groups, list):
-                lh5_files *= len(groups)
-        elif not isinstance(lh5_files, list):
+        elif not isinstance(lh5_files, (list, set, tuple)):
             msg = "lh5_files must be a string or list of strings"
             raise ValueError(msg)
 
         if isinstance(groups, str):
-            groups = [groups] * len(lh5_files)
+            groups = [ [groups] ] * len(lh5_files)
         elif not isinstance(groups, list):
-            msg = "group must be a string or list of strings"
+            msg = "group must be a string or appropriate list"
+            raise ValueError(msg)
+        elif all([ isinstance(g, str) for g in groups ]):
+            groups = [ groups ] * len(lh5_files)
+        elif len(groups)==len(lh5_files) and all([isinstance(l, (list, set, tuple)) for l in groups]):
+            pass
+        else:
+            msg = "group must be a string or appropriate list"
             raise ValueError(msg)
 
         if len(groups) != len(lh5_files):
             msg = "lh5_files and groups must have same length"
             raise ValueError(msg)
 
+        # make flattened outer-product-like list of files and groups
         self.lh5_files = []
         self.groups = []
         for f, g in zip(lh5_files, groups):
-            f_exp = expand_path(f, list=True, base_path=base_path)
-            self.lh5_files += f_exp
-            self.groups += [g] * len(f_exp)
+            for f_exp in expand_path(f, list=True, base_path=base_path):
+                self.lh5_files += [f_exp] * len(g)
+                self.groups += list(g)
 
         if entry_list is not None and entry_mask is not None:
             msg = "entry_list and entry_mask arguments are mutually exclusive"
