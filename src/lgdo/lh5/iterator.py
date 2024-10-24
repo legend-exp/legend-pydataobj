@@ -88,13 +88,15 @@ class LH5Iterator(typing.Iterator):
             raise ValueError(msg)
 
         if isinstance(groups, str):
-            groups = [ [groups] ] * len(lh5_files)
+            groups = [[groups]] * len(lh5_files)
         elif not isinstance(groups, list):
             msg = "group must be a string or appropriate list"
             raise ValueError(msg)
-        elif all([ isinstance(g, str) for g in groups ]):
-            groups = [ groups ] * len(lh5_files)
-        elif len(groups)==len(lh5_files) and all([isinstance(l, (list, set, tuple)) for l in groups]):
+        elif all([isinstance(g, str) for g in groups]):
+            groups = [groups] * len(lh5_files)
+        elif len(groups) == len(lh5_files) and all(
+            [isinstance(l, (list, set, tuple)) for l in groups]
+        ):
             pass
         else:
             msg = "group must be a string or appropriate list"
