@@ -110,9 +110,9 @@ class LH5Iterator(typing.Iterator):
             raise ValueError(msg)
 
         # Map to last row in each file
-        self.file_map = np.full(len(self.lh5_files), np.iinfo("i").max, "i")
+        self.file_map = np.full(len(self.lh5_files), np.iinfo("q").max, "q")
         # Map to last iterator entry for each file
-        self.entry_map = np.full(len(self.lh5_files), np.iinfo("i").max, "i")
+        self.entry_map = np.full(len(self.lh5_files), np.iinfo("q").max, "q")
         self.buffer_len = buffer_len
 
         if len(self.lh5_files) > 0:
@@ -142,13 +142,13 @@ class LH5Iterator(typing.Iterator):
             entry_list = list(entry_list)
             if isinstance(entry_list[0], int):
                 self.local_entry_list = [None] * len(self.file_map)
-                self.global_entry_list = np.array(entry_list, "i")
+                self.global_entry_list = np.array(entry_list, "q")
                 self.global_entry_list.sort()
 
             else:
                 self.local_entry_list = [[]] * len(self.file_map)
                 for i_file, local_list in enumerate(entry_list):
-                    self.local_entry_list[i_file] = np.array(local_list, "i")
+                    self.local_entry_list[i_file] = np.array(local_list, "q")
                     self.local_entry_list[i_file].sort()
 
         elif entry_mask is not None:
@@ -178,8 +178,8 @@ class LH5Iterator(typing.Iterator):
         fcl = self.file_map[i_file]
 
         # if we haven't already calculated, calculate for all files up to i_file
-        if fcl == np.iinfo("i").max:
-            i_start = np.searchsorted(self.file_map, np.iinfo("i").max)
+        if fcl == np.iinfo("q").max:
+            i_start = np.searchsorted(self.file_map, np.iinfo("q").max)
             fcl = self.file_map[i_start - 1] if i_start > 0 else 0
 
             for i in range(i_start, i_file + 1):
@@ -194,8 +194,8 @@ class LH5Iterator(typing.Iterator):
         n = self.entry_map[i_file]
 
         # if we haven't already calculated, calculate for all files up to i_file
-        if n == np.iinfo("i").max:
-            i_start = np.searchsorted(self.entry_map, np.iinfo("i").max)
+        if n == np.iinfo("q").max:
+            i_start = np.searchsorted(self.entry_map, np.iinfo("q").max)
             n = self.entry_map[i_start - 1] if i_start > 0 else 0
 
             for i in range(i_start, i_file + 1):
@@ -226,14 +226,14 @@ class LH5Iterator(typing.Iterator):
             f_end = self._get_file_cumlen(i_file)
             i_start = self._get_file_cumentries(i_file - 1)
             i_stop = np.searchsorted(self.global_entry_list, f_end, "right")
-            elist = np.array(self.global_entry_list[i_start:i_stop], "i") - f_start
+            elist = np.array(self.global_entry_list[i_start:i_stop], "q") - f_start
             self.local_entry_list[i_file] = elist
         return elist
 
     def get_global_entrylist(self) -> np.ndarray:
         """Get global entry list, constructing it if needed"""
         if self.global_entry_list is None and self.local_entry_list is not None:
-            self.global_entry_list = np.zeros(len(self), "i")
+            self.global_entry_list = np.zeros(len(self), "q")
             for i_file in range(len(self.lh5_files)):
                 i_start = self.get_file_cumentries(i_file - 1)
                 i_stop = self.get_file_cumentries(i_file)
@@ -251,7 +251,7 @@ class LH5Iterator(typing.Iterator):
 
         # if file hasn't been opened yet, search through files
         # sequentially until we find the right one
-        if i_file < len(self.lh5_files) and self.entry_map[i_file] == np.iinfo("i").max:
+        if i_file < len(self.lh5_files) and self.entry_map[i_file] == np.iinfo("q").max:
             while i_file < len(self.lh5_files) and entry >= self._get_file_cumentries(
                 i_file
             ):
