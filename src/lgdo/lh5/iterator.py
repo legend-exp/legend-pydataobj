@@ -203,7 +203,7 @@ class LH5Iterator(typing.Iterator):
                 fcl = self._get_file_cumlen(i)
                 if elist is None:
                     # no entry list provided
-                    n += fcl
+                    n = fcl
                 else:
                     n += len(elist)
                     # check that file entries fall inside of file
