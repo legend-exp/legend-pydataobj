@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Iterable, Sequence, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from typing import Any
 
 import hist
@@ -324,7 +324,7 @@ class Histogram(Struct):
         assert all(isinstance(v, Histogram.Axis) for k, v in bins)
         return tuple(v for _, v in bins)
 
-    def fill(self, data, w: np.ndarray = None, keys:List[str] = None) -> None:
+    def fill(self, data, w: np.ndarray = None, keys: List[str] = None) -> None:
         """Fill histogram by incrementing bins with data points weighted by w
 
         Parameters
@@ -335,55 +335,75 @@ class Histogram(Struct):
         w
             weight to use for incrementing data points. If None, use 1 for all
         """
-        if isinstance(data, np.ndarray) and len(data.shape)==1 and len(self.binning)==1:
+        if (
+            isinstance(data, np.ndarray)
+            and len(data.shape) == 1
+            and len(self.binning) == 1
+        ):
             N = len(data)
             data = [data]
-        elif isinstance(data, np.ndarray) and len(data.shape)==2 and data.shape[1]==len(self.binning):
+        elif (
+            isinstance(data, np.ndarray)
+            and len(data.shape) == 2
+            and data.shape[1] == len(self.binning)
+        ):
             N = data.shape[0]
             data = data.T
-        elif isinstance(data, pd.DataFrame) and data.ndim==len(self.binning):
+        elif isinstance(data, pd.DataFrame) and data.ndim == len(self.binning):
             if keys is not None:
                 data = data[keys]
             N = len(data)
             data = data.values.T
-        elif isinstance(data, Sequence) and len(data)==len(self.binning):
+        elif isinstance(data, Sequence) and len(data) == len(self.binning):
             data = [d if isinstance(d, np.ndarray) else np.array(d) for d in data]
             N = len(data[0])
-            if not all(len(d)==N for d in data):
+            if not all(len(d) == N for d in data):
                 msg = "length of all data arrays must be equal"
                 raise ValueError(msg)
-        elif isinstance(data, Mapping) and len(data)==len(self.binning):
+        elif isinstance(data, Mapping) and len(data) == len(self.binning):
             if not isinstance(keys, Sequence):
                 msg = "filling hist with Mapping data requires a list of keys"
                 raise ValueError(msg)
-            data = [data[k] if isinstance(data[k], np.ndarray) else np.array(data[k]) for k in keys]
+            data = [
+                data[k] if isinstance(data[k], np.ndarray) else np.array(data[k])
+                for k in keys
+            ]
             N = len(data[0])
-            if not all(len(d)==N for d in data):
+            if not all(len(d) == N for d in data):
                 msg = "length of all data arrays must be equal"
                 raise ValueError(msg)
         else:
             msg = "data must be 2D numpy array or list of 1D arrays with length equal to number of axes"
             raise ValueError(msg)
 
-        idx = np.zeros(N, "float64") # bin indices for flattened array
-        oor_mask = np.ones(N, "bool") # mask for out of range values
-        stride = [s//self.weights.dtype.itemsize for s in self.weights.nda.strides]
+        idx = np.zeros(N, "float64")  # bin indices for flattened array
+        oor_mask = np.ones(N, "bool")  # mask for out of range values
+        stride = [s // self.weights.dtype.itemsize for s in self.weights.nda.strides]
         for col, ax, s in zip(data, self.binning, stride):
             if ax.is_range:
-                np.add(idx, s*np.floor((col - ax.first)/ax.step - int(not ax.closedleft)), idx)
+                np.add(
+                    idx,
+                    s * np.floor((col - ax.first) / ax.step - int(not ax.closedleft)),
+                    idx,
+                )
                 if ax.closedleft:
-                    oor_mask &= ( (ax.first <= col) & (col < ax.last) )
+                    oor_mask &= (ax.first <= col) & (col < ax.last)
                 else:
-                    oor_mask &= ( (ax.first < col) & (col <= ax.last) )
+                    oor_mask &= (ax.first < col) & (col <= ax.last)
             else:
-                idx += s*(np.searchsorted(ax.edges, col, side=("right" if ax.closedleft else "left")) - 1)
+                idx += s * (
+                    np.searchsorted(
+                        ax.edges, col, side=("right" if ax.closedleft else "left")
+                    )
+                    - 1
+                )
                 if ax.closedleft:
-                    oor_mask &= ( (ax.edges[0] <= col) & (col < ax.edges[-1]) )
+                    oor_mask &= (ax.edges[0] <= col) & (col < ax.edges[-1])
                 else:
-                    oor_mask &= ( (ax.edges[0] < col) & (col <= ax.edges[-1]) )
+                    oor_mask &= (ax.edges[0] < col) & (col <= ax.edges[-1])
 
         # increment bin contents
-        idx = idx[oor_mask].astype('int64')
+        idx = idx[oor_mask].astype("int64")
         w = w[oor_mask] if w is not None else 1
         np.add.at(self.weights.nda.reshape(-1), idx, w)
 
