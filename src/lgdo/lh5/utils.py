@@ -44,7 +44,7 @@ def read_n_rows(name: str, h5f: str | h5py.File) -> int | None:
     Return ``None`` if `name` is a :class:`.Scalar` or a :class:`.Struct`.
     """
     if not isinstance(h5f, h5py.File):
-        h5f = h5py.File(h5f, "r")
+        h5f = h5py.File(h5f, "r", locking=False)
 
     try:
         h5o = h5f[name].id
