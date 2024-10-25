@@ -299,7 +299,7 @@ def test_read_histogram_multiple(lgnd_test_data):
         lh5.read("test_histogram_range", [file, file])
 
 
-def test_histogram_fill(lgnd_test_data):
+def test_histogram_fill():
     # Test the basics with fixed width bins
     h = Histogram(None, [(0, 5, 1)])
     h.fill(np.array([0.5, 1.5, 1.1]))  # add some data

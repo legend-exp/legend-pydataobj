@@ -324,7 +324,7 @@ class Histogram(Struct):
         assert all(isinstance(v, Histogram.Axis) for k, v in bins)
         return tuple(v for _, v in bins)
 
-    def fill(self, data, w: np.ndarray = None, keys: List[str] = None) -> None:
+    def fill(self, data, w: np.ndarray = None, keys: list[str] = None) -> None:
         """Fill histogram by incrementing bins with data points weighted by w
 
         Parameters
