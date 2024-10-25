@@ -4,6 +4,7 @@ import logging
 
 import hist
 import numpy as np
+import pandas as pd
 import pytest
 
 from lgdo import Array, Histogram, Scalar, lh5
@@ -79,7 +80,7 @@ def test_init_np():
     h = Histogram(np.array([1, 1]), (np.array([0, 1, 2]),), isdensity=True)
     assert h.isdensity
 
-    with pytest.raises(ValueError, match="also pass binning"):
+    with pytest.raises(ValueError, match="pass binning"):
         h = Histogram(np.array([1, 1]), None)
 
     with pytest.raises(ValueError, match="dimensions do not match"):
@@ -296,3 +297,67 @@ def test_read_histogram_multiple(lgnd_test_data):
     file = lgnd_test_data.get_path("lh5/lgdo-histograms.lh5")
     with pytest.raises(LH5DecodeError):
         lh5.read("test_histogram_range", [file, file])
+
+def test_histogram_fill(lgnd_test_data):
+    # Test the basics with fixed width bins
+    h = Histogram(None, [ (0, 5, 1) ])
+    h.fill(np.array([0.5, 1.5, 1.1])) # add some data
+    assert all(h.weights.nda == np.array([1., 2., 0., 0., 0.]))
+    h.fill(np.array([0.5, 3.5, 4., 3.5])) # add more data
+    assert all(h.weights.nda == np.array([2., 2., 0., 2., 1.]))
+    h.fill(np.array([-1., 6., np.inf, np.nan])) # add out of range data
+    assert all(h.weights.nda == np.array([2., 2., 0., 2., 1.]))
+
+    # Test the basics with variable width bins
+    h = Histogram(None, [ np.array([0., 0.75, 2., 4., 4.5, 5.]) ])
+    h.fill(np.array([0.5, 1.5, 1.1])) # add some data
+    assert all(h.weights.nda == np.array([1., 2., 0., 0., 0.]))
+    h.fill(np.array([0.5, 3.5, 4., 3.5])) # add more data
+    assert all(h.weights.nda == np.array([2., 2., 2., 1., 0.]))
+    h.fill(np.array([-1., 6., np.inf, np.nan])) # add out of range data
+    assert all(h.weights.nda == np.array([2., 2., 2., 1., 0.]))
+    
+    # Test bin edge behavior with fixed width bins
+    h = Histogram(None, [ Histogram.Axis(None, 0, 6, 1, closedleft=True) ])
+    h.fill(np.array([0, 2, 4, 6]))
+    assert all(h.weights.nda == np.array([1., 0., 1., 0., 1., 0.]))
+    h = Histogram(None, [ Histogram.Axis(None, 0, 6, 1, closedleft=False) ])
+    h.fill(np.array([0, 2, 4, 6]))
+    assert all(h.weights.nda == np.array([0., 1., 0., 1., 0., 1.]))
+    
+    # Test bin edge behavior with variable width bins
+    h = Histogram(None, [ Histogram.Axis([0., 0.75, 2., 4., 4.5, 5., 6.], None, None, None, closedleft=True) ])
+    h.fill(np.array([0, 2, 4, 6]))
+    assert all(h.weights.nda == np.array([1., 0., 1., 1., 0., 0.]))
+    h = Histogram(None, [ Histogram.Axis([0., 0.75, 2., 4., 4.5, 5., 6.], None, None, None, closedleft=False) ])
+    h.fill(np.array([0, 2, 4, 6]))
+    assert all(h.weights.nda == np.array([0., 1., 1., 0., 0., 1.]))
+    
+    # Test 2d histogram with numpy array data
+    h = Histogram(None, [ (0, 3, 1), (0, 3, 1) ])
+    data = np.array( [ [1, 1], [2, 2], [-1, 2], [2, -1] ])
+    h.fill(data)
+    assert np.all(h.weights.nda == np.array([[0., 0., 0.], [0., 1., 0.], [0., 0., 1.]]))
+    
+    # Test 2d histogram with pandas data
+    h = Histogram(None, [ (0, 3, 1), (0, 3, 1) ])
+    data = pd.DataFrame({"a": [1, 2, -1, 2], "b": [1, 2, 2, -1]})
+    h.fill(data)
+    assert np.all(h.weights.nda == np.array([[0., 0., 0.], [0., 1., 0.], [0., 0., 1.]]))
+    h.fill(data, keys=["a", "b"])
+    assert np.all(h.weights.nda == np.array([[0., 0., 0.], [0., 2., 0.], [0., 0., 2.]]))
+    
+    # Test list of columnar data
+    h = Histogram(None, [ (0, 3, 1), (0, 3, 1) ])
+    data = [np.array([1, 2, -1, 2]), np.array([1, 2, 2, -1])]
+    h.fill(data)
+    assert np.all(h.weights.nda == np.array([[0., 0., 0.], [0., 1., 0.], [0., 0., 1.]]))
+
+    # Test ordered dict of columnar data
+    h = Histogram(None, [ (0, 3, 1), (0, 3, 1) ])
+    data = {"a": [1, 2, -1, 2], "b": [1, 2, 2, -1]}
+    with pytest.raises(ValueError, match="requires a list of keys"):
+        h.fill(data)
+    h.fill(data, keys=["a", "b"])
+    assert np.all(h.weights.nda == np.array([[0., 0., 0.], [0., 1., 0.], [0., 0., 1.]]))
+    
