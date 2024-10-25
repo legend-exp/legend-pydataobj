@@ -112,6 +112,6 @@ def _h5_read_ndarray(
     # special handling for bools
     # (c and Julia store as uint8 so cast to bool)
     if datatype.get_nested_datatype_string(attrs["datatype"]) == "bool":
-        nda = nda.astype(np.bool_)
+        nda = nda.astype(np.bool_, copy=False)
 
     return (nda, attrs, n_rows_to_read)
