@@ -375,6 +375,8 @@ def test_histogram_fill():
     assert np.all(
         h.weights.nda == np.array([[0.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]])
     )
+    with pytest.raises(ValueError, match="length of all data arrays"):
+        h.fill([np.array([1, 2, -1]), np.array([1, 2, 2, -1])])
 
     # Test ordered dict of columnar data
     h = Histogram(None, [(0, 3, 1), (0, 3, 1)])
@@ -385,3 +387,8 @@ def test_histogram_fill():
     assert np.all(
         h.weights.nda == np.array([[0.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]])
     )
+    with pytest.raises(ValueError, match="length of all data arrays"):
+        h.fill({"a": [1, 2, -1], "b": [1, 2, 2, -1]}, keys=["a", "b"])
+
+    with pytest.raises(ValueError, match="data must be"):
+        h.fill(np.ones(shape=(5, 5)))
