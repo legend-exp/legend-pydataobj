@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import typing
+from warnings import warn
 
 import numpy as np
 import pandas as pd
@@ -19,24 +20,25 @@ class LH5Iterator(typing.Iterator):
     at a time. This also accepts an entry list/mask to enable event selection,
     and a field mask.
 
-    This class can be used either for random access:
+    This can be used as an iterator:
 
-    >>> lh5_obj, n_rows = lh5_it.read(entry)
-
-    to read the block of entries starting at entry. In case of multiple files
-    or the use of an event selection, entry refers to a global event index
-    across files and does not count events that are excluded by the selection.
-
-    This can also be used as an iterator:
-
-    >>> for lh5_obj, entry, n_rows in LH5Iterator(...):
+    >>> for lh5_obj, i_entry, n_rows in LH5Iterator(...):
     >>>    # do the thing!
 
-    This is intended for if you are reading a large quantity of data but
-    want to limit your memory usage (particularly when reading in waveforms!).
+    This is intended for if you are reading a large quantity of data. This
+    will ensure that you traverse files efficiently to minimize caching time
+    and will limit your memory usage (particularly when reading in waveforms!).
     The ``lh5_obj`` that is read by this class is reused in order to avoid
     reallocation of memory; this means that if you want to hold on to data
     between reads, you will have to copy it somewhere!
+
+    This class can also be used either for random access:
+
+    >>> lh5_obj, n_rows = lh5_it.read(i_entry)
+
+    to read the block of entries starting at i_entry. In case of multiple files
+    or the use of an event selection, i_entry refers to a global event index
+    across files and does not count events that are excluded by the selection.
     """
 
     def __init__(
@@ -139,8 +141,8 @@ class LH5Iterator(typing.Iterator):
             raise RuntimeError(msg)
 
         self.n_rows = 0
-        self.current_entry = 0
-        self.next_entry = 0
+        self.current_i_entry = 0
+        self.next_i_entry = 0
 
         self.field_mask = field_mask
 
@@ -195,6 +197,17 @@ class LH5Iterator(typing.Iterator):
                 fcl += self.lh5_st.read_n_rows(self.groups[i], self.lh5_files[i])
                 self.file_map[i] = fcl
         return fcl
+
+    @property
+    def current_entry(self) -> int:
+        "deprecated alias for current_i_entry"
+        warn(
+            "current_entry has been renamed to current_i_entry.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
+        return self.current_i_entry
 
     def _get_file_cumentries(self, i_file: int) -> int:
         """Helper to get cumulative iterator entries in file"""
@@ -252,33 +265,33 @@ class LH5Iterator(typing.Iterator):
                 )
         return self.global_entry_list
 
-    def read(self, entry: int) -> tuple[LGDO, int]:
-        """Read the nextlocal chunk of events, starting at entry. Return the
+    def read(self, i_entry: int) -> tuple[LGDO, int]:
+        """Read the nextlocal chunk of events, starting at i_entry. Return the
         LH5 buffer and number of rows read."""
         self.n_rows = 0
-        i_file = np.searchsorted(self.entry_map, entry, "right")
+        i_file = np.searchsorted(self.entry_map, i_entry, "right")
 
         # if file hasn't been opened yet, search through files
         # sequentially until we find the right one
         if i_file < len(self.lh5_files) and self.entry_map[i_file] == np.iinfo("q").max:
-            while i_file < len(self.lh5_files) and entry >= self._get_file_cumentries(
+            while i_file < len(self.lh5_files) and i_entry >= self._get_file_cumentries(
                 i_file
             ):
                 i_file += 1
 
         if i_file == len(self.lh5_files):
             return (self.lh5_buffer, self.n_rows)
-        local_entry = entry - self._get_file_cumentries(i_file - 1)
+        local_i_entry = i_entry - self._get_file_cumentries(i_file - 1)
 
         while self.n_rows < self.buffer_len and i_file < len(self.file_map):
             # Loop through files
             local_idx = self.get_file_entrylist(i_file)
             if local_idx is not None and len(local_idx) == 0:
                 i_file += 1
-                local_entry = 0
+                local_i_entry = 0
                 continue
 
-            i_local = local_idx[local_entry] if local_idx is not None else local_entry
+            i_local = local_i_entry if local_idx is None else local_idx[local_i_entry]
             self.lh5_buffer, n_rows = self.lh5_st.read(
                 self.groups[i_file],
                 self.lh5_files[i_file],
@@ -292,12 +305,12 @@ class LH5Iterator(typing.Iterator):
 
             self.n_rows += n_rows
             i_file += 1
-            local_entry = 0
+            local_i_entry = 0
 
-        self.current_entry = entry
+        self.current_i_entry = i_entry
 
         if self.friend is not None:
-            self.friend.read(entry)
+            self.friend.read(i_entry)
 
         return (self.lh5_buffer, self.n_rows)
 
@@ -317,15 +330,15 @@ class LH5Iterator(typing.Iterator):
 
     def __iter__(self) -> typing.Iterator:
         """Loop through entries in blocks of size buffer_len."""
-        self.current_entry = 0
-        self.next_entry = 0
+        self.current_i_entry = 0
+        self.next_i_entry = 0
         return self
 
     def __next__(self) -> tuple[LGDO, int, int]:
         """Read next buffer_len entries and return lh5_table, iterator entry
         and n_rows read."""
-        buf, n_rows = self.read(self.next_entry)
-        self.next_entry = self.current_entry + n_rows
+        buf, n_rows = self.read(self.next_i_entry)
+        self.next_i_entry = self.current_i_entry + n_rows
         if n_rows == 0:
             raise StopIteration
-        return (buf, self.current_entry, n_rows)
+        return (buf, self.current_i_entry, n_rows)
