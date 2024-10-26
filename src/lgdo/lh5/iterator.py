@@ -320,6 +320,77 @@ class LH5Iterator(typing.Iterator):
         if self.friend is not None:
             self.friend.reset_field_mask(mask)
 
+    @property
+    def current_local_entries(self) -> NDArray[int]:
+        """Return list of local file entries in buffer"""
+        cur_entries = np.zeros(len(self.lh5_buffer), dtype="int32")
+        i_file = np.searchsorted(self.entry_map, self.current_i_entry, "right")
+        file_start = self._get_file_cumentries(i_file - 1)
+        i_local = self.current_i_entry - file_start
+        i = 0
+
+        while i < len(cur_entries):
+            # number of entries to read from this file
+            file_end = self._get_file_cumentries(i_file)
+            n = min(file_end - file_start - i_local, len(cur_entries) - i)
+            entries = self.get_file_entrylist(i_file)
+
+            if entries is None:
+                cur_entries[i : i + n] = np.arange(i_local, i_local + n)
+            else:
+                cur_entries[i : i + n] = entries[i_local : i_local + n]
+
+            i_file += 1
+            file_start = file_end
+            i_local = 0
+            i += n
+
+        return cur_entries
+
+    @property
+    def current_files(self) -> NDArray[str]:
+        """Return list of file names for entries in buffer"""
+        cur_files = np.zeros(len(self.lh5_buffer), dtype=object)
+        i_file = np.searchsorted(self.entry_map, self.current_i_entry, "right")
+        file_start = self._get_file_cumentries(i_file - 1)
+        i_local = self.current_i_entry - file_start
+        i = 0
+
+        while i < len(cur_files):
+            # number of entries to read from this file
+            file_end = self._get_file_cumentries(i_file)
+            n = min(file_end - file_start - i_local, len(cur_files) - i)
+            cur_files[i : i + n] = self.lh5_files[i_file]
+
+            i_file += 1
+            file_start = file_end
+            i_local = 0
+            i += n
+
+        return cur_files
+
+    @property
+    def current_groups(self) -> NDArray[str]:
+        """Return list of group names for entries in buffer"""
+        cur_groups = np.zeros(len(self.lh5_buffer), dtype=object)
+        i_file = np.searchsorted(self.entry_map, self.current_i_entry, "right")
+        file_start = self._get_file_cumentries(i_file - 1)
+        i_local = self.current_i_entry - file_start
+        i = 0
+
+        while i < len(cur_groups):
+            # number of entries to read from this file
+            file_end = self._get_file_cumentries(i_file)
+            n = min(file_end - file_start - i_local, len(cur_groups) - i)
+            cur_groups[i : i + n] = self.groups[i_file]
+
+            i_file += 1
+            file_start = file_end
+            i_local = 0
+            i += n
+
+        return cur_groups
+
     def __len__(self) -> int:
         """Return the total number of entries."""
         return (

@@ -35,6 +35,9 @@ def test_basics(lgnd_file):
         assert len(lh5_obj) == 5
         assert n_rows == 5
         assert entry % 5 == 0
+        assert all(lh5_it.current_local_entries == np.arange(entry, entry + 5))
+        assert all(lh5_it.current_files == [lgnd_file] * 5)
+        assert all(lh5_it.current_groups == ["/geds/raw"] * 5)
 
 
 def test_errors(lgnd_file):
@@ -141,10 +144,29 @@ def test_iterate(more_lgnd_files):
         buffer_len=5,
     )
 
+    exp_entries = [[0, 1, 2, 3, 5], [8, 3, 1, 4, 5]]
+    exp_files = [
+        [more_lgnd_files[1][0]] * 5,
+        [more_lgnd_files[1][0]] * 3 + [more_lgnd_files[1][1]] * 2,
+    ]
+    exp_groups = [
+        ["ch1084803/hit"] * 5,
+        [
+            "ch1084803/hit",
+            "ch1084804/hit",
+            "ch1121600/hit",
+            "ch1084803/hit",
+            "ch1121600/hit",
+        ],
+    ]
+
     for lh5_out, entry, n_rows in lh5_it:
         assert set(lh5_out.keys()) == {"is_valid_0vbb", "timestamp", "zacEmax_ctc_cal"}
         assert entry % 5 == 0
         assert n_rows == 5
+        assert all(lh5_it.current_local_entries == exp_entries[entry // 5])
+        assert all(lh5_it.current_files == exp_files[entry // 5])
+        assert all(lh5_it.current_groups == exp_groups[entry // 5])
 
     lh5_it = lh5.LH5Iterator(
         more_lgnd_files[1],
