@@ -291,7 +291,7 @@ class Histogram(Struct):
             if isinstance(weights, Array):
                 w = weights
             elif weights is None:
-                w = Array(shape=[ax.nbins for ax in b], fill_val=0, dtype="float32")
+                w = Array(shape=[ax.nbins for ax in b], fill_val=0, dtype=np.float32)
             else:
                 w = Array(weights)
 
@@ -324,17 +324,27 @@ class Histogram(Struct):
         assert all(isinstance(v, Histogram.Axis) for k, v in bins)
         return tuple(v for _, v in bins)
 
-    def fill(self, data, w: np.ndarray = None, keys: list[str] = None) -> None:
+    def fill(self, data, w: NDArray = None, keys: Sequence[str] = None) -> None:
         """Fill histogram by incrementing bins with data points weighted by w
 
         Parameters
         ----------
         data
-            a ndarray with inner dimension equal to number of axes or a list
-            of equal-length 1d-arrays containing data for each axis
+            a ndarray with inner dimension equal to number of axes, or a list
+            of equal-length 1d-arrays containing data for each axis, or a
+            Mapping to 1d-arrays containing data for each axis (requires keys),
+            or a Pandas dataframe (optionally takes a list of keys)
         w
             weight to use for incrementing data points. If None, use 1 for all
+        keys
+            list of keys to use if data is a pandas ''DataFrame'' or ''Mapping''
         """
+        if keys is not None:
+            if isinstance(keys, str):
+                keys = [keys]
+            elif not isinstance(keys, list):
+                keys = list(keys)
+
         if (
             isinstance(data, np.ndarray)
             and len(data.shape) == 1
@@ -349,7 +359,10 @@ class Histogram(Struct):
         ):
             N = data.shape[0]
             data = data.T
-        elif isinstance(data, pd.DataFrame) and data.ndim == len(self.binning):
+        elif isinstance(data, pd.DataFrame) and (
+            (keys is not None and len(keys) == len(self.binning))
+            or data.ndim == len(self.binning)
+        ):
             if keys is not None:
                 data = data[keys]
             N = len(data)
@@ -360,9 +373,9 @@ class Histogram(Struct):
             if not all(len(d) == N for d in data):
                 msg = "length of all data arrays must be equal"
                 raise ValueError(msg)
-        elif isinstance(data, Mapping) and len(data) == len(self.binning):
-            if not isinstance(keys, Sequence):
-                msg = "filling hist with Mapping data requires a list of keys"
+        elif isinstance(data, Mapping):
+            if not isinstance(keys, Sequence) or len(keys) != len(self.binning):
+                msg = "filling hist with Mapping data requires a list of keys with same length as histogram rank"
                 raise ValueError(msg)
             data = [
                 data[k] if isinstance(data[k], np.ndarray) else np.array(data[k])
@@ -376,16 +389,12 @@ class Histogram(Struct):
             msg = "data must be 2D numpy array or list of 1D arrays with length equal to number of axes"
             raise ValueError(msg)
 
-        idx = np.zeros(N, "float64")  # bin indices for flattened array
-        oor_mask = np.ones(N, "bool")  # mask for out of range values
+        idx = np.zeros(N, np.float64)  # bin indices for flattened array
+        oor_mask = np.ones(N, np.bool_)  # mask to remove out of range values
         stride = [s // self.weights.dtype.itemsize for s in self.weights.nda.strides]
         for col, ax, s in zip(data, self.binning, stride):
             if ax.is_range:
-                np.add(
-                    idx,
-                    s * np.floor((col - ax.first) / ax.step - int(not ax.closedleft)),
-                    idx,
-                )
+                idx += s * np.floor((col - ax.first) / ax.step - int(not ax.closedleft))
                 if ax.closedleft:
                     oor_mask &= (ax.first <= col) & (col < ax.last)
                 else:
@@ -403,7 +412,7 @@ class Histogram(Struct):
                     oor_mask &= (ax.edges[0] < col) & (col <= ax.edges[-1])
 
         # increment bin contents
-        idx = idx[oor_mask].astype("int64")
+        idx = idx[oor_mask].astype(np.int64)
         w = w[oor_mask] if w is not None else 1
         np.add.at(self.weights.nda.reshape(-1), idx, w)
 
