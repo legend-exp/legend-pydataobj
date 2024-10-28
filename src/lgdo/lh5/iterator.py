@@ -31,15 +31,15 @@ class LH5Iterator(typing.Iterator):
     The ``lh5_obj`` that is read by this class is reused in order to avoid
     reallocation of memory; this means that if you want to hold on to data
     between reads, you will have to copy it somewhere!
-    
+
     When defining an LH5Iterator, you must give it a list of files and the
     hdf5 groups containing the data tables you are reading. You may also
     provide a field mask, and an entry list or mask, specifying which entries
-    to read from the files. You may also pair it with a friend iterator, which 
+    to read from the files. You may also pair it with a friend iterator, which
     contains a parallel group of files which will be simultaneously read.
     In addition to accessing requested data via ``lh5_obj``, several
     properties exist to tell you where that data came from:
-    
+
     - lh5_it.current_local_entries: get the entry numbers relative to the
       file the data came from
     - lh5_it.current_global_entries: get the entry number relative to the
@@ -363,7 +363,7 @@ class LH5Iterator(typing.Iterator):
             i_local = 0
             i += n
 
-        return cur_entries  
+        return cur_entries
 
     @property
     def current_global_entries(self) -> NDArray[int]:
@@ -381,16 +381,20 @@ class LH5Iterator(typing.Iterator):
             entries = self.get_file_entrylist(i_file)
 
             if entries is None:
-                cur_entries[i : i + n] = self._get_file_cumlen(i_file - 1) + np.arange(i_local, i_local + n)
+                cur_entries[i : i + n] = self._get_file_cumlen(i_file - 1) + np.arange(
+                    i_local, i_local + n
+                )
             else:
-                cur_entries[i : i + n] = self._get_file_cumlen(i_file - 1) + entries[i_local : i_local + n]
+                cur_entries[i : i + n] = (
+                    self._get_file_cumlen(i_file - 1) + entries[i_local : i_local + n]
+                )
 
             i_file += 1
             file_start = file_end
             i_local = 0
             i += n
 
-        return cur_entries  
+        return cur_entries
 
     @property
     def current_files(self) -> NDArray[str]:
