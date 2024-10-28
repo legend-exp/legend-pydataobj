@@ -65,6 +65,7 @@ class LH5Iterator(typing.Iterator):
         entry_mask: list[bool] | list[list[bool]] | None = None,
         field_mask: dict[str, bool] | list[str] | tuple[str] | None = None,
         buffer_len: int = 3200,
+        file_cache: int = 10,
         friend: typing.Iterator | None = None,
     ) -> None:
         """
@@ -90,12 +91,14 @@ class LH5Iterator(typing.Iterator):
             more details.
         buffer_len
             number of entries to read at a time while iterating through files.
+        file_cache
+            maximum number of files to keep open at a time
         friend
             a \"friend\" LH5Iterator that will be read in parallel with this.
             The friend should have the same length and entry list. A single
             LH5 table containing columns from both iterators will be returned.
         """
-        self.lh5_st = LH5Store(base_path=base_path, keep_open=3)
+        self.lh5_st = LH5Store(base_path=base_path, keep_open=file_cache)
 
         # List of files, with wildcards and env vars expanded
         if isinstance(lh5_files, str):
