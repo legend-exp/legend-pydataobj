@@ -6,6 +6,7 @@ from warnings import warn
 
 import numpy as np
 import pandas as pd
+from numpy.typing import NDArray
 
 from ..types import Array, Scalar, Struct, VectorOfVectors
 from .store import LH5Store
