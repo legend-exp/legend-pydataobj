@@ -450,7 +450,7 @@ class Table(Struct):
             cols = self.keys()
 
         if library == "pd":
-            df = pd.DataFrame()
+            df = {}
 
             for col in cols:
                 data = self[col]
@@ -470,7 +470,7 @@ class Table(Struct):
                     )
                     df[f"{prefix}{col}"] = data.view_as("pd", with_units=with_units)
 
-            return df
+            return pd.DataFrame(df, copy=False)
 
         if library == "np":
             msg = f"Format {library!r} is not supported for Tables."
