@@ -103,7 +103,7 @@ def read_n_rows(h5o, fname, oname):
     raise LH5DecodeError(msg, fname, oname)
 
 
-def read_size_in_bytes(h5o, fname, oname, field_mask = None):
+def read_size_in_bytes(h5o, fname, oname, field_mask=None):
     """Read number of rows in LH5 object"""
     if not h5py.h5a.exists(h5o, b"datatype"):
         msg = "missing 'datatype' attribute"
@@ -117,7 +117,7 @@ def read_size_in_bytes(h5o, fname, oname, field_mask = None):
 
     # scalars are dim-0 datasets
     if lgdotype in (types.Scalar, types.Array, types.ArrayOfEqualSizedArrays):
-        return int(np.prod(h5o.shape)*h5o.dtype.itemsize)
+        return int(np.prod(h5o.shape) * h5o.dtype.itemsize)
 
     # structs don't have rows
     if lgdotype is types.Struct:
@@ -160,9 +160,9 @@ def read_size_in_bytes(h5o, fname, oname, field_mask = None):
         obj = h5py.h5o.open(h5o, b"encoded_data")
         cl = h5py.h5o.open(obj, b"cumulative_length")
         size *= cl.shape[0]
-        size *= 4 # TODO: UPDATE WHEN CODECS SUPPORT MORE DTYPES
+        size *= 4  # TODO: UPDATE WHEN CODECS SUPPORT MORE DTYPES
         obj.close()
-        
+
         return size
 
     msg = f"don't know how to read size of LGDO {lgdotype.__name__}"

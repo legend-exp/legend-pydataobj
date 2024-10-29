@@ -54,17 +54,21 @@ def test_read_n_rows(lh5_file):
     assert store.read_n_rows("/data/struct_full/wftable", lh5_file) == 10
     assert store.read_n_rows("/data/struct_full/wftable_enc/values", lh5_file) == 10
 
+
 def test_read_size_in_bytes(lh5_file):
     store = lh5.LH5Store()
     assert store.read_size_in_bytes("/data/struct_full/aoesa", lh5_file) == 100
     assert store.read_size_in_bytes("/data/struct_full/array", lh5_file) == 40
     assert store.read_size_in_bytes("/data/struct_full/scalar", lh5_file) == 8
     assert store.read_size_in_bytes("/data/struct_full/table", lh5_file) == 128
-    #assert store.read_size_in_bytes("/data/struct_full/voev", lh5_file) == ?
+    # assert store.read_size_in_bytes("/data/struct_full/voev", lh5_file) == ?
     assert store.read_size_in_bytes("/data/struct_full/vov", lh5_file) == 144
     assert store.read_size_in_bytes("/data/struct_full/vov3d", lh5_file) == 232
     assert store.read_size_in_bytes("/data/struct_full/wftable", lh5_file) == 20160
-    assert store.read_size_in_bytes("/data/struct_full/wftable_enc", lh5_file) == 80+80+40000
+    assert (
+        store.read_size_in_bytes("/data/struct_full/wftable_enc", lh5_file)
+        == 80 + 80 + 40000
+    )
 
 
 def test_get_buffer(lh5_file):

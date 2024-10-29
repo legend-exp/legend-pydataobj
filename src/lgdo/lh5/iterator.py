@@ -150,12 +150,16 @@ class LH5Iterator(typing.Iterator):
             f = self.lh5_files[0]
             g = self.groups[0]
             n_rows = self.lh5_st.read_n_rows(g, f)
-            
+
             if isinstance(self.buffer_len, str):
                 self.buffer_len = ureg.Quantity(buffer_len)
             if isinstance(self.buffer_len, ureg.Quantity):
-                self.buffer_len = int(self.buffer_len/(self.lh5_st.read_size_in_bytes(g, f)*ureg.B)*n_rows)
-            
+                self.buffer_len = int(
+                    self.buffer_len
+                    / (self.lh5_st.read_size_in_bytes(g, f) * ureg.B)
+                    * n_rows
+                )
+
             self.lh5_buffer = self.lh5_st.get_buffer(
                 g,
                 f,
