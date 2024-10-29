@@ -9,6 +9,7 @@ import pandas as pd
 from numpy.typing import NDArray
 
 from ..types import Array, Scalar, Struct, VectorOfVectors
+from ..units import default_units_registry as ureg
 from .store import LH5Store
 from .utils import expand_path
 
@@ -65,7 +66,7 @@ class LH5Iterator(typing.Iterator):
         entry_list: list[int] | list[list[int]] | None = None,
         entry_mask: list[bool] | list[list[bool]] | None = None,
         field_mask: dict[str, bool] | list[str] | tuple[str] | None = None,
-        buffer_len: int = 3200,
+        buffer_len: int = "100*MB",
         file_cache: int = 10,
         friend: typing.Iterator | None = None,
     ) -> None:
@@ -148,13 +149,20 @@ class LH5Iterator(typing.Iterator):
         if len(self.lh5_files) > 0:
             f = self.lh5_files[0]
             g = self.groups[0]
+            n_rows = self.lh5_st.read_n_rows(g, f)
+            
+            if isinstance(self.buffer_len, str):
+                self.buffer_len = ureg.Quantity(buffer_len)
+            if isinstance(self.buffer_len, ureg.Quantity):
+                self.buffer_len = int(self.buffer_len/(self.lh5_st.read_size_in_bytes(g, f)*ureg.B)*n_rows)
+            
             self.lh5_buffer = self.lh5_st.get_buffer(
                 g,
                 f,
                 size=self.buffer_len,
                 field_mask=field_mask,
             )
-            self.file_map[0] = self.lh5_st.read_n_rows(g, f)
+            self.file_map[0] = n_rows
         else:
             msg = f"can't open any files from {lh5_files}"
             raise RuntimeError(msg)
