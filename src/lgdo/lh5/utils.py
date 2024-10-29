@@ -56,7 +56,7 @@ def read_n_rows(name: str, h5f: str | h5py.File) -> int | None:
 
 
 def read_size_in_bytes(name: str, h5f: str | h5py.File) -> int | None:
-    """Look up the size (in B) in an LGDO object on disk. Will crawl
+    """Look up the size (in B) in an LGDO object in memory. Will crawl
     recursively through members of a Struct or Table
     """
     if not isinstance(h5f, h5py.File):

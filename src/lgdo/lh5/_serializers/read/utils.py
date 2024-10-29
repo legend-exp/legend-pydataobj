@@ -104,7 +104,7 @@ def read_n_rows(h5o, fname, oname):
 
 
 def read_size_in_bytes(h5o, fname, oname, field_mask=None):
-    """Read number of rows in LH5 object"""
+    """Read number size in LH5 object in memory (in B)"""
     if not h5py.h5a.exists(h5o, b"datatype"):
         msg = "missing 'datatype' attribute"
         raise LH5DecodeError(msg, fname, oname)
@@ -116,11 +116,16 @@ def read_size_in_bytes(h5o, fname, oname, field_mask=None):
     lgdotype = datatype.datatype(type_attr)
 
     # scalars are dim-0 datasets
-    if lgdotype in (types.Scalar, types.Array, types.ArrayOfEqualSizedArrays):
+    if lgdotype in (
+        types.Scalar,
+        types.Array,
+        types.ArrayOfEqualSizedArrays,
+        types.FixedSizeArray,
+    ):
         return int(np.prod(h5o.shape) * h5o.dtype.itemsize)
 
     # structs don't have rows
-    if lgdotype is types.Struct:
+    if lgdotype in (types.Struct, types.Histogram, types.Histogram.Axis):
         size = 0
         for key in h5o:
             obj = h5py.h5o.open(h5o, key)
@@ -129,7 +134,7 @@ def read_size_in_bytes(h5o, fname, oname, field_mask=None):
         return size
 
     # tables should have elements with all the same length
-    if lgdotype is types.Table:
+    if lgdotype in (types.Table, types.WaveformTable):
         # read out each of the fields
         size = 0
         if not field_mask:

@@ -314,7 +314,7 @@ class LH5Store:
         return utils.read_n_rows(name, self.gimme_file(lh5_file, "r"))
 
     def read_size_in_bytes(self, name: str, lh5_file: str | h5py.File) -> int:
-        """Look up the size (in B) of the object. Will recursively crawl
-        through all objects in a Struct or Table
+        """Look up the size (in B) of the object in memory. Will recursively
+        crawl through all objects in a Struct or Table
         """
         return utils.read_size_in_bytes(name, self.gimme_file(lh5_file, "r"))
