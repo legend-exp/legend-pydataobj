@@ -55,6 +55,22 @@ def test_read_n_rows(lh5_file):
     assert store.read_n_rows("/data/struct_full/wftable_enc/values", lh5_file) == 10
 
 
+def test_read_size_in_bytes(lh5_file):
+    store = lh5.LH5Store()
+    assert store.read_size_in_bytes("/data/struct_full/aoesa", lh5_file) == 100
+    assert store.read_size_in_bytes("/data/struct_full/array", lh5_file) == 40
+    assert store.read_size_in_bytes("/data/struct_full/scalar", lh5_file) == 8
+    assert store.read_size_in_bytes("/data/struct_full/table", lh5_file) == 128
+    # assert store.read_size_in_bytes("/data/struct_full/voev", lh5_file) == ?
+    assert store.read_size_in_bytes("/data/struct_full/vov", lh5_file) == 144
+    assert store.read_size_in_bytes("/data/struct_full/vov3d", lh5_file) == 232
+    assert store.read_size_in_bytes("/data/struct_full/wftable", lh5_file) == 20160
+    assert (
+        store.read_size_in_bytes("/data/struct_full/wftable_enc", lh5_file)
+        == 80 + 80 + 40000
+    )
+
+
 def test_get_buffer(lh5_file):
     store = lh5.LH5Store()
     buf = store.get_buffer("/data/struct_full/wftable_enc", lh5_file)
@@ -120,6 +136,22 @@ def test_read_array_fancy_idx(lh5_file):
     assert n_rows == 6
     assert lh5_obj == lgdo.Array([1, 4, 5, 1, 4, 5])
 
+    # Test with out of range index
+    lh5_obj, n_rows = store.read(
+        "/data/struct_full/array", lh5_file, idx=[0, 3, 4, 100]
+    )
+    assert isinstance(lh5_obj, types.Array)
+    assert n_rows == 3
+    assert lh5_obj == lgdo.Array([1, 4, 5])
+
+    # Test with boolean mask
+    lh5_obj, n_rows = store.read(
+        "/data/struct_full/array", lh5_file, idx=np.array([1, 0, 0, 1, 1], "bool")
+    )
+    assert isinstance(lh5_obj, types.Array)
+    assert n_rows == 3
+    assert lh5_obj == lgdo.Array([1, 4, 5])
+
 
 def test_read_vov(lh5_file):
     store = lh5.LH5Store()
@@ -159,7 +191,11 @@ def test_read_vov_fancy_idx(lh5_file):
 
     lh5_obj, n_rows = store.read("/data/struct_full/vov", lh5_file, idx=[0, 2])
     assert isinstance(lh5_obj, types.VectorOfVectors)
+    assert lh5_obj == types.VectorOfVectors([[1, 2], [2]], attrs={"myattr": 2})
+    assert n_rows == 2
 
+    lh5_obj, n_rows = store.read("/data/struct_full/vov", lh5_file, idx=[0, 2, 10])
+    assert isinstance(lh5_obj, types.VectorOfVectors)
     assert lh5_obj == types.VectorOfVectors([[1, 2], [2]], attrs={"myattr": 2})
     assert n_rows == 2
 
@@ -223,6 +259,17 @@ def test_read_aoesa(lh5_file):
     assert (lh5_obj.nda == np.full((3, 5), fill_value=42)).all()
 
 
+def test_read_aoesa_fancy_idx(lh5_file):
+    store = lh5.LH5Store()
+    lh5_obj, n_rows = store.read("/data/struct/aoesa", lh5_file, idx=[0, 2])
+    assert isinstance(lh5_obj, types.ArrayOfEqualSizedArrays)
+    assert (lh5_obj.nda == np.full((2, 5), fill_value=42)).all()
+
+    lh5_obj, n_rows = store.read("/data/struct/aoesa", lh5_file, idx=[0, 2, 10])
+    assert isinstance(lh5_obj, types.ArrayOfEqualSizedArrays)
+    assert (lh5_obj.nda == np.full((2, 5), fill_value=42)).all()
+
+
 def test_read_table(lh5_file):
     store = lh5.LH5Store()
     lh5_obj, n_rows = store.read("/data/struct/table", lh5_file)
@@ -233,6 +280,17 @@ def test_read_table(lh5_file):
     assert n_rows == 6
     assert lh5_obj.attrs["stuff"] == 5
     assert lh5_obj["a"].attrs["attr"] == 9
+
+
+def test_read_table_fancy_idx(lh5_file):
+    store = lh5.LH5Store()
+    lh5_obj, n_rows = store.read("/data/struct/table", lh5_file, idx=[0, 2])
+    assert isinstance(lh5_obj, types.Table)
+    assert n_rows == 2
+
+    lh5_obj, n_rows = store.read("/data/struct/table", lh5_file, idx=[0, 2, 10])
+    assert isinstance(lh5_obj, types.Table)
+    assert n_rows == 2
 
 
 def test_read_empty_struct(lh5_file):
@@ -445,6 +503,35 @@ def test_read_lgnd_waveform_table_fancy_idx(lgnd_file):
         "/geds/raw/waveform",
         lgnd_file,
         idx=[7, 9, 25, 27, 33, 38, 46, 52, 57, 59, 67, 71, 72, 82, 90, 92, 93, 94, 97],
+    )
+    assert isinstance(lh5_obj, types.WaveformTable)
+    assert len(lh5_obj) == 19
+
+    lh5_obj, n_rows = store.read(
+        "/geds/raw/waveform",
+        lgnd_file,
+        idx=[
+            7,
+            9,
+            25,
+            27,
+            33,
+            38,
+            46,
+            52,
+            57,
+            59,
+            67,
+            71,
+            72,
+            82,
+            90,
+            92,
+            93,
+            94,
+            97,
+            1000,
+        ],
     )
     assert isinstance(lh5_obj, types.WaveformTable)
     assert len(lh5_obj) == 19

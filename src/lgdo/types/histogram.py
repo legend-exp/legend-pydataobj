@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping, Sequence
 from typing import Any
 
 import hist
 import numpy as np
+import pandas as pd
 from numpy.typing import NDArray
 
 from .array import Array
@@ -269,10 +270,10 @@ class Histogram(Struct):
                     b.append(Histogram.Axis.from_edges(ax.edges, binedge_attrs))
         else:
             if binning is None:
-                msg = "need to also pass binning if passing histogram as array"
+                msg = "need to pass binning to construct Histogram"
                 raise ValueError(msg)
-            w = weights if isinstance(weights, Array) else Array(weights)
 
+            # set up binning
             if all(isinstance(ax, Histogram.Axis) for ax in binning):
                 if binedge_attrs is not None:
                     msg = "passed both binedges as Axis instances and binedge_attrs"
@@ -285,6 +286,14 @@ class Histogram(Struct):
             else:
                 msg = "invalid binning object passed"
                 raise ValueError(msg)
+
+            # set up bin weights
+            if isinstance(weights, Array):
+                w = weights
+            elif weights is None:
+                w = Array(shape=[ax.nbins for ax in b], fill_val=0, dtype=np.float32)
+            else:
+                w = Array(weights)
 
             if len(binning) != len(w.nda.shape):
                 msg = "binning and weight dimensions do not match"
@@ -314,6 +323,98 @@ class Histogram(Struct):
         bins = sorted(self["binning"].items())
         assert all(isinstance(v, Histogram.Axis) for k, v in bins)
         return tuple(v for _, v in bins)
+
+    def fill(self, data, w: NDArray = None, keys: Sequence[str] = None) -> None:
+        """Fill histogram by incrementing bins with data points weighted by w
+
+        Parameters
+        ----------
+        data
+            a ndarray with inner dimension equal to number of axes, or a list
+            of equal-length 1d-arrays containing data for each axis, or a
+            Mapping to 1d-arrays containing data for each axis (requires keys),
+            or a Pandas dataframe (optionally takes a list of keys)
+        w
+            weight to use for incrementing data points. If None, use 1 for all
+        keys
+            list of keys to use if data is a pandas ''DataFrame'' or ''Mapping''
+        """
+        if keys is not None:
+            if isinstance(keys, str):
+                keys = [keys]
+            elif not isinstance(keys, list):
+                keys = list(keys)
+
+        if (
+            isinstance(data, np.ndarray)
+            and len(data.shape) == 1
+            and len(self.binning) == 1
+        ):
+            N = len(data)
+            data = [data]
+        elif (
+            isinstance(data, np.ndarray)
+            and len(data.shape) == 2
+            and data.shape[1] == len(self.binning)
+        ):
+            N = data.shape[0]
+            data = data.T
+        elif isinstance(data, pd.DataFrame) and (
+            (keys is not None and len(keys) == len(self.binning))
+            or data.ndim == len(self.binning)
+        ):
+            if keys is not None:
+                data = data[keys]
+            N = len(data)
+            data = data.values.T
+        elif isinstance(data, Sequence) and len(data) == len(self.binning):
+            data = [d if isinstance(d, np.ndarray) else np.array(d) for d in data]
+            N = len(data[0])
+            if not all(len(d) == N for d in data):
+                msg = "length of all data arrays must be equal"
+                raise ValueError(msg)
+        elif isinstance(data, Mapping):
+            if not isinstance(keys, Sequence) or len(keys) != len(self.binning):
+                msg = "filling hist with Mapping data requires a list of keys with same length as histogram rank"
+                raise ValueError(msg)
+            data = [
+                data[k] if isinstance(data[k], np.ndarray) else np.array(data[k])
+                for k in keys
+            ]
+            N = len(data[0])
+            if not all(len(d) == N for d in data):
+                msg = "length of all data arrays must be equal"
+                raise ValueError(msg)
+        else:
+            msg = "data must be 2D numpy array or list of 1D arrays with length equal to number of axes"
+            raise ValueError(msg)
+
+        idx = np.zeros(N, np.float64)  # bin indices for flattened array
+        oor_mask = np.ones(N, np.bool_)  # mask to remove out of range values
+        stride = [s // self.weights.dtype.itemsize for s in self.weights.nda.strides]
+        for col, ax, s in zip(data, self.binning, stride):
+            if ax.is_range:
+                idx += s * np.floor((col - ax.first) / ax.step - int(not ax.closedleft))
+                if ax.closedleft:
+                    oor_mask &= (ax.first <= col) & (col < ax.last)
+                else:
+                    oor_mask &= (ax.first < col) & (col <= ax.last)
+            else:
+                idx += s * (
+                    np.searchsorted(
+                        ax.edges, col, side=("right" if ax.closedleft else "left")
+                    )
+                    - 1
+                )
+                if ax.closedleft:
+                    oor_mask &= (ax.edges[0] <= col) & (col < ax.edges[-1])
+                else:
+                    oor_mask &= (ax.edges[0] < col) & (col <= ax.edges[-1])
+
+        # increment bin contents
+        idx = idx[oor_mask].astype(np.int64)
+        w = w[oor_mask] if w is not None else 1
+        np.add.at(self.weights.nda.reshape(-1), idx, w)
 
     def __setitem__(self, name: str, obj: LGDO) -> None:
         # do not allow for new attributes on this
