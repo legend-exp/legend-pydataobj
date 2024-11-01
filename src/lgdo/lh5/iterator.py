@@ -68,6 +68,7 @@ class LH5Iterator(typing.Iterator):
         field_mask: dict[str, bool] | list[str] | tuple[str] | None = None,
         buffer_len: int = "100*MB",
         file_cache: int = 10,
+        file_map: NDArray[int] = None,
         friend: typing.Iterator | None = None,
     ) -> None:
         """
@@ -95,6 +96,11 @@ class LH5Iterator(typing.Iterator):
             number of entries to read at a time while iterating through files.
         file_cache
             maximum number of files to keep open at a time
+        file_map
+            cumulative file/group entries. This can be provided on construction
+            to speed up random or sparse access; otherwise, we sequentially
+            read the size of each group. WARNING: no checks for accuracy are
+            performed so only use this if you know what you are doing!
         friend
             a \"friend\" LH5Iterator that will be read in parallel with this.
             The friend should have the same length and entry list. A single
@@ -142,7 +148,11 @@ class LH5Iterator(typing.Iterator):
             raise ValueError(msg)
 
         # Map to last row in each file
-        self.file_map = np.full(len(self.lh5_files), np.iinfo("q").max, "q")
+        if file_map is None:
+            self.file_map = np.full(len(self.lh5_files), np.iinfo("q").max, "q")
+        else:
+            self.file_map = np.array(file_map)
+
         # Map to last iterator entry for each file
         self.entry_map = np.full(len(self.lh5_files), np.iinfo("q").max, "q")
         self.buffer_len = buffer_len
@@ -167,7 +177,8 @@ class LH5Iterator(typing.Iterator):
                 size=self.buffer_len,
                 field_mask=field_mask,
             )
-            self.file_map[0] = n_rows
+            if file_map is None:
+                self.file_map[0] = n_rows
         else:
             msg = f"can't open any files from {lh5_files}"
             raise RuntimeError(msg)
