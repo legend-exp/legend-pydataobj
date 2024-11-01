@@ -99,6 +99,7 @@ class LH5Iterator(typing.Iterator):
             a \"friend\" LH5Iterator that will be read in parallel with this.
             The friend should have the same length and entry list. A single
             LH5 table containing columns from both iterators will be returned.
+            Note that buffer_len will be set to the minimum of the two.
         """
         self.lh5_st = LH5Store(base_path=base_path, keep_open=file_cache)
 
@@ -210,6 +211,15 @@ class LH5Iterator(typing.Iterator):
             if not isinstance(friend, typing.Iterator):
                 msg = "Friend must be an Iterator"
                 raise ValueError(msg)
+
+            # set buffer_lens to be equal
+            if self.buffer_len < friend.buffer_len:
+                friend.buffer_len = self.buffer_len
+                friend.lh5_buffer.resize(self.buffer_len)
+            elif self.buffer_len > friend.buffer_len:
+                self.buffer_len = friend.buffer_len
+                self.lh5_buffer.resize(friend.buffer_len)
+
             self.lh5_buffer.join(friend.lh5_buffer)
         self.friend = friend
 
