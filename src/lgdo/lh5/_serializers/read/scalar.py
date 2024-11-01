@@ -7,7 +7,7 @@ import numpy as np
 
 from ....types import Scalar
 from ...exceptions import LH5DecodeError
-from .utils import read_attrs
+from . import utils
 
 log = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ def _h5_read_scalar(
     sp = h5py.h5s.create(h5py.h5s.SCALAR)
     h5d.read(sp, sp, value)
     value = value[()]
-    attrs = read_attrs(h5d, fname, oname)
+    attrs = utils.read_attrs(h5d, fname, oname)
 
     # special handling for bools
     # (c and Julia store as uint8 so cast to bool)
