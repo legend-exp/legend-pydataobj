@@ -233,6 +233,9 @@ class LH5Store:
 
         if isinstance(idx, (list, tuple)) and len(idx) > 0 and not np.isscalar(idx[0]):
             idx = idx[0]
+        if isinstance(idx, np.ndarray) and idx.dtype == np.dtype("?"):
+            idx = np.where(idx)[0]
+
         return _serializers._h5_read_lgdo(
             lh5_obj.id,
             lh5_obj.file.filename,

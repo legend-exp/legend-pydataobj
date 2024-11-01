@@ -43,8 +43,8 @@ def _h5_read_ndarray(
     if idx is not None:
         if len(idx) > 0 and idx[-1] >= ds_n_rows:
             log.warning("idx indexed past the end of the array in the file. Culling...")
-            n_rows_to_read = bisect_left(idx[0], ds_n_rows)
-            idx = (idx[:n_rows_to_read],)
+            n_rows_to_read = bisect_left(idx, ds_n_rows)
+            idx = idx[:n_rows_to_read]
             if len(idx) == 0:
                 log.warning("idx empty after culling.")
         n_rows_to_read = len(idx)
