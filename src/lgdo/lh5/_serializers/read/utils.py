@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import logging
+from collections import defaultdict
+from collections.abc import Collection, Mapping
 
 import h5py
 import numpy as np
-from collections import defaultdict
-from collections.abc import Mapping, Collection
 
 from .... import types
 from ... import datatype
@@ -23,51 +23,57 @@ def check_obj_buf_attrs(attrs, new_attrs, fname, oname):
         )
         raise LH5DecodeError(msg, fname, oname)
 
+
 def build_field_mask(field_mask: Mapping[str, bool] | Collection[str]) -> defaultdict:
     # check field_mask and make it a default dict
     if field_mask is None:
         return defaultdict(lambda: True)
-    elif isinstance(field_mask, dict):
+    if isinstance(field_mask, dict):
         default = True
         if len(field_mask) > 0:
             default = not field_mask[next(iter(field_mask.keys()))]
         return defaultdict(lambda: default, field_mask)
-    elif isinstance(field_mask, (list, tuple, set)):
+    if isinstance(field_mask, (list, tuple, set)):
         return defaultdict(bool, {field: True for field in field_mask})
-    elif isinstance(field_mask, defaultdict):
+    if isinstance(field_mask, defaultdict):
         return field_mask
-    else:
-        msg = "bad field_mask type"
-        raise ValueError(msg, type(field_mask).__name__)
+    msg = "bad field_mask type"
+    raise ValueError(msg, type(field_mask).__name__)
 
-    
-def eval_field_mask(field_mask: defaultdict, all_fields: list[str]) -> list[tuple(str, defaultdict)]:
+
+def eval_field_mask(
+    field_mask: defaultdict, all_fields: list[str]
+) -> list[tuple(str, defaultdict)]:
     """Get list of fields that need to be loaded along with a sub-field-mask
     in case we have a nested Table"""
 
     if field_mask is None:
         return all_fields
-    
+
     this_field_mask = defaultdict(field_mask.default_factory)
     sub_field_masks = {}
-    
+
     for field, val in field_mask.items():
         field = field.strip("/")
         pos = field.find("/")
-        if pos<0:
+        if pos < 0:
             this_field_mask[field] = val
         else:
-            sub_field = field[pos+1:]
+            sub_field = field[pos + 1 :]
             field = field[:pos]
             this_field_mask[field] = True
             sub_mask = sub_field_masks.setdefault(
-                field,
-                defaultdict(field_mask.default_factory)
+                field, defaultdict(field_mask.default_factory)
             )
             sub_mask[sub_field] = val
-    
-    return [ (field, sub_field_masks.get(field, None)) for field in all_fields if this_field_mask[field] ]
-    
+
+    return [
+        (field, sub_field_masks.get(field))
+        for field in all_fields
+        if this_field_mask[field]
+    ]
+
+
 def read_attrs(h5o, fname, oname):
     """Read all attributes for an hdf5 dataset or group using low level API
     and return them as a dict. Assume all are strings or scalar types."""
@@ -172,7 +178,13 @@ def read_size_in_bytes(h5o, fname, oname, field_mask=None):
         return int(np.prod(h5o.shape) * h5o.dtype.itemsize)
 
     # tables should have elements with all the same length
-    if lgdotype in (types.Struct, types.Histogram, types.Histogram.Axis, types.Table, types.WaveformTable):
+    if lgdotype in (
+        types.Struct,
+        types.Histogram,
+        types.Histogram.Axis,
+        types.Table,
+        types.WaveformTable,
+    ):
         # read out each of the fields
         size = 0
         all_fields = datatype.get_struct_fields(type_attr)

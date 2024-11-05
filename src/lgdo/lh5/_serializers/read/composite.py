@@ -237,7 +237,9 @@ def _h5_read_struct(
     selected_fields = utils.eval_field_mask(field_mask, all_fields)
 
     # modify datatype in attrs if a field_mask was used
-    attrs["datatype"] = "struct{" + ",".join(field for field, _ in selected_fields) + "}"
+    attrs["datatype"] = (
+        "struct{" + ",".join(field for field, _ in selected_fields) + "}"
+    )
 
     # loop over fields and read
     obj_dict = {}
