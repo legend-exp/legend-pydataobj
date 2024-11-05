@@ -134,9 +134,7 @@ def test_read_array_fancy_idx(lh5_file):
     assert lh5_obj == lgdo.Array([1, 4, 5, 1, 4, 5])
 
     # Test with out of range index
-    lh5_obj = store.read(
-        "/data/struct_full/array", lh5_file, idx=[0, 3, 4, 100]
-    )
+    lh5_obj = store.read("/data/struct_full/array", lh5_file, idx=[0, 3, 4, 100])
     assert isinstance(lh5_obj, types.Array)
     assert len(lh5_obj) == 3
     assert lh5_obj == lgdo.Array([1, 4, 5])
