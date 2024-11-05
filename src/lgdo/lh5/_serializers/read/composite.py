@@ -3,7 +3,6 @@ from __future__ import annotations
 import bisect
 import logging
 import sys
-from collections import defaultdict
 
 import h5py
 import numpy as np
@@ -72,19 +71,8 @@ def _h5_read_lgdo(
             obj_buf=obj_buf,
         )
 
-    # check field_mask and make it a default dict
-    if field_mask is None:
-        field_mask = defaultdict(lambda: True)
-    elif isinstance(field_mask, dict):
-        default = True
-        if len(field_mask) > 0:
-            default = not field_mask[next(iter(field_mask.keys()))]
-        field_mask = defaultdict(lambda: default, field_mask)
-    elif isinstance(field_mask, (list, tuple, set)):
-        field_mask = defaultdict(bool, {field: True for field in field_mask})
-    elif not isinstance(field_mask, defaultdict):
-        msg = "bad field_mask type"
-        raise ValueError(msg, type(field_mask).__name__)
+    # Convert whatever we input into a defaultdict
+    field_mask = utils.build_field_mask(field_mask)
 
     if lgdotype is Struct:
         return _h5_read_struct(

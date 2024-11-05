@@ -5,6 +5,7 @@ import logging
 import h5py
 import numpy as np
 from collections import defaultdict
+from collections.abc import Mapping, Collection
 
 from .... import types
 from ... import datatype
@@ -22,6 +23,24 @@ def check_obj_buf_attrs(attrs, new_attrs, fname, oname):
         )
         raise LH5DecodeError(msg, fname, oname)
 
+def build_field_mask(field_mask: Mapping[str, bool] | Collection[str]) -> defaultdict:
+    # check field_mask and make it a default dict
+    if field_mask is None:
+        return defaultdict(lambda: True)
+    elif isinstance(field_mask, dict):
+        default = True
+        if len(field_mask) > 0:
+            default = not field_mask[next(iter(field_mask.keys()))]
+        return defaultdict(lambda: default, field_mask)
+    elif isinstance(field_mask, (list, tuple, set)):
+        return defaultdict(bool, {field: True for field in field_mask})
+    elif isinstance(field_mask, defaultdict):
+        return field_mask
+    else:
+        msg = "bad field_mask type"
+        raise ValueError(msg, type(field_mask).__name__)
+
+    
 def eval_field_mask(field_mask: defaultdict, all_fields: list[str]) -> list[tuple(str, defaultdict)]:
     """Get list of fields that need to be loaded along with a sub-field-mask
     in case we have a nested Table"""
@@ -141,6 +160,7 @@ def read_size_in_bytes(h5o, fname, oname, field_mask=None):
     h5a.read(type_attr)
     type_attr = type_attr.item().decode()
     lgdotype = datatype.datatype(type_attr)
+    field_mask = build_field_mask(field_mask)
 
     # scalars are dim-0 datasets
     if lgdotype in (
@@ -151,24 +171,15 @@ def read_size_in_bytes(h5o, fname, oname, field_mask=None):
     ):
         return int(np.prod(h5o.shape) * h5o.dtype.itemsize)
 
-    # structs don't have rows
-    if lgdotype in (types.Struct, types.Histogram, types.Histogram.Axis):
-        size = 0
-        for key in h5o:
-            obj = h5py.h5o.open(h5o, key)
-            size += read_size_in_bytes(obj, fname, oname, field_mask)
-            obj.close()
-        return size
-
     # tables should have elements with all the same length
-    if lgdotype in (types.Table, types.WaveformTable):
+    if lgdotype in (types.Struct, types.Histogram, types.Histogram.Axis, types.Table, types.WaveformTable):
         # read out each of the fields
         size = 0
-        if not field_mask:
-            field_mask = datatype.get_struct_fields(type_attr)
-        for field in field_mask:
+        all_fields = datatype.get_struct_fields(type_attr)
+        selected_fields = eval_field_mask(field_mask, all_fields)
+        for field, submask in selected_fields:
             obj = h5py.h5o.open(h5o, field.encode())
-            size += read_size_in_bytes(obj, fname, field)
+            size += read_size_in_bytes(obj, fname, field, submask)
             obj.close()
         return size
 
