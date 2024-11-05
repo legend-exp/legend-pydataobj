@@ -11,7 +11,7 @@ import pytest
 from lgdo import lh5, types
 
 
-def test_write_compressed_lgnd_waveform_table(enc_lgnd_file):  # noqa: ARG001
+def test_write_compressed_lgnd_waveform_table(enc_lgnd_file):
     pass
 
 

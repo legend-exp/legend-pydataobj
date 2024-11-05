@@ -617,7 +617,7 @@ class VectorOfVectors(LGDOCollection):
             offsets = np.empty(
                 len(self.cumulative_length) + 1, dtype=self.cumulative_length.dtype
             )
-            offsets[1:] = self.cumulative_length
+            offsets[1:] = self.cumulative_length.nda
             offsets[0] = 0
 
             content = (

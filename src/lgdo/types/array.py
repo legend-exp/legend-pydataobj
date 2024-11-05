@@ -116,7 +116,7 @@ class Array(LGDOCollection):
         if capacity < len(self):
             msg = "Cannot reduce capacity below Array length"
             raise ValueError(msg)
-        self._nda.resize((capacity,) + self._nda.shape[1:], refcheck=True)
+        self._nda.resize((capacity,) + self._nda.shape[1:], refcheck=False)
 
     def get_capacity(self) -> int:
         "Get capacity (i.e. max size before memory must be re-allocated)"

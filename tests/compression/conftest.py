@@ -5,7 +5,7 @@ import pytest
 from lgdo import lh5
 
 
-@pytest.fixture()
+@pytest.fixture
 def wftable(lgnd_test_data):
     store = lh5.LH5Store()
     return store.read(
