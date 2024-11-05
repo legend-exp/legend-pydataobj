@@ -40,6 +40,11 @@ class Table(Struct):
     :meth:`__len__` to access valid data, which returns the ``size`` attribute.
     """
 
+    def __new__(cls, *args, **kwargs):
+        inst = super().__new__(cls, *args, **kwargs)
+        inst.size = None
+        return inst
+
     def __init__(
         self,
         col_dict: Mapping[str, LGDO] | pd.DataFrame | ak.Array | None = None,

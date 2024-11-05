@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 import logging
-import typing
+from collections.abc import Callable, Collection, Iterator, Mapping
+from copy import deepcopy
+from functools import partial
+from multiprocessing.pool import Pool
+from typing import Any, Union
 from warnings import warn
 
 import numpy as np
@@ -13,10 +17,10 @@ from ..units import default_units_registry as ureg
 from .store import LH5Store
 from .utils import expand_path
 
-LGDO = typing.Union[Array, Scalar, Struct, VectorOfVectors]
+LGDO = Union[Array, Scalar, Struct, VectorOfVectors]
 
 
-class LH5Iterator(typing.Iterator):
+class LH5Iterator(Iterator):
     """
     A class for iterating through one or more LH5 files, one block of entries
     at a time. This also accepts an entry list/mask to enable event selection,
@@ -60,16 +64,16 @@ class LH5Iterator(typing.Iterator):
 
     def __init__(
         self,
-        lh5_files: str | list[str],
-        groups: str | list[str] | list[list[str]],
+        lh5_files: str | Collection[str],
+        groups: str | Collection[str] | Collection[Collection[str]],
         base_path: str = "",
-        entry_list: list[int] | list[list[int]] | None = None,
-        entry_mask: list[bool] | list[list[bool]] | None = None,
-        field_mask: dict[str, bool] | list[str] | tuple[str] | None = None,
+        entry_list: Collection[int] | Collection[Collection[int]] | None = None,
+        entry_mask: Collection[bool] | Collection[Collection[bool]] | None = None,
+        field_mask: Mapping[str, bool] | Collection[str] | None = None,
         buffer_len: int = "100*MB",
         file_cache: int = 10,
         file_map: NDArray[int] = None,
-        friend: typing.Iterator | None = None,
+        friend: LH5Iterator | None = None,
     ) -> None:
         """
         Parameters
@@ -112,19 +116,19 @@ class LH5Iterator(typing.Iterator):
         # List of files, with wildcards and env vars expanded
         if isinstance(lh5_files, str):
             lh5_files = [lh5_files]
-        elif not isinstance(lh5_files, (list, set, tuple)):
+        elif not isinstance(lh5_files, (Collection)):
             msg = "lh5_files must be a string or list of strings"
             raise ValueError(msg)
 
         if isinstance(groups, str):
             groups = [[groups]] * len(lh5_files)
-        elif not isinstance(groups, list):
+        elif not isinstance(groups, Collection):
             msg = "group must be a string or appropriate list"
             raise ValueError(msg)
         elif all(isinstance(g, str) for g in groups):
             groups = [groups] * len(lh5_files)
         elif len(groups) == len(lh5_files) and all(
-            isinstance(gr_list, (list, set, tuple)) for gr_list in groups
+            isinstance(gr_list, (list, tuple, set)) for gr_list in groups
         ):
             pass
         else:
@@ -219,7 +223,7 @@ class LH5Iterator(typing.Iterator):
 
         # Attach the friend
         if friend is not None:
-            if not isinstance(friend, typing.Iterator):
+            if not isinstance(friend, LH5Iterator):
                 msg = "Friend must be an Iterator"
                 raise ValueError(msg)
 
@@ -482,7 +486,7 @@ class LH5Iterator(typing.Iterator):
             else 0
         )
 
-    def __iter__(self) -> typing.Iterator:
+    def __iter__(self) -> LH5Iterator:
         """Loop through entries in blocks of size buffer_len."""
         self.current_i_entry = 0
         self.next_i_entry = 0
@@ -496,3 +500,164 @@ class LH5Iterator(typing.Iterator):
         if n_rows == 0:
             raise StopIteration
         return (buf, self.current_i_entry, n_rows)
+
+    def __deepcopy__(self, memo):
+        """Deep copy everything except lh5_st and friend"""
+        result = LH5Iterator.__new__(LH5Iterator)
+        memo[id(self)] = result
+        for k, v in self.__dict__.items():
+            if k == "lh5_st":
+                result.lh5_st = LH5Store(
+                    base_path=self.lh5_st.base_path, keep_open=self.lh5_st.keep_open
+                )
+            elif k == "friend":
+                result.friend = None
+            else:
+                setattr(result, k, deepcopy(v, memo))
+        return result
+
+    def __getstate__(self):
+        """Deep copy lh5_buf when unpickling to avoid weird ownership issues"""
+        return dict(
+            self.__dict__,
+            lh5_st={
+                "base_path": self.lh5_st.base_path,
+                "keep_open": self.lh5_st.keep_open,
+            },
+            lh5_buffer=None,
+        )
+
+    def __setstate__(self, d):
+        """Reinitialize lh5_st and lh5_buffer to avoid potential issues"""
+        self.__dict__ = d
+        self.lh5_st = LH5Store(**(d["lh5_st"]))
+        self.lh5_st.gimme_file(self.lh5_files[0])
+        self.lh5_buffer = self.lh5_st.get_buffer(
+            self.groups[0],
+            self.lh5_files[0],
+            size=self.buffer_len,
+            field_mask=self.field_mask,
+        )
+
+    def _generate_workers(self, n_workers: int):
+        """Create n_workers copy of this iterator, dividing the files and
+        groups between them. These are intended for parallel use"""
+        if self.friend is not None:
+            friend_its = self.friend._generate_workers(n_workers)
+
+        i_files = np.linspace(0, len(self.lh5_files), n_workers + 1).astype("int")
+        worker_its = []
+        for i_worker in range(n_workers):
+            it = deepcopy(self)
+
+            # worker should only include subset of files
+            s = slice(i_files[i_worker], i_files[i_worker + 1])
+            it.lh5_files = it.lh5_files[s]
+            it.groups = it.groups[s]
+            # TODO: handle these correctly
+            it.file_map = it.file_map[s]
+            it.entry_map = it.entry_map[s]
+            # it.local_entry_list = it.local_entry_list[s]
+            # it.global_entry_list = None
+            if self.friend is not None:
+                self.friend = friend_its[i_worker]
+
+            worker_its += [it]
+
+        return worker_its
+
+    def map(
+        self, fun: Callable[LH5Iterator, int, int], processes: Pool | int = None
+    ) -> list(Any):
+        """Map function over iterator blocks and return order-preserving list
+        of outputs. Can be multi-threaded provided there are no attempts
+        to modify existing objects.
+
+        Parameters
+        ----------
+        fun:
+            function with signature fun(lh5_obj: LGDO, entry: int, n_rows: int) -> Any
+            Outputs of function will be collected in list and returned
+        processes:
+            number of processes or multiprocessing processor pool
+        """
+        if processes is None:
+            return map_helper(fun, self)
+        if isinstance(processes, int):
+            processes = Pool(processes)
+        it_pool = self._generate_workers(processes._processes)
+        result = processes.map(partial(map_helper, fun), it_pool)
+
+        return [r for res in result for r in res]
+
+    def accumulate(
+        self,
+        fun: Callable[LH5Iterator, int, int],
+        processes: Pool | int = None,
+        operator: Callable = None,
+        init: Any = None,
+        merge: Callable = None,
+    ) -> Any:
+        """Accumulate function output over iterator.
+
+        Parameters
+        ----------
+        fun:
+            function with signature fun(lh5_obj: LGDO, entry: int, n_rows: int) -> Any
+            Outputs of function will be summed together using accumulator function
+        processor:
+            number of processes or multiprocessing processor pool
+        operator:
+            function with signature `operator(accumulator: Any, addend: Any) -> Any | None`
+            that adds the `addend` (i.e. the output of `fun`) to the `accumulator` (i.e. the
+            running total). This will can be in place on the accumulator, or returning the
+            next value sum. If `None`, we will simply call `accumulator+=addend`
+        init:
+            initial value for accumulator. If `None` initialize with first result of `fun`
+        merge:
+            function to use to combine results from different threads. If `None`, use `operator`
+        """
+        if processes is None:
+            return accumulate_helper(fun, operator, init, self)
+        if isinstance(processes, int):
+            processes = Pool(processes)
+        it_pool = self._generate_workers(processes._processes)
+        results = processes.map(
+            partial(accumulate_helper, fun, operator, init), it_pool
+        )
+
+        # merge the results
+        accumulator = results.pop(0)
+        if merge is None:
+            merge = operator
+        for addend in results:
+            if merge is not None:
+                res = merge(accumulator, addend)
+                if res is not None:
+                    accumulator = res
+            else:
+                accumulator += addend
+
+        return accumulator
+
+
+def map_helper(fun, it):
+    return [fun(tab, entry, n_rows) for tab, entry, n_rows in it]
+
+
+def accumulate_helper(fun, op, init, it):
+    accumulator = init
+    for tab, entry, n_rows in it:
+        addend = fun(tab, entry, n_rows)
+
+        if accumulator is None:
+            # if no init, initialize on first entry
+            accumulator = addend
+        elif op is not None:
+            res = op(accumulator, addend)
+            if res is not None:
+                accumulator = res
+        else:
+            accumulator += addend
+
+    return accumulator

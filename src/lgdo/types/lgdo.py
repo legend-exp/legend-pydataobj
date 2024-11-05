@@ -11,6 +11,11 @@ import pandas as pd
 class LGDO(ABC):
     """Abstract base class representing a LEGEND Data Object (LGDO)."""
 
+    def __new__(cls, *_args, **_kwargs):
+        inst = super().__new__(cls)
+        inst.attrs = {}
+        return inst
+
     @abstractmethod
     def __init__(self, attrs: dict[str, Any] | None = None) -> None:
         self.attrs = {} if attrs is None else dict(attrs)
