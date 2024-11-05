@@ -4,6 +4,7 @@ import logging
 
 import h5py
 import numpy as np
+from collections import defaultdict
 
 from .... import types
 from ... import datatype
@@ -21,7 +22,33 @@ def check_obj_buf_attrs(attrs, new_attrs, fname, oname):
         )
         raise LH5DecodeError(msg, fname, oname)
 
+def eval_field_mask(field_mask: defaultdict, all_fields: list[str]) -> list[tuple(str, defaultdict)]:
+    """Get list of fields that need to be loaded along with a sub-field-mask
+    in case we have a nested Table"""
 
+    if field_mask is None:
+        return all_fields
+    
+    this_field_mask = defaultdict(field_mask.default_factory)
+    sub_field_masks = {}
+    
+    for field, val in field_mask.items():
+        field = field.strip("/")
+        pos = field.find("/")
+        if pos<0:
+            this_field_mask[field] = val
+        else:
+            sub_field = field[pos+1:]
+            field = field[:pos]
+            this_field_mask[field] = True
+            sub_mask = sub_field_masks.setdefault(
+                field,
+                defaultdict(field_mask.default_factory)
+            )
+            sub_mask[sub_field] = val
+    
+    return [ (field, sub_field_masks.get(field, None)) for field in all_fields if this_field_mask[field] ]
+    
 def read_attrs(h5o, fname, oname):
     """Read all attributes for an hdf5 dataset or group using low level API
     and return them as a dict. Assume all are strings or scalar types."""
