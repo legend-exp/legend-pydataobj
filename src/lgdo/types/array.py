@@ -100,7 +100,7 @@ class Array(LGDO):
 
     def resize(self, new_size: int) -> None:
         new_shape = (new_size,) + self.nda.shape[1:]
-        return self.nda.resize(new_shape, refcheck=True)
+        return self.nda.resize(new_shape, refcheck=False)
 
     def append(self, value: np.ndarray) -> None:
         self.resize(len(self) + 1)
