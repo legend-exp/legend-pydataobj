@@ -53,8 +53,8 @@ def eval_field_mask(
     this_field_mask = defaultdict(field_mask.default_factory)
     sub_field_masks = {}
 
-    for field, val in field_mask.items():
-        field = field.strip("/")
+    for key, val in field_mask.items():
+        field = key.strip("/")
         pos = field.find("/")
         if pos < 0:
             this_field_mask[field] = val
