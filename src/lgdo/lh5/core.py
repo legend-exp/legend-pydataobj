@@ -120,6 +120,7 @@ def read(
         lh5_obj = lh5_file[name]
     else:
         lh5_files = list(lh5_file)
+
         n_rows_read = 0
         obj_buf_is_new = False
 
@@ -352,6 +353,9 @@ def read_as(
     # read the LGDO from disk
     # NOTE: providing a buffer does not make much sense
     obj = read(name, lh5_file, **kwargs1)
+
+    if isinstance(obj, tuple):
+        obj = obj[0]
 
     # and finally return a view
     return obj.view_as(library, **kwargs2)
