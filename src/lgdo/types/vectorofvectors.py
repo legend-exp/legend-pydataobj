@@ -503,7 +503,7 @@ class VectorOfVectors(LGDO):
     def __str__(self) -> str:
         string = self.view_as("ak").show(stream=None)
 
-        string = string.strip().removesuffix("]")
+        string = str(string).strip().removesuffix("]")
         string += "\n]"
 
         tmp_attrs = self.attrs.copy()
