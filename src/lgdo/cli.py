@@ -7,7 +7,7 @@ import fnmatch
 import logging
 import sys
 
-from . import Array, Table, VectorOfVectors, __version__, lh5
+from . import Array, Scalar, Struct, Table, VectorOfVectors, __version__, lh5
 from . import logging as lgdogging  # eheheh
 
 log = logging.getLogger(__name__)
@@ -212,6 +212,7 @@ Exclude the /data/table1/col1 Table column:
     store = lh5.LH5Store()
     h5f0 = store.gimme_file(file0)
     lgdos = {}
+    lgdo_structs = {}
     # loop over object list in the first file
     for name in obj_list:
         # now loop over groups starting from root
@@ -222,7 +223,7 @@ Exclude the /data/table1/col1 Table column:
             if current in lgdos:
                 break
 
-            # not even an LGDO!
+            # not even an LGDO (i.e. a plain HDF5 group)!
             if "datatype" not in h5f0[current].attrs:
                 continue
 
@@ -232,13 +233,29 @@ Exclude the /data/table1/col1 Table column:
                 # read all!
                 obj, _ = store.read(current, h5f0)
                 lgdos[current] = obj
+            elif isinstance(obj, Struct):
+                # structs might be used in a "group-like" fashion (i.e. they might only
+                # contain array-like objects).
+                # note: handle after handling tables, as tables also satisfy this check.
+                lgdo_structs[current] = obj.attrs["datatype"]
+                continue
+            elif isinstance(obj, Scalar):
+                msg = f"cannot concat scalar field {current}"
+                log.warning(msg)
 
             break
 
     msg = f"first-level, array-like objects: {lgdos.keys()}"
     log.debug(msg)
+    msg = f"nested structs: {lgdo_structs.keys()}"
+    log.debug(msg)
 
     h5f0.close()
+
+    if lgdos == {}:
+        msg = "did not find any field to concatenate, exit"
+        log.error(msg)
+        return
 
     # 2. remove (nested) table fields based on obj_list
 
@@ -298,3 +315,14 @@ Exclude the /data/table1/col1 Table column:
                 _inplace_table_filter(name, obj, obj_list)
 
             store.write(obj, name, args.output, wo_mode="append")
+
+    # 5. reset datatypes of the "group-like" structs
+
+    if lgdo_structs != {}:
+        output_file = store.gimme_file(args.output, mode="a")
+        for struct, struct_dtype in lgdo_structs.items():
+            msg = f"reset datatype of struct {struct} to {struct_dtype}"
+            log.debug(msg)
+
+            output_file[struct].attrs["datatype"] = struct_dtype
+        output_file.close()
