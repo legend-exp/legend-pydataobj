@@ -164,6 +164,6 @@ def test_lh5concat(lgnd_test_data, tmptestdir):
     outfile = f"{tmptestdir}/concat_test_struct_out.lh5"
     cli.lh5concat(["--output", outfile, "--", infile1, infile2])
 
-    out_stp = store.read("stp", outfile)[0]
+    out_stp = store.read("stp", outfile)
     assert out_stp.attrs["datatype"] == "struct{x}"
     assert np.all(out_stp.x["col"].nda == np.array([0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1]))
