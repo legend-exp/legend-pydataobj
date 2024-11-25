@@ -345,5 +345,8 @@ def read_as(
     # NOTE: providing a buffer does not make much sense
     obj = read(name, lh5_file, **kwargs1)
 
+    if isinstance(obj, tuple):
+        obj = obj[0]
+
     # and finally return a view
     return obj.view_as(library, **kwargs2)

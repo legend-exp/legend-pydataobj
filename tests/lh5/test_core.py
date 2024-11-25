@@ -38,6 +38,8 @@ def test_read_as(lh5_file):
     )
     assert obj1.equals(obj2)
 
+    obj2 = lh5.read_as("/data/struct/table", [lh5_file], "ak")
+
 
 def test_read_multiple_files(lh5_file):
     lh5_obj = lh5.read("/data/struct/array", [lh5_file, lh5_file, lh5_file])

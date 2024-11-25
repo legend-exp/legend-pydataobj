@@ -3,7 +3,6 @@ from __future__ import annotations
 import bisect
 import logging
 import sys
-from collections import defaultdict
 
 import h5py
 import numpy as np
@@ -72,19 +71,8 @@ def _h5_read_lgdo(
             obj_buf=obj_buf,
         )
 
-    # check field_mask and make it a default dict
-    if field_mask is None:
-        field_mask = defaultdict(lambda: True)
-    elif isinstance(field_mask, dict):
-        default = True
-        if len(field_mask) > 0:
-            default = not field_mask[next(iter(field_mask.keys()))]
-        field_mask = defaultdict(lambda: default, field_mask)
-    elif isinstance(field_mask, (list, tuple, set)):
-        field_mask = defaultdict(bool, {field: True for field in field_mask})
-    elif not isinstance(field_mask, defaultdict):
-        msg = "bad field_mask type"
-        raise ValueError(msg, type(field_mask).__name__)
+    # Convert whatever we input into a defaultdict
+    field_mask = utils.build_field_mask(field_mask)
 
     if lgdotype is Struct:
         return _h5_read_struct(
@@ -246,18 +234,16 @@ def _h5_read_struct(
 
     # determine fields to be read out
     all_fields = dtypeutils.get_struct_fields(attrs["datatype"])
-    selected_fields = (
-        [field for field in all_fields if field_mask[field]]
-        if field_mask is not None
-        else all_fields
-    )
+    selected_fields = utils.eval_field_mask(field_mask, all_fields)
 
     # modify datatype in attrs if a field_mask was used
-    attrs["datatype"] = "struct{" + ",".join(selected_fields) + "}"
+    attrs["datatype"] = (
+        "struct{" + ",".join(field for field, _ in selected_fields) + "}"
+    )
 
     # loop over fields and read
     obj_dict = {}
-    for field in selected_fields:
+    for field, submask in selected_fields:
         # support for integer keys
         field_key = int(field) if attrs.get("int_keys") else str(field)
         h5o = h5py.h5o.open(h5g, field.encode("utf-8"))
@@ -269,6 +255,7 @@ def _h5_read_struct(
             n_rows=n_rows,
             idx=idx,
             use_h5idx=use_h5idx,
+            field_mask=submask,
             decompress=decompress,
         )
         h5o.close()
@@ -297,19 +284,15 @@ def _h5_read_table(
 
     # determine fields to be read out
     all_fields = dtypeutils.get_struct_fields(attrs["datatype"])
-    selected_fields = (
-        [field for field in all_fields if field_mask[field]]
-        if field_mask is not None
-        else all_fields
-    )
+    selected_fields = utils.eval_field_mask(field_mask, all_fields)
 
     # modify datatype in attrs if a field_mask was used
-    attrs["datatype"] = "table{" + ",".join(selected_fields) + "}"
+    attrs["datatype"] = "table{" + ",".join(field for field, _ in selected_fields) + "}"
 
     # read out each of the fields
     col_dict = {}
     rows_read = []
-    for field in selected_fields:
+    for field, submask in selected_fields:
         fld_buf = None
         if obj_buf is not None:
             if not isinstance(obj_buf, Table) or field not in obj_buf:
@@ -329,6 +312,7 @@ def _h5_read_table(
             use_h5idx=use_h5idx,
             obj_buf=fld_buf,
             obj_buf_start=obj_buf_start,
+            field_mask=submask,
             decompress=decompress,
         )
         h5o.close()
