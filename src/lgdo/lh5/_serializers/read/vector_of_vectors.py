@@ -156,7 +156,7 @@ def _h5_read_vector_of_vectors(
         # grow fd_buf if necessary to hold the data
         fdb_size = fd_buf_start + fd_n_rows
         if len(fd_buf) < fdb_size:
-            fd_buf.nda.resize(fdb_size, refcheck=False)
+            fd_buf.resize(fdb_size)
 
     # now read
     h5o = h5py.h5o.open(h5g, b"flattened_data")
