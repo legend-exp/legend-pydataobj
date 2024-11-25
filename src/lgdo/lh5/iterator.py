@@ -56,7 +56,7 @@ class LH5Iterator(Iterator):
 
     This class can also be used for random access:
 
-    >>> lh5_obj, n_rows = lh5_it.read(i_entry)
+    >>> lh5_obj = lh5_it.read(i_entry)
 
     to read the block of entries starting at i_entry. In case of multiple files
     or the use of an event selection, i_entry refers to a global event index
@@ -573,7 +573,7 @@ class LH5Iterator(Iterator):
         Parameters
         ----------
         fun:
-            function with signature fun(lh5_obj: LGDO, entry: int, n_rows: int) -> Any
+            function with signature fun(lh5_obj: LGDO, entry: int) -> Any
             Outputs of function will be collected in list and returned
         processes:
             number of processes or multiprocessing processor pool
@@ -600,7 +600,7 @@ class LH5Iterator(Iterator):
         Parameters
         ----------
         fun:
-            function with signature fun(lh5_obj: LGDO, entry: int, n_rows: int) -> Any
+            function with signature fun(lh5_obj: LGDO, entry: int) -> Any
             Outputs of function will be summed together using accumulator function
         processor:
             number of processes or multiprocessing processor pool
@@ -639,13 +639,13 @@ class LH5Iterator(Iterator):
 
 
 def map_helper(fun, it):
-    return [fun(tab, entry, n_rows) for tab, entry, n_rows in it]
+    return [fun(tab, entry) for tab, entry in it]
 
 
 def accumulate_helper(fun, op, init, it):
     accumulator = init
-    for tab, entry, n_rows in it:
-        addend = fun(tab, entry, n_rows)
+    for tab, entry in it:
+        addend = fun(tab, entry)
 
         if accumulator is None:
             # if no init, initialize on first entry
