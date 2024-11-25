@@ -30,13 +30,15 @@ def test_write(tmptestdir):
 
 def test_read_as(lh5_file):
     store = lh5.LH5Store()
-    obj1, _ = store.read("/data/struct/table", lh5_file, start_row=1)
+    obj1 = store.read("/data/struct/table", lh5_file, start_row=1)
     obj1 = obj1.view_as("pd", with_units=True)
 
     obj2 = lh5.read_as(
         "/data/struct/table", lh5_file, "pd", start_row=1, with_units=True
     )
     assert obj1.equals(obj2)
+
+    obj2 = lh5.read_as("/data/struct/table", [lh5_file], "ak")
 
 
 def test_read_multiple_files(lh5_file):
