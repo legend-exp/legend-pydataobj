@@ -353,15 +353,13 @@ def _h5_read_table(
             table = Table(col_dict=col_dict, attrs=attrs)
 
         # set (write) loc to end of tree
-        table.loc = n_rows_read
+        table.resize(do_warn=True)
         return table, n_rows_read
 
     # We have read all fields into the object buffer. Run
     # checks: All columns should be the same size. So update
     # table's size as necessary, warn if any mismatches are found
     obj_buf.resize(do_warn=True)
-    # set (write) loc to end of tree
-    obj_buf.loc = obj_buf_start + n_rows_read
 
     # check attributes
     utils.check_obj_buf_attrs(obj_buf.attrs, attrs, fname, oname)

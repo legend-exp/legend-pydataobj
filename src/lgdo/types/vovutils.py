@@ -81,7 +81,7 @@ def _nb_build_cl(sorted_array_in: NDArray, cumulative_length_out: NDArray) -> ND
 
 @numba.guvectorize(
     [
-        f"{data_type}[:,:],{size_type}[:],{data_type}[:]"
+        f"{data_type}[:,:],{size_type}[:],{data_type},{data_type}[:]"
         for data_type in [
             "b1",
             "i1",
@@ -99,10 +99,12 @@ def _nb_build_cl(sorted_array_in: NDArray, cumulative_length_out: NDArray) -> ND
         ]
         for size_type in ["i4", "i8", "u4", "u8"]
     ],
-    "(l,m),(l),(n)",
+    "(l,m),(l),(),(n)",
     **nb_kwargs,
 )
-def _nb_fill(aoa_in: NDArray, len_in: NDArray, flattened_array_out: NDArray):
+def _nb_fill(
+    aoa_in: NDArray, len_in: NDArray, nan_val: int | float, flattened_array_out: NDArray
+):
     """Vectorized function to fill flattened array from array of arrays and
     lengths. Values in aoa_in past lengths will not be copied.
 
@@ -112,6 +114,9 @@ def _nb_fill(aoa_in: NDArray, len_in: NDArray, flattened_array_out: NDArray):
         array of arrays containing values to be copied
     len_in
         array of vector lengths for each row of aoa_in
+    nan_val
+        value to use when len_in is longer than aoa_in. Should use
+        np.nan for floating point, and 0xfff... for integer types
     flattened_array_out
         flattened array to copy values into. Must be longer than sum of
         lengths in len_in
@@ -122,9 +127,14 @@ def _nb_fill(aoa_in: NDArray, len_in: NDArray, flattened_array_out: NDArray):
         raise ValueError(msg)
 
     start = 0
+    max_len = aoa_in.shape[1]
     for i, ll in enumerate(len_in):
         stop = start + ll
-        flattened_array_out[start:stop] = aoa_in[i, :ll]
+        if ll > max_len:
+            flattened_array_out[start : start + max_len] = aoa_in[i, :]
+            flattened_array_out[start + max_len : stop] = nan_val
+        else:
+            flattened_array_out[start:stop] = aoa_in[i, :ll]
         start = stop
 
 
