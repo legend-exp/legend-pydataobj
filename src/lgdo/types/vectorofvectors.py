@@ -468,7 +468,15 @@ class VectorOfVectors(LGDOCollection):
             cum_lens = np.add(start, lens.cumsum(), dtype=int)
 
             # fill with fast vectorized routine
-            vovutils._nb_fill(vec, lens, self.flattened_data.nda[start : cum_lens[-1]])
+            if np.issubdtype(self.flattened_data.dtype, np.unsignedinteger):
+                nan_val = np.iinfo(self.flattened_data.dtype).max
+            if np.issubdtype(self.flattened_data.dtype, np.integer):
+                nan_val = np.iinfo(self.flattened_data.dtype).min
+            else:
+                nan_val = np.nan
+            vovutils._nb_fill(
+                vec, lens, nan_val, self.flattened_data.nda[start : cum_lens[-1]]
+            )
 
             # add new vector(s) length to cumulative_length
             self.cumulative_length[i : i + len(lens)] = cum_lens
