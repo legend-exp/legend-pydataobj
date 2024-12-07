@@ -52,7 +52,7 @@ def get_element_type(obj: object) -> str:
     if (
         kind == "O"
         and dt.metadata is not None
-        and dt.metadata.get("vlen", None) is not None
+        and dt.metadata.get("vlen", None) in (str, bytes)
     ):
         # variable length strings in HDF5 are read as numpy object arrays in h5py.
         # see also h5py.check_vlen_dtype.
