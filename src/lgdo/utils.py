@@ -49,6 +49,14 @@ def get_element_type(obj: object) -> str:
         return "complex"
     if kind in ["S", "U"]:
         return "string"
+    if (
+        kind == "O"
+        and dt.metadata is not None
+        and dt.metadata.get("vlen", None) is not None
+    ):
+        # variable length strings in HDF5 are read as numpy object arrays in h5py.
+        # see also h5py.check_vlen_dtype.
+        return "string"
 
     # couldn't figure it out
     msg = "cannot determine lgdo element_type for object of type"
