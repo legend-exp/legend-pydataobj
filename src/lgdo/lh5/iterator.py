@@ -25,7 +25,7 @@ class LH5Iterator(typing.Iterator):
     This can be used as an iterator:
 
 
-    >>> for lh5_obj, entry in LH5Iterator(...):
+    >>> for lh5_obj in LH5Iterator(...):
     >>>    # do the thing!
 
     This is intended for if you are reading a large quantity of data. This
@@ -43,6 +43,8 @@ class LH5Iterator(typing.Iterator):
     In addition to accessing requested data via ``lh5_obj``, several
     properties exist to tell you where that data came from:
 
+    - lh5_it.current_i_entry: get the index within the entry list of the
+      first entry that is currently read
     - lh5_it.current_local_entries: get the entry numbers relative to the
       file the data came from
     - lh5_it.current_global_entries: get the entry number relative to the
@@ -52,7 +54,7 @@ class LH5Iterator(typing.Iterator):
 
     This class can also be used for random access:
 
-    >>> lh5_obj, n_rows = lh5_it.read(i_entry)
+    >>> lh5_obj = lh5_it.read(i_entry)
 
     to read the block of entries starting at i_entry. In case of multiple files
     or the use of an event selection, i_entry refers to a global event index
@@ -492,4 +494,4 @@ class LH5Iterator(typing.Iterator):
         if len(buf) == 0:
             raise StopIteration
         self.next_i_entry = self.current_i_entry + len(buf)
-        return (buf, self.current_i_entry)
+        return buf
