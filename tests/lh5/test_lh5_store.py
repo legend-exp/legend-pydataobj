@@ -472,21 +472,16 @@ def test_read_lgnd_vov_fancy_idx(lgnd_file):
     assert (lh5_obj.cumulative_length.nda == [1, 2, 3, 4, 5, 6, 7]).all()
     assert (lh5_obj.flattened_data.nda == [40, 60, 64, 60, 64, 28, 60]).all()
 
-    lh5_obj, n_rows = store.read(
-        "/geds/raw/tracelist", lgnd_file, idx=[]
-    )
+    lh5_obj, n_rows = store.read("/geds/raw/tracelist", lgnd_file, idx=[])
     assert isinstance(lh5_obj, types.VectorOfVectors)
     assert n_rows == 0
     assert len(lh5_obj) == 0
 
-
-    lh5_obj, n_rows = store.read(
-        "/geds/raw/tracelist", [lgnd_file]*3, idx=[250]
-    )
+    lh5_obj, n_rows = store.read("/geds/raw/tracelist", [lgnd_file] * 3, idx=[250])
     assert isinstance(lh5_obj, types.VectorOfVectors)
     assert n_rows == 1
     assert len(lh5_obj) == 1
-    
+
 
 def test_read_array_concatenation(lgnd_file):
     store = lh5.LH5Store()
