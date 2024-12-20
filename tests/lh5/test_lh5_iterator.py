@@ -31,7 +31,8 @@ def test_basics(lgnd_file):
         lh5_obj["baseline"].nda == np.array([14353, 14254, 14525, 11656, 13576])
     ).all()
 
-    for lh5_obj, entry in lh5_it:
+    for lh5_obj in lh5_it:
+        entry = lh5_it.current_i_entry
         assert len(lh5_obj) == 5
         assert entry % 5 == 0
         assert all(lh5_it.current_local_entries == np.arange(entry, entry + 5))
@@ -161,8 +162,9 @@ def test_iterate(more_lgnd_files):
         ],
     ]
 
-    for lh5_out, entry in lh5_it:
+    for lh5_out in lh5_it:
         assert set(lh5_out.keys()) == {"is_valid_0vbb", "timestamp", "zacEmax_ctc_cal"}
+        entry = lh5_it.current_i_entry
         assert entry % 5 == 0
         assert len(lh5_out) == 5
         assert all(lh5_it.current_local_entries == exp_loc_entries[entry // 5])
@@ -178,9 +180,9 @@ def test_iterate(more_lgnd_files):
         buffer_len=5,
     )
 
-    for lh5_out, entry in lh5_it:
+    for lh5_out in lh5_it:
         assert set(lh5_out.keys()) == {"is_valid_0vbb", "timestamp", "zacEmax_ctc_cal"}
-        assert entry % 5 == 0
+        assert lh5_it.current_i_entry % 5 == 0
         assert len(lh5_out) == 5
     print(lh5_it.get_global_entrylist())
     assert all(
@@ -197,9 +199,9 @@ def test_iterate(more_lgnd_files):
         buffer_len=5,
     )
 
-    for lh5_out, entry in lh5_it:
+    for lh5_out in lh5_it:
         assert set(lh5_out.keys()) == {"is_valid_0vbb", "timestamp", "zacEmax_ctc_cal"}
-        assert entry % 5 == 0
+        assert lh5_it.current_i_entry % 5 == 0
         assert len(lh5_out) == 5
 
     with pytest.raises(ValueError):

@@ -29,7 +29,7 @@ class LH5Iterator(Iterator):
     This can be used as an iterator:
 
 
-    >>> for lh5_obj, entry in LH5Iterator(...):
+    >>> for lh5_obj in LH5Iterator(...):
     >>>    # do the thing!
 
     This is intended for if you are reading a large quantity of data. This
@@ -47,6 +47,8 @@ class LH5Iterator(Iterator):
     In addition to accessing requested data via ``lh5_obj``, several
     properties exist to tell you where that data came from:
 
+    - lh5_it.current_i_entry: get the index within the entry list of the
+      first entry that is currently read
     - lh5_it.current_local_entries: get the entry numbers relative to the
       file the data came from
     - lh5_it.current_global_entries: get the entry number relative to the
@@ -496,7 +498,7 @@ class LH5Iterator(Iterator):
         if len(buf) == 0:
             raise StopIteration
         self.next_i_entry = self.current_i_entry + len(buf)
-        return (buf, self.current_i_entry)
+        return buf
 
     def __deepcopy__(self, memo):
         """Deep copy everything except lh5_st and friend"""
@@ -573,7 +575,7 @@ class LH5Iterator(Iterator):
         Parameters
         ----------
         fun:
-            function with signature fun(lh5_obj: LGDO, entry: int) -> Any
+            function with signature fun(lh5_obj: LGDO, it: LH5Iterator) -> Any
             Outputs of function will be collected in list and returned
         processes:
             number of processes or multiprocessing processor pool
@@ -600,7 +602,7 @@ class LH5Iterator(Iterator):
         Parameters
         ----------
         fun:
-            function with signature fun(lh5_obj: LGDO, entry: int) -> Any
+            function with signature fun(lh5_obj: LGDO, it: LH5Iterator) -> Any
             Outputs of function will be summed together using accumulator function
         processor:
             number of processes or multiprocessing processor pool
@@ -639,13 +641,13 @@ class LH5Iterator(Iterator):
 
 
 def map_helper(fun, it):
-    return [fun(tab, entry) for tab, entry in it]
+    return [fun(tab, it) for tab in it]
 
 
 def accumulate_helper(fun, op, init, it):
     accumulator = init
-    for tab, entry in it:
-        addend = fun(tab, entry)
+    for tab in it:
+        addend = fun(tab, it)
 
         if accumulator is None:
             # if no init, initialize on first entry

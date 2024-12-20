@@ -389,7 +389,7 @@ def test_set_vector_unsafe(testvov):
         np.array([4, 8, 9, 7], dtype=testvov.dtype),
         np.array([5, 3, 1], dtype=testvov.dtype),
     ]
-    desired_aoa = np.zeros(shape=(5, 5), dtype=testvov.dtype)
+    desired_aoa = np.zeros(shape=(5, 4), dtype=testvov.dtype)
     desired_lens = np.array([len(arr) for arr in desired])
 
     # test sequential filling
@@ -403,6 +403,15 @@ def test_set_vector_unsafe(testvov):
     third_vov = lgdo.VectorOfVectors(shape_guess=(5, 5), dtype=testvov.dtype)
     third_vov._set_vector_unsafe(0, desired_aoa, desired_lens)
     assert testvov == third_vov
+
+    # test vectorized filling when len is longer than array
+    fourth_vov = lgdo.VectorOfVectors(shape_guess=(5, 5), dtype=testvov.dtype)
+    desired_lens[3] = 10
+    fourth_vov._set_vector_unsafe(0, desired_aoa, desired_lens)
+    exp_entry_w_overflow = np.concatenate(
+        [desired[3], np.array([np.iinfo(testvov.dtype).min] * 6)]
+    )
+    assert np.all(fourth_vov[3] == exp_entry_w_overflow)
 
 
 def test_iter(testvov):
@@ -460,5 +469,5 @@ def test_lh5_iterator_view_as(lgnd_test_data):
         "ch1067205/dsp/energies",
     )
 
-    for obj, _ in it:
+    for obj in it:
         assert ak.is_valid(obj.view_as("ak"))

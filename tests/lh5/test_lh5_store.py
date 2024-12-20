@@ -292,6 +292,9 @@ def test_read_table_fancy_idx(lh5_file):
     assert isinstance(lh5_obj, types.Table)
     assert len(lh5_obj) == 2
 
+    lh5_obj = store.read("/data/struct/table", lh5_file, idx=[])
+    assert isinstance(lh5_obj, types.Table)
+    assert len(lh5_obj) == 0
 
 def test_read_empty_struct(lh5_file):
     store = lh5.LH5Store()
@@ -455,6 +458,14 @@ def test_read_lgnd_vov_fancy_idx(lgnd_file):
     assert len(lh5_obj) == 7
     assert (lh5_obj.cumulative_length.nda == [1, 2, 3, 4, 5, 6, 7]).all()
     assert (lh5_obj.flattened_data.nda == [40, 60, 64, 60, 64, 28, 60]).all()
+
+    lh5_obj = store.read("/geds/raw/tracelist", lgnd_file, idx=[])
+    assert isinstance(lh5_obj, types.VectorOfVectors)
+    assert len(lh5_obj) == 0
+
+    lh5_obj = store.read("/geds/raw/tracelist", [lgnd_file] * 3, idx=[250])
+    assert isinstance(lh5_obj, types.VectorOfVectors)
+    assert len(lh5_obj) == 1
 
 
 def test_read_array_concatenation(lgnd_file):
