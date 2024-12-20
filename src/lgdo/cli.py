@@ -228,10 +228,10 @@ Exclude the /data/table1/col1 Table column:
                 continue
 
             # read as little as possible
-            obj, _ = store.read(current, h5f0, n_rows=1)
+            obj = store.read(current, h5f0, n_rows=1)
             if isinstance(obj, (Table, Array, VectorOfVectors)):
                 # read all!
-                obj, _ = store.read(current, h5f0)
+                obj = store.read(current, h5f0)
                 lgdos[current] = obj
             elif isinstance(obj, Struct):
                 # structs might be used in a "group-like" fashion (i.e. they might only
@@ -309,7 +309,7 @@ Exclude the /data/table1/col1 Table column:
         log.info(msg)
 
         for name in lgdos:
-            obj, _ = store.read(name, file)
+            obj = store.read(name, file)
             # need to remove nested LGDOs from obj too before appending
             if isinstance(obj, Table):
                 _inplace_table_filter(name, obj, obj_list)
