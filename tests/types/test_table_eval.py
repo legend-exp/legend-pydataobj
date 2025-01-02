@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import hist
 import numpy as np
+import pytest
 
 import lgdo
 
@@ -31,6 +33,7 @@ def test_eval_dependency():
             ),
         }
     )
+
     r = obj.eval("sum(a)")
     assert isinstance(r, lgdo.Scalar)
 
@@ -81,3 +84,7 @@ def test_eval_dependency():
     # test with modules argument, the simplest is using directly lgdo
     res = obj.eval("lgdo.Array([1,2,3])", {}, modules={"lgdo": lgdo})
     assert res == lgdo.Array([1, 2, 3])
+
+    # check bad type
+    with pytest.raises(RuntimeError):
+        obj.eval("hist.Hist()", modules={"hist": hist})
