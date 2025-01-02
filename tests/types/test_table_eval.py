@@ -77,3 +77,7 @@ def test_eval_dependency():
     assert isinstance(r, lgdo.Scalar)
 
     assert obj.eval("np.sum(a) + ak.sum(e)")
+
+    # test with modules argument, the simplest is using directly lgdo
+    res = eval("lgdo.Array([1,2,3])", {}, {"lgdo": lgdo})
+    assert res == lgdo.Array([1, 2, 3])

@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Mapping
+from types import ModuleType
 from typing import Any
 from warnings import warn
 
@@ -266,6 +267,7 @@ class Table(Struct):
         self,
         expr: str,
         parameters: Mapping[str, str] | None = None,
+        modules: Mapping[str, ModuleType] | None = None,
     ) -> LGDO:
         """Apply column operations to the table and return a new LGDO.
 
@@ -299,6 +301,10 @@ class Table(Struct):
             a dictionary of function parameters. Passed to
             :func:`numexpr.evaluate`` as `local_dict` argument or to
             :func:`eval` as `locals` argument.
+        modules
+            a dictionary of additional modules used by the expression. If this is not `None`
+            then :func:`eval`is used and the expression can depend on any modules from this dictionary in
+            addition to awkward and numpy. These are passed to :func:`eval` as `globals` argument.
 
         Examples
         --------
@@ -339,8 +345,8 @@ class Table(Struct):
         msg = f"evaluating {expr!r} with locals={(self_unwrap | parameters)} and {has_ak=}"
         log.debug(msg)
 
-        # use numexpr if we are only dealing with numpy data types
-        if not has_ak:
+        # use numexpr if we are only dealing with numpy data types (and no global dictionary)
+        if not has_ak and modules is None:
             out_data = ne.evaluate(
                 expr,
                 local_dict=(self_unwrap | parameters),
@@ -366,6 +372,9 @@ class Table(Struct):
 
         # resort to good ol' eval()
         globs = {"ak": ak, "np": np}
+        if modules is not None:
+            globs = globs | modules
+
         out_data = eval(expr, globs, (self_unwrap | parameters))
 
         msg = f"...the result is {out_data!r}"
