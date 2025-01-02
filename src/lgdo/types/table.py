@@ -389,6 +389,10 @@ class Table(Struct):
         if np.isscalar(out_data):
             return Scalar(out_data)
 
+        # if out_data is already an LGDO just return it
+        if isinstance(out_data, LGDO):
+            return out_data
+
         msg = (
             f"evaluation resulted in a {type(out_data)} object, "
             "I don't know which LGDO this corresponds to"

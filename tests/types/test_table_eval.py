@@ -79,5 +79,5 @@ def test_eval_dependency():
     assert obj.eval("np.sum(a) + ak.sum(e)")
 
     # test with modules argument, the simplest is using directly lgdo
-    res = eval("lgdo.Array([1,2,3])", {}, {"lgdo": lgdo})
+    res = obj.eval("lgdo.Array([1,2,3])", {}, modules={"lgdo": lgdo})
     assert res == lgdo.Array([1, 2, 3])
