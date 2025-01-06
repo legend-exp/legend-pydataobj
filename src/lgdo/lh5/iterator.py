@@ -224,21 +224,30 @@ class LH5Iterator(Iterator):
                     self.local_entry_list[i_file] = np.nonzero(local_mask)[0]
 
         # Attach the friend
+        self.friend = None
         if friend is not None:
-            if not isinstance(friend, LH5Iterator):
-                msg = "Friend must be an Iterator"
-                raise ValueError(msg)
+            self.add_friend(friend)
 
-            # set buffer_lens to be equal
-            if self.buffer_len < friend.buffer_len:
-                friend.buffer_len = self.buffer_len
-                friend.lh5_buffer.resize(self.buffer_len)
-            elif self.buffer_len > friend.buffer_len:
-                self.buffer_len = friend.buffer_len
-                self.lh5_buffer.resize(friend.buffer_len)
+    def add_friend(self, friend: LH5Iterator):
+        if not isinstance(friend, LH5Iterator):
+            msg = "Friend must be an iterator"
+            raise ValueError(msg)
 
-            self.lh5_buffer.join(friend.lh5_buffer)
-        self.friend = friend
+        # set buffer_lens to be equal
+        if self.buffer_len < friend.buffer_len:
+            friend.buffer_len = self.buffer_len
+            friend.lh5_buffer.resize(self.buffer_len)
+        elif self.buffer_len > friend.buffer_len:
+            self.buffer_len = friend.buffer_len
+            self.lh5_buffer.resize(friend.buffer_len)
+            tmp = self.friend
+
+        # add friend
+        self.lh5_buffer.join(friend.lh5_buffer)
+        if self.friend is None:
+            self.friend = friend
+        else:
+            self.friend.add_friend(friend)
 
     def _get_file_cumlen(self, i_file: int) -> int:
         """Helper to get cumulative file length of file"""
@@ -559,7 +568,7 @@ class LH5Iterator(Iterator):
             # it.local_entry_list = it.local_entry_list[s]
             # it.global_entry_list = None
             if self.friend is not None:
-                self.friend = friend_its[i_worker]
+                self.add_friend(friend_its[i_worker])
 
             worker_its += [it]
 
