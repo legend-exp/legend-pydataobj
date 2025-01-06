@@ -15,17 +15,17 @@ from .vectorofvectors import VectorOfVectors
 from .waveformtable import WaveformTable
 
 __all__ = [
+    "LGDO",
     "Array",
-    "ArrayOfEqualSizedArrays",
     "ArrayOfEncodedEqualSizedArrays",
+    "ArrayOfEqualSizedArrays",
     "FixedSizeArray",
     "Histogram",
-    "LGDO",
     "Scalar",
     "Struct",
     "Table",
-    "VectorOfVectors",
     "VectorOfEncodedVectors",
+    "VectorOfVectors",
     "WaveformTable",
 ]
 
