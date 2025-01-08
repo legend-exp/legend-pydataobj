@@ -8,8 +8,10 @@ from multiprocessing.pool import Pool
 from typing import Any, Union
 from warnings import warn
 
+import awkward as ak
 import numpy as np
 import pandas as pd
+from hist import Hist, axis
 from numpy.typing import NDArray
 
 from ..types import Array, Scalar, Struct, VectorOfVectors
@@ -240,7 +242,6 @@ class LH5Iterator(Iterator):
         elif self.buffer_len > friend.buffer_len:
             self.buffer_len = friend.buffer_len
             self.lh5_buffer.resize(friend.buffer_len)
-            tmp = self.friend
 
         # add friend
         self.lh5_buffer.join(friend.lh5_buffer)
@@ -590,11 +591,11 @@ class LH5Iterator(Iterator):
             number of processes or multiprocessing processor pool
         """
         if processes is None:
-            return map_helper(fun, self)
+            return _map_helper(fun, self)
         if isinstance(processes, int):
             processes = Pool(processes)
         it_pool = self._generate_workers(processes._processes)
-        result = processes.map(partial(map_helper, fun), it_pool)
+        result = processes.map(partial(_map_helper, fun), it_pool)
 
         return [r for res in result for r in res]
 
@@ -613,7 +614,7 @@ class LH5Iterator(Iterator):
         fun:
             function with signature fun(lh5_obj: LGDO, it: LH5Iterator) -> Any
             Outputs of function will be summed together using accumulator function
-        processor:
+        processes:
             number of processes or multiprocessing processor pool
         operator:
             function with signature `operator(accumulator: Any, addend: Any) -> Any | None`
@@ -626,12 +627,12 @@ class LH5Iterator(Iterator):
             function to use to combine results from different threads. If `None`, use `operator`
         """
         if processes is None:
-            return accumulate_helper(fun, operator, init, self)
+            return _accumulate_helper(fun, operator, init, self)
         if isinstance(processes, int):
             processes = Pool(processes)
         it_pool = self._generate_workers(processes._processes)
         results = processes.map(
-            partial(accumulate_helper, fun, operator, init), it_pool
+            partial(_accumulate_helper, fun, operator, init), it_pool
         )
 
         # merge the results
@@ -648,12 +649,159 @@ class LH5Iterator(Iterator):
 
         return accumulator
 
+    def query(
+        self,
+        filter: Callable | str,
+        processes: Pool | int = None,
+    ):
+        """
+        Query the data files in the iterator and return the selected data
+        as a single table in one of several formats.
 
-def map_helper(fun, it):
+        Parameters
+        ----------
+        filter:
+            A filter function for reducing the data files. Can be:
+            - A function that returns reduced data, with signature
+              fun(lh5_obj: LGDO, it: LH5Iterator). Can return:
+              - NDArray: if 1D list of values; if 2D list of lists of values in
+                same order as axes
+              - Collection[ArrayLike]: return list of values in same order as axes
+              - Mapping[str, ArrayLike]: mapping from axis name to values
+              - pandas.DataFrame: pandas dataframe. Treat as mapping from column
+                name to values
+            - A string expression. This will call `pd.DataFrame.query <https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.query.html>`_ and return
+              a pandas DataFrame containing all columns in the fields mask.
+        processes:
+            number of processes or multiprocessing processor pool
+        """
+        if filter is None:
+            return self.accumulate(_identity, processes, self.lh5_buffer.append)
+        if isinstance(filter, str):
+            return pd.concat(self.map(_pandas_query(filter), processes))
+        if isinstance(filter, Callable):
+            test = filter(self.lh5_buffer, self)
+            if isinstance(test, LGDO):
+                return self.accumulate(filter, processes, test.append)
+            if isinstance(test, pd.DataFrame):
+                return pd.concat(self.map(filter, processes))
+            if isinstance(test, np.ndarray):
+                return np.concatenate(self.map(filter, processes))
+            if isinstance(test, ak.Array):
+                return ak.concatenate(self.map(filter, processes))
+            msg = f"Cannot call query with return type {test.__class__}. "
+            "Allowed return types: LGDO, np.array, pd.DataFrame, ak.Array"
+            raise ValueError(msg)
+        msg = "filter must be a string or a callable returning types "
+        "LGDO, np.array, pd.DataFrame, ak.Array"
+        raise ValueError(msg)
+
+    def hist(
+        self,
+        ax: Hist | axis | Collection[axis],
+        filter: Callable | str = None,
+        processes: Pool | int = None,
+        keys: Collection[str] | str = None,
+        **hist_kwargs,
+    ) -> Hist:
+        """
+        Fill a histogram from data produced by our `filter`. If
+        `filter` is `None`, fill with all data fetched by iterator.
+
+        Parameters
+        ----------
+        ax:
+            Axis object(s) used to construct the histogram. Can provide a Hist
+            which will be filled as well.
+        filter:
+            string containing a pandas style query function with signature fun(lh5_obj: LGDO, it: LH5Iterator) that
+            returns values to be filled into histogram. If `None` return all
+            values from `field_mask`. Return types can be:
+
+            - NDArray: if 1D list of values; if 2D list of lists of values in
+              same order as axes
+            - Collection[ArrayLike]: return list of values in same order as axes
+            - Mapping[str, ArrayLike]: mapping from axis name to values
+            - pandas.DataFrame: pandas dataframe. Treat as mapping from column
+              name to values
+        processes:
+            number of processes or multiprocessing processor pool
+        keys:
+            list of keys fields corresponding to axes. Use if filter
+            returns a mapping with names different from axis names.
+        hist_kwargs:
+            additional keyword arguments for constructing Hist. See `hist.Hist`.
+        """
+
+        # get initial hist for each thread
+        if isinstance(ax, axis.AxesMixin):
+            h = Hist(ax, **hist_kwargs)
+        elif isinstance(ax, Collection):
+            h = Hist(*ax, **hist_kwargs)
+        elif isinstance(ax, Hist):
+            h = ax.copy()
+            h[...] = 0
+
+        if filter is None:
+            filter = _identity
+        elif isinstance(filter, str):
+            filter = _pandas_query(filter)
+
+        h = self.accumulate(
+            filter if filter else _identity,
+            processes,
+            _hist_filler(keys),
+            h,
+            Hist.__add__,
+        )
+
+        if isinstance(ax, Hist):
+            ax += h
+            return ax
+        return h
+
+
+class _hist_filler:
+    def __init__(self, keys):
+        if keys is not None:
+            if isinstance(keys, str):
+                keys = [keys]
+            elif not isinstance(keys, list):
+                keys = list(keys)
+        self.keys = keys
+
+    def __call__(self, hist, data):
+        if isinstance(data, np.ndarray) and len(data.shape) == 1:
+            hist.fill(data)
+        elif isinstance(data, np.ndarray) and len(data.shape) == 2:
+            hist.fill(*data)
+        elif isinstance(data, (pd.DataFrame, Mapping)):
+            if self.keys is not None:
+                hist.fill(*[data[k] for k in self.keys])
+            else:
+                hist.fill(**data)
+        elif isinstance(data, ak.Array):
+            # TODO: handle nested ak arrays
+            if self.keys is not None:
+                hist.fill(*[data[k] for k in self.keys])
+            else:
+                hist.fill(*[data[f] for f in data.fields])
+        elif isinstance(data, Collection):
+            hist.fill(*data)
+        else:
+            msg = "data returned by filter is not compatible with hist. Must be a 1d or 2d numpy array, a list of arrays, or a mapping from str to array"
+            raise ValueError(msg)
+
+
+def _identity(val):
+    return val
+
+
+def _map_helper(fun, it):
     return [fun(tab, it) for tab in it]
 
 
-def accumulate_helper(fun, op, init, it):
+def _accumulate_helper(fun, op, init, it):
     accumulator = init
     for tab in it:
         addend = fun(tab, it)
@@ -669,3 +817,13 @@ def accumulate_helper(fun, op, init, it):
             accumulator += addend
 
     return accumulator
+
+
+class _pandas_query:
+    "Helper for when query is called on a string"
+
+    def __init__(self, expr):
+        self.expr = expr
+
+    def __call__(self, tab, _):
+        return tab.view_as("pd").query(self.expr)
