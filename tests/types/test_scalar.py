@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pickle
+
 import pytest
 
 import lgdo
@@ -33,3 +35,14 @@ def test_getattrs():
 
 def test_equality():
     assert lgdo.Scalar(value=42) == lgdo.Scalar(value=42)
+
+
+def test_pickle():
+    obj = lgdo.Scalar(value=10)
+    obj.attrs["attr1"] = 1
+
+    ex = pickle.loads(pickle.dumps(obj))
+    assert isinstance(ex, lgdo.Scalar)
+    assert ex.attrs["attr1"] == 1
+    assert ex.attrs["datatype"] == obj.attrs["datatype"]
+    assert ex.value == 10

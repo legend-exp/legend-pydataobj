@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pickle
 import warnings
 
 import awkward as ak
@@ -221,3 +222,20 @@ def test_remove_column():
 
     tbl.remove_column("c")
     assert list(tbl.keys()) == ["b"]
+
+
+def test_pickle():
+    col_dict = {
+        "a": lgdo.Array(nda=np.array([1, 2, 3, 4])),
+        "b": lgdo.Array(nda=np.array([5, 6, 7, 8])),
+        "c": lgdo.Array(nda=np.array([9, 10, 11, 12])),
+    }
+    obj = Table(col_dict=col_dict)
+    obj.attrs["attr1"] = 1
+
+    ex = pickle.loads(pickle.dumps(obj))
+    assert isinstance(ex, Table)
+    assert ex.attrs["attr1"] == 1
+    assert ex.attrs["datatype"] == obj.attrs["datatype"]
+    for key, val in col_dict.items():
+        assert ex[key] == val

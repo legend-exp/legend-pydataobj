@@ -16,6 +16,9 @@ class LH5DecodeError(Exception):
             + super().__str__()
         )
 
+    def __reduce__(self) -> tuple:  # for pickling.
+        return self.__class__, (*self.args, self.file, self.obj)
+
 
 class LH5EncodeError(Exception):
     def __init__(
@@ -32,3 +35,6 @@ class LH5EncodeError(Exception):
             f"while writing object {self.group}/{self.name} to file {self.file}: "
             + super().__str__()
         )
+
+    def __reduce__(self) -> tuple:  # for pickling.
+        return self.__class__, (*self.args, self.file, self.group, self.name)
