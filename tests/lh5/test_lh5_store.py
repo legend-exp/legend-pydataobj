@@ -296,6 +296,7 @@ def test_read_table_fancy_idx(lh5_file):
     assert isinstance(lh5_obj, types.Table)
     assert len(lh5_obj) == 0
 
+
 def test_read_empty_struct(lh5_file):
     store = lh5.LH5Store()
     lh5_obj = store.read("/data/struct/empty_struct", lh5_file)

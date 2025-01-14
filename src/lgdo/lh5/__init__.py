@@ -20,10 +20,10 @@ __all__ = [
     "LH5Store",
     "load_dfs",
     "load_nda",
-    "read",
-    "write",
-    "read_as",
     "ls",
+    "read",
+    "read_as",
     "read_n_rows",
     "show",
+    "write",
 ]
