@@ -30,9 +30,9 @@ from .radware import RadwareSigcompress
 from .varlen import ULEB128ZigZagDiff
 
 __all__ = [
-    "WaveformCodec",
-    "encode",
-    "decode",
     "RadwareSigcompress",
     "ULEB128ZigZagDiff",
+    "WaveformCodec",
+    "decode",
+    "encode",
 ]
