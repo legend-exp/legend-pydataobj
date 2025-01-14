@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Mapping
+from types import ModuleType
 from typing import Any
 from warnings import warn
 
@@ -35,6 +36,12 @@ class Table(Struct, LGDOCollection):
     resize it before passing to data processing functions, as they will call
     :meth:`__len__` to access valid data, which returns the ``size`` attribute.
     """
+
+    def __new__(cls, *args, **kwargs):
+        # allow for (un-)pickling LGDO objects.
+        obj = super().__new__(cls, *args, **kwargs)
+        obj.size = None
+        return obj
 
     def __init__(
         self,
@@ -287,6 +294,7 @@ class Table(Struct, LGDOCollection):
         self,
         expr: str,
         parameters: Mapping[str, str] | None = None,
+        modules: Mapping[str, ModuleType] | None = None,
     ) -> LGDO:
         """Apply column operations to the table and return a new LGDO.
 
@@ -320,6 +328,10 @@ class Table(Struct, LGDOCollection):
             a dictionary of function parameters. Passed to
             :func:`numexpr.evaluate`` as `local_dict` argument or to
             :func:`eval` as `locals` argument.
+        modules
+            a dictionary of additional modules used by the expression. If this is not `None`
+            then :func:`eval`is used and the expression can depend on any modules from this dictionary in
+            addition to awkward and numpy. These are passed to :func:`eval` as `globals` argument.
 
         Examples
         --------
@@ -360,8 +372,8 @@ class Table(Struct, LGDOCollection):
         msg = f"evaluating {expr!r} with locals={(self_unwrap | parameters)} and {has_ak=}"
         log.debug(msg)
 
-        # use numexpr if we are only dealing with numpy data types
-        if not has_ak:
+        # use numexpr if we are only dealing with numpy data types (and no global dictionary)
+        if not has_ak and modules is None:
             out_data = ne.evaluate(
                 expr,
                 local_dict=(self_unwrap | parameters),
@@ -387,6 +399,9 @@ class Table(Struct, LGDOCollection):
 
         # resort to good ol' eval()
         globs = {"ak": ak, "np": np}
+        if modules is not None:
+            globs = globs | modules
+
         out_data = eval(expr, globs, (self_unwrap | parameters))
 
         msg = f"...the result is {out_data!r}"
@@ -400,6 +415,10 @@ class Table(Struct, LGDOCollection):
 
         if np.isscalar(out_data):
             return Scalar(out_data)
+
+        # if out_data is already an LGDO just return it
+        if isinstance(out_data, LGDO):
+            return out_data
 
         msg = (
             f"evaluation resulted in a {type(out_data)} object, "

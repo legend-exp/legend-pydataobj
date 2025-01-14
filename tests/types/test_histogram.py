@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import pickle
 
 import hist
 import numpy as np
@@ -392,3 +393,14 @@ def test_histogram_fill():
 
     with pytest.raises(ValueError, match="data must be"):
         h.fill(np.ones(shape=(5, 5)))
+
+
+def test_pickle():
+    obj = Histogram(np.array([1, 1]), (Histogram.Axis.from_range_edges([0, 1, 2]),))
+    obj.attrs["attr1"] = 1
+
+    ex = pickle.loads(pickle.dumps(obj))
+    assert isinstance(ex, Histogram)
+    assert ex.attrs["attr1"] == 1
+    assert ex.attrs["datatype"] == obj.attrs["datatype"]
+    assert np.all(ex.weights == obj.weights)

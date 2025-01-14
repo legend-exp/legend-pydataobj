@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import pickle
 from collections import namedtuple
 
 import awkward as ak
@@ -471,3 +472,19 @@ def test_lh5_iterator_view_as(lgnd_test_data):
 
     for obj in it:
         assert ak.is_valid(obj.view_as("ak"))
+
+
+def test_pickle(testvov):
+    obj = testvov.v2d
+    ex = pickle.loads(pickle.dumps(obj))
+
+    desired = [
+        np.array([1, 2]),
+        np.array([3, 4, 5]),
+        np.array([2]),
+        np.array([4, 8, 9, 7]),
+        np.array([5, 3, 1]),
+    ]
+
+    for i in range(len(desired)):
+        assert np.array_equal(desired[i], ex[i])

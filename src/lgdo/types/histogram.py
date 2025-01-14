@@ -418,8 +418,13 @@ class Histogram(Struct):
 
     def __setitem__(self, name: str, obj: LGDO) -> None:
         # do not allow for new attributes on this
-        msg = "histogram fields cannot be mutated"
-        raise AttributeError(msg)
+        known_keys = ("binning", "weights", "isdensity")
+        if name in known_keys and not dict.__contains__(self, name):
+            # but allow initialization while unpickling (after __init__() this is unreachable)
+            dict.__setitem__(self, name, obj)
+        else:
+            msg = "histogram fields cannot be mutated "
+            raise TypeError(msg)
 
     def __getattr__(self, name: str) -> None:
         # do not allow for new attributes on this
