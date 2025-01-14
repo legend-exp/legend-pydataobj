@@ -11,6 +11,12 @@ import pandas as pd
 class LGDO(ABC):
     """Abstract base class representing a LEGEND Data Object (LGDO)."""
 
+    def __new__(cls, *_args, **_kwargs):
+        # allow for (un-)pickling LGDO objects.
+        obj = super().__new__(cls)
+        obj.attrs = {}
+        return obj
+
     @abstractmethod
     def __init__(self, attrs: dict[str, Any] | None = None) -> None:
         self.attrs = {} if attrs is None else dict(attrs)

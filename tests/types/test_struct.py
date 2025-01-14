@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pickle
+
 import pytest
 
 import lgdo
@@ -78,3 +80,15 @@ def test_remove_field():
 
     struct.remove_field("array1", delete=True)
     assert list(struct.keys()) == []
+
+
+def test_pickle():
+    obj_dict = {"scalar1": lgdo.Scalar(value=10)}
+    attrs = {"attr1": 1}
+    struct = lgdo.Struct(obj_dict=obj_dict, attrs=attrs)
+
+    ex = pickle.loads(pickle.dumps(struct))
+    assert isinstance(ex, lgdo.Struct)
+    assert ex.attrs["attr1"] == 1
+    assert ex.attrs["datatype"] == struct.attrs["datatype"]
+    assert ex["scalar1"].value == 10

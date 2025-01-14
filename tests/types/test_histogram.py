@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import pickle
 
 import hist
 import numpy as np
@@ -266,7 +267,7 @@ def test_view_as_np():
 def test_not_like_table():
     h = Histogram(np.array([1, 1]), (np.array([0, 1, 2]),))
     assert h.form_datatype() == "struct{binning,weights,isdensity}"
-    with pytest.raises(TypeError):
+    with pytest.raises(AttributeError):
         x = h.x  # noqa: F841
     with pytest.raises(TypeError):
         h["x"] = Scalar(1.0)
@@ -392,3 +393,14 @@ def test_histogram_fill():
 
     with pytest.raises(ValueError, match="data must be"):
         h.fill(np.ones(shape=(5, 5)))
+
+
+def test_pickle():
+    obj = Histogram(np.array([1, 1]), (Histogram.Axis.from_range_edges([0, 1, 2]),))
+    obj.attrs["attr1"] = 1
+
+    ex = pickle.loads(pickle.dumps(obj))
+    assert isinstance(ex, Histogram)
+    assert ex.attrs["attr1"] == 1
+    assert ex.attrs["datatype"] == obj.attrs["datatype"]
+    assert np.all(ex.weights == obj.weights)

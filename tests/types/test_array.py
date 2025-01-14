@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pickle
+
 import awkward as ak
 import numpy as np
 import pandas as pd
@@ -61,3 +63,14 @@ def test_view():
 
     with pytest.raises(ValueError):
         a.view_as("ak", with_units=True)
+
+
+def test_pickle():
+    obj = Array(nda=np.array([1, 2, 3, 4]))
+    obj.attrs["attr1"] = 1
+
+    ex = pickle.loads(pickle.dumps(obj))
+    assert isinstance(ex, Array)
+    assert ex.attrs["attr1"] == 1
+    assert ex.attrs["datatype"] == obj.attrs["datatype"]
+    assert np.all(ex.nda == np.array([1, 2, 3, 4]))
