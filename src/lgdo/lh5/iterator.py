@@ -555,6 +555,12 @@ class LH5Iterator(Iterator):
             friend_its = self.friend._generate_workers(n_workers)
 
         i_files = np.linspace(0, len(self.lh5_files), n_workers + 1).astype("int")
+        # if we have an entry list, get local entries for all files
+        if self.local_entry_list is not None:
+            local_entry_list = [
+                self.get_file_entries(i) for i in range(len(self.lh5_files))
+            ]
+
         worker_its = []
         for i_worker in range(n_workers):
             it = deepcopy(self)
@@ -563,11 +569,26 @@ class LH5Iterator(Iterator):
             s = slice(i_files[i_worker], i_files[i_worker + 1])
             it.lh5_files = it.lh5_files[s]
             it.groups = it.groups[s]
-            # TODO: handle these correctly
             it.file_map = it.file_map[s]
             it.entry_map = it.entry_map[s]
-            # it.local_entry_list = it.local_entry_list[s]
-            # it.global_entry_list = None
+            if i_files[i_worker] - 1 > 0:
+                np.subtract(
+                    it.file_map,
+                    self.file_map[i_files[i_worker] - 1],
+                    out=it.file_map,
+                    where=it.file_map != np.iinfo("q").max,
+                )
+                np.subtract(
+                    it.entry_map,
+                    self.entry_map[i_files[i_worker] - 1],
+                    out=it.entry_map,
+                    where=it.entry_map != np.iinfo("q").max,
+                )
+
+            if it.local_entry_list is not None:
+                it.local_entry_list = local_entry_list[s]
+            it.global_entry_list = None
+
             if self.friend is not None:
                 self.add_friend(friend_its[i_worker])
 
