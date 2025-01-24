@@ -561,12 +561,10 @@ class VectorOfVectors(LGDO):
             compatible one.
         """
         if self.ndim == 2:
-            ak_arr = self.view_as("ak")
-
             if max_len is None:
                 lens = np.copy(self.cumulative_length)
                 lens[1:] = lens[1:] - lens[:-1]
-                max_len = int(ak.max(lens))
+                max_len = int(np.max(lens))
             nda = np.full((len(self), max_len), fill_val)
             if preserve_dtype:
                 nda = nda.astype(self.flattened_data.dtype, copy=False)
