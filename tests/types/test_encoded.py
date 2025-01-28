@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pickle
+
 import awkward as ak
 import awkward_pandas as akpd
 import numpy as np
@@ -285,3 +287,51 @@ def test_aoeesa_view_as():
 
     with pytest.raises(TypeError):
         df = voev.view_as("np")
+
+
+def test_aoeesa_pickle():
+    obj = ArrayOfEncodedEqualSizedArrays(
+        encoded_data=VectorOfVectors(
+            flattened_data=Array(nda=np.array([1, 2, 3, 4, 5, 2, 4, 8, 9, 7, 5, 3, 1])),
+            cumulative_length=Array(nda=np.array([2, 5, 6, 10, 13])),
+        ),
+        decoded_size=99,
+    )
+
+    ex = pickle.loads(pickle.dumps(obj))
+
+    desired = [
+        [1, 2],
+        [3, 4, 5],
+        [2],
+        [4, 8, 9, 7],
+        [5, 3, 1],
+    ]
+
+    for i, v in enumerate(ex):
+        assert np.array_equal(v, desired[i])
+
+
+def test_voev_pickle():
+    obj = VectorOfEncodedVectors(
+        encoded_data=VectorOfVectors(
+            flattened_data=Array(nda=np.array([1, 2, 3, 4, 5, 2, 4, 8, 9, 7, 5, 3, 1])),
+            cumulative_length=Array(nda=np.array([2, 5, 6, 10, 13])),
+        ),
+        decoded_size=Array(shape=5, fill_val=6),
+        attrs={"units": "s"},
+    )
+
+    ex = pickle.loads(pickle.dumps(obj))
+
+    desired = [
+        [1, 2],
+        [3, 4, 5],
+        [2],
+        [4, 8, 9, 7],
+        [5, 3, 1],
+    ]
+
+    for i, (v, s) in enumerate(ex):
+        assert np.array_equal(v, desired[i])
+        assert s == 6

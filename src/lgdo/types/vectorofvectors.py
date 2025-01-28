@@ -13,6 +13,7 @@ import awkward as ak
 import awkward_pandas as akpd
 import numpy as np
 import pandas as pd
+from numba import jit
 from numpy.typing import ArrayLike, DTypeLike, NDArray
 
 from .. import utils
@@ -560,17 +561,15 @@ class VectorOfVectors(LGDO):
             compatible one.
         """
         if self.ndim == 2:
-            ak_arr = self.view_as("ak")
-
             if max_len is None:
-                max_len = int(ak.max(ak.count(ak_arr, axis=-1)))
-
-            nda = ak.fill_none(
-                ak.pad_none(ak_arr, max_len, clip=True), fill_val
-            ).to_numpy(allow_missing=False)
-
+                lens = np.copy(self.cumulative_length)
+                lens[1:] = lens[1:] - lens[:-1]
+                max_len = int(np.max(lens))
+            nda = np.full((len(self), max_len), fill_val)
             if preserve_dtype:
                 nda = nda.astype(self.flattened_data.dtype, copy=False)
+
+            _to_aoesa(self.flattened_data.nda, self.cumulative_length.nda, nda)
 
             return aoesa.ArrayOfEqualSizedArrays(nda=nda, attrs=self.getattrs())
 
@@ -664,3 +663,11 @@ class VectorOfVectors(LGDO):
 
         msg = f"{library} is not a supported third-party format."
         raise ValueError(msg)
+
+
+@jit
+def _to_aoesa(flattened_array, cumulative_length, nda):
+    prev_cl = 0
+    for i, cl in enumerate(cumulative_length):
+        nda[i, : (cl - prev_cl)] = flattened_array[prev_cl:cl]
+        prev_cl = cl
