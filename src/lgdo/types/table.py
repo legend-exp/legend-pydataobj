@@ -351,6 +351,20 @@ class Table(Struct):
         msg = f"evaluating {expr!r} with locals={(self_unwrap | parameters)} and {has_ak=}"
         log.debug(msg)
 
+        def _make_lgdo(data):
+            if data.ndim == 0:
+                return Scalar(data.item())
+            if data.ndim == 1:
+                return Array(data)
+            if data.ndim == 2:
+                return ArrayOfEqualSizedArrays(nda=data)
+
+            msg = (
+                f"evaluation resulted in {data.ndim}-dimensional data, "
+                "I don't know which LGDO this corresponds to"
+            )
+            raise RuntimeError(msg)
+
         # use numexpr if we are only dealing with numpy data types (and no global dictionary)
         if not has_ak and modules is None:
             out_data = ne.evaluate(
@@ -363,18 +377,7 @@ class Table(Struct):
 
             # need to convert back to LGDO
             # np.evaluate should always return a numpy thing?
-            if out_data.ndim == 0:
-                return Scalar(out_data.item())
-            if out_data.ndim == 1:
-                return Array(out_data)
-            if out_data.ndim == 2:
-                return ArrayOfEqualSizedArrays(nda=out_data)
-
-            msg = (
-                f"evaluation resulted in {out_data.ndim}-dimensional data, "
-                "I don't know which LGDO this corresponds to"
-            )
-            raise RuntimeError(msg)
+            return _make_lgdo(out_data)
 
         # resort to good ol' eval()
         globs = {"ak": ak, "np": np}
@@ -394,18 +397,7 @@ class Table(Struct):
 
         # modules can still produce numpy array
         if isinstance(out_data, np.ndarray):
-            if out_data.ndim == 0:
-                return Scalar(out_data.item())
-            if out_data.ndim == 1:
-                return Array(out_data)
-            if out_data.ndim == 2:
-                return ArrayOfEqualSizedArrays(nda=out_data)
-
-            msg = (
-                f"evaluation resulted in {out_data.ndim}-dimensional data, "
-                "I don't know which LGDO this corresponds to"
-            )
-            raise RuntimeError(msg)
+            return _make_lgdo(out_data)
 
         if np.isscalar(out_data):
             return Scalar(out_data)
