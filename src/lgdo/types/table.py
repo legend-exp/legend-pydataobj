@@ -386,6 +386,21 @@ class Table(Struct):
                 return Array(out_data.to_numpy())
             return VectorOfVectors(out_data)
 
+        # modules can still produce numpy array
+        if isinstance(out_data, np.ndarray):
+            if out_data.ndim == 0:
+                return Scalar(out_data.item())
+            if out_data.ndim == 1:
+                return Array(out_data)
+            if out_data.ndim == 2:
+                return ArrayOfEqualSizedArrays(nda=out_data)
+
+            msg = (
+                f"evaluation resulted in {out_data.ndim}-dimensional data, "
+                "I don't know which LGDO this corresponds to"
+            )
+            raise RuntimeError(msg)
+
         if np.isscalar(out_data):
             return Scalar(out_data)
 
