@@ -367,17 +367,22 @@ class Table(Struct):
 
         # use numexpr if we are only dealing with numpy data types (and no global dictionary)
         if not has_ak and modules is None:
-            out_data = ne.evaluate(
-                expr,
-                local_dict=(self_unwrap | parameters),
-            )
+            try:
+                out_data = ne.evaluate(
+                    expr,
+                    local_dict=(self_unwrap | parameters),
+                )
 
-            msg = f"...the result is {out_data!r}"
-            log.debug(msg)
+                msg = f"...the result is {out_data!r}"
+                log.debug(msg)
 
-            # need to convert back to LGDO
-            # np.evaluate should always return a numpy thing?
-            return _make_lgdo(out_data)
+                # need to convert back to LGDO
+                # np.evaluate should always return a numpy thing?
+                return _make_lgdo(out_data)
+
+            except Exception:
+                msg = f"Warning {expr} could not be evaluated with numexpr probably due to some not allowed characters, trying with eval()."
+                log.debug(msg)
 
         # resort to good ol' eval()
         globs = {"ak": ak, "np": np}
