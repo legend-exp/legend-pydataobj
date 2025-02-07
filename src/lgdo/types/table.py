@@ -19,7 +19,7 @@ from pandas.io.formats import format as fmt
 
 from .array import Array
 from .arrayofequalsizedarrays import ArrayOfEqualSizedArrays
-from .lgdo import LGDO
+from .lgdo import LGDO, LGDOCollection
 from .scalar import Scalar
 from .struct import Struct
 from .vectorofvectors import VectorOfVectors
@@ -27,12 +27,8 @@ from .vectorofvectors import VectorOfVectors
 log = logging.getLogger(__name__)
 
 
-class Table(Struct):
+class Table(Struct, LGDOCollection):
     """A special struct of arrays or subtable columns of equal length.
-
-    Holds onto an internal read/write location ``loc`` that is useful in
-    managing table I/O using functions like :meth:`push_row`, :meth:`is_full`,
-    and :meth:`clear`.
 
     Note
     ----
@@ -49,7 +45,7 @@ class Table(Struct):
 
     def __init__(
         self,
-        col_dict: Mapping[str, LGDO] | pd.DataFrame | ak.Array | None = None,
+        col_dict: Mapping[str, LGDOCollection] | pd.DataFrame | ak.Array | None = None,
         size: int | None = None,
         attrs: Mapping[str, Any] | None = None,
     ) -> None:
@@ -65,7 +61,7 @@ class Table(Struct):
         col_dict
             instantiate this table using the supplied mapping of column names
             and array-like objects. Supported input types are: mapping of
-            strings to LGDOs, :class:`pd.DataFrame` and :class:`ak.Array`.
+            strings to LGDOCollections, :class:`pd.DataFrame` and :class:`ak.Array`.
             Note 1: no copy is performed, the objects are used directly (unless
             :class:`ak.Array` is provided).  Note 2: if `size` is not ``None``,
             all arrays will be resized to match it.  Note 3: if the arrays have
@@ -85,7 +81,8 @@ class Table(Struct):
             col_dict = _ak_to_lgdo_or_col_dict(col_dict)
 
         # call Struct constructor
-        super().__init__(obj_dict=col_dict, attrs=attrs)
+        Struct.__init__(self, obj_dict=col_dict)
+        LGDOCollection.__init__(self, attrs=attrs)
 
         # if col_dict is not empty, set size according to it
         # if size is also supplied, resize all fields to match it
@@ -93,12 +90,9 @@ class Table(Struct):
         if col_dict is not None and len(col_dict) > 0:
             self.resize(new_size=size, do_warn=(size is None))
 
-        # if no col_dict, just set the size (default to 1024)
+        # if no col_dict, just set the size
         else:
             self.size = size if size is not None else None
-
-        # always start at loc=0
-        self.loc = 0
 
     def datatype_name(self) -> str:
         return "table"
@@ -107,7 +101,31 @@ class Table(Struct):
         """Provides ``__len__`` for this array-like class."""
         return self.size
 
-    def resize(self, new_size: int | None = None, do_warn: bool = False) -> None:
+    def reserve_capacity(self, capacity: int | list) -> None:
+        "Set size (number of rows) of internal memory buffer"
+        if isinstance(capacity, int):
+            for obj in self.values():
+                obj.reserve_capacity(capacity)
+        else:
+            if len(capacity) != len(self.keys()):
+                msg = "List of capacities must have same length as number of keys"
+                raise ValueError(msg)
+
+            for obj, cap in zip(self.values(), capacity):
+                obj.reserve_capacity(cap)
+
+    def get_capacity(self) -> int:
+        "Get list of capacities for each key"
+        return [v.get_capacity() for v in self.values()]
+
+    def trim_capacity(self) -> int:
+        "Set capacity to be minimum needed to support Array size"
+        for v in self.values():
+            v.trim_capacity()
+
+    def resize(
+        self, new_size: int | None = None, do_warn: bool = False, trim: bool = False
+    ) -> None:
         # if new_size = None, use the size from the first field
         for field, obj in self.items():
             if new_size is None:
@@ -119,21 +137,20 @@ class Table(Struct):
                         f"with size {len(obj)} != {new_size}"
                     )
                 if isinstance(obj, Table):
-                    obj.resize(new_size)
+                    obj.resize(new_size, trim)
                 else:
-                    obj.resize(new_size)
+                    obj.resize(new_size, trim)
         self.size = new_size
 
-    def push_row(self) -> None:
-        self.loc += 1
+    def insert(self, i: int, vals: dict) -> None:
+        "Insert vals into table at row i. Vals is a mapping from table key to val"
+        for k, ar in self.items():
+            ar.insert(i, vals[k])
+        self.size += 1
 
-    def is_full(self) -> bool:
-        return self.loc >= self.size
-
-    def clear(self) -> None:
-        self.loc = 0
-
-    def add_field(self, name: str, obj: LGDO, use_obj_size: bool = False) -> None:
+    def add_field(
+        self, name: str, obj: LGDOCollection, use_obj_size: bool = False
+    ) -> None:
         """Add a field (column) to the table.
 
         Use the name "field" here to match the terminology used in
@@ -170,7 +187,9 @@ class Table(Struct):
             new_size = len(obj) if use_obj_size else self.size
             self.resize(new_size=new_size)
 
-    def add_column(self, name: str, obj: LGDO, use_obj_size: bool = False) -> None:
+    def add_column(
+        self, name: str, obj: LGDOCollection, use_obj_size: bool = False
+    ) -> None:
         """Alias for :meth:`.add_field` using table terminology 'column'."""
         self.add_field(name, obj, use_obj_size=use_obj_size)
 
@@ -201,8 +220,10 @@ class Table(Struct):
             set to ``False`` to turn off warnings associated with mismatched
             `loc` parameter or :meth:`add_column` warnings.
         """
-        if other_table.loc != self.loc and do_warn:
-            log.warning(f"other_table.loc ({other_table.loc}) != self.loc({self.loc})")
+        if len(other_table) != len(self) and do_warn:
+            log.warning(
+                f"len(other_table) ({len(other_table)}) != len(self) ({len(self)})"
+            )
         if cols is None:
             cols = other_table.keys()
         for name in cols:

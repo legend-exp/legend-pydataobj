@@ -92,3 +92,53 @@ class LGDO(ABC):
 
     def __repr__(self) -> str:
         return self.__class__.__name__ + f"(attrs={self.attrs!r})"
+
+
+class LGDOCollection(LGDO):
+    """Abstract base class representing a LEGEND Collection Object (LGDO).
+    This defines the interface for classes used as table columns.
+    """
+
+    @abstractmethod
+    def __init__(self, attrs: dict[str, Any] | None = None) -> None:
+        super().__init__(attrs)
+
+    @abstractmethod
+    def __len__(self) -> int:
+        """Provides ``__len__`` for this array-like class."""
+
+    @abstractmethod
+    def reserve_capacity(self, capacity: int) -> None:
+        """Reserve capacity (in rows) for later use. Internal memory buffers
+        will have enough entries to store this many rows.
+        """
+
+    @abstractmethod
+    def get_capacity(self) -> int:
+        "get reserved capacity of internal memory buffers in rows"
+
+    @abstractmethod
+    def trim_capacity(self) -> None:
+        """set capacity to only what is required to store current contents
+        of LGDOCollection
+        """
+
+    @abstractmethod
+    def resize(self, new_size: int, trim: bool = False) -> None:
+        """Return this LGDO's datatype attribute string."""
+
+    def append(self, val) -> None:
+        "append val to end of LGDOCollection"
+        self.insert(len(self), val)
+
+    @abstractmethod
+    def insert(self, i: int, val) -> None:
+        "insert val into LGDOCollection at position i"
+
+    @abstractmethod
+    def replace(self, i: int, val) -> None:
+        "replace item at position i with val in LGDOCollection"
+
+    def clear(self, trim: bool = False) -> None:
+        "set size of LGDOCollection to zero"
+        self.resize(0, trim=trim)

@@ -424,7 +424,7 @@ class Histogram(Struct):
             dict.__setitem__(self, name, obj)
         else:
             msg = "histogram fields cannot be mutated "
-            raise TypeError(msg)
+            raise AttributeError(msg)
 
     def __getattr__(self, name: str) -> None:
         # do not allow for new attributes on this

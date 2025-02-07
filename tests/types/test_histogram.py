@@ -269,7 +269,7 @@ def test_not_like_table():
     assert h.form_datatype() == "struct{binning,weights,isdensity}"
     with pytest.raises(AttributeError):
         x = h.x  # noqa: F841
-    with pytest.raises(TypeError):
+    with pytest.raises(AttributeError):
         h["x"] = Scalar(1.0)
     with pytest.raises(TypeError):
         h.add_field("x", Scalar(1.0))

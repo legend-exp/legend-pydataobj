@@ -11,12 +11,12 @@ from numpy.typing import NDArray
 
 from .. import utils
 from .array import Array
-from .lgdo import LGDO
+from .lgdo import LGDOCollection
 from .scalar import Scalar
 from .vectorofvectors import VectorOfVectors
 
 
-class VectorOfEncodedVectors(LGDO):
+class VectorOfEncodedVectors(LGDOCollection):
     """An array of variable-length encoded arrays.
 
     Used to represent an encoded :class:`.VectorOfVectors`. In addition to an
@@ -92,6 +92,17 @@ class VectorOfEncodedVectors(LGDO):
 
         return False
 
+    def reserve_capacity(self, *capacity: int) -> None:
+        self.encoded_data.reserve_capacity(*capacity)
+        self.decoded_size.reserve_capacity(capacity[0])
+
+    def get_capacity(self) -> tuple:
+        return (self.decoded_size.get_capacity, *self.encoded_data.get_capacity())
+
+    def trim_capacity(self) -> None:
+        self.encoded_data.trim_capacity()
+        self.decoded_size.trim_capacity()
+
     def resize(self, new_size: int) -> None:
         """Resize vector along the first axis.
 
@@ -101,21 +112,6 @@ class VectorOfEncodedVectors(LGDO):
         """
         self.encoded_data.resize(new_size)
         self.decoded_size.resize(new_size)
-
-    def append(self, value: tuple[NDArray, int]) -> None:
-        """Append a 1D encoded vector at the end.
-
-        Parameters
-        ----------
-        value
-            a tuple holding the encoded array and its decoded size.
-
-        See Also
-        --------
-        .VectorOfVectors.append
-        """
-        self.encoded_data.append(value[0])
-        self.decoded_size.append(value[1])
 
     def insert(self, i: int, value: tuple[NDArray, int]) -> None:
         """Insert an encoded vector at index `i`.
@@ -282,7 +278,7 @@ class VectorOfEncodedVectors(LGDO):
         raise ValueError(msg)
 
 
-class ArrayOfEncodedEqualSizedArrays(LGDO):
+class ArrayOfEncodedEqualSizedArrays(LGDOCollection):
     """An array of encoded arrays with equal decoded size.
 
     Used to represent an encoded :class:`.ArrayOfEqualSizedArrays`. In addition
@@ -349,14 +345,23 @@ class ArrayOfEncodedEqualSizedArrays(LGDO):
 
         return False
 
-    def resize(self, new_size: int) -> None:
+    def reserve_capacity(self, *capacity: int) -> None:
+        self.encoded_data.reserve_capacity(capacity)
+
+    def get_capacity(self) -> tuple:
+        return self.encoded_data.get_capacity()
+
+    def trim_capacity(self) -> None:
+        self.encoded_data.trim_capacity()
+
+    def resize(self, new_size: int, trim: bool = False) -> None:
         """Resize array along the first axis.
 
         See Also
         --------
         .VectorOfVectors.resize
         """
-        self.encoded_data.resize(new_size)
+        self.encoded_data.resize(new_size, trim)
 
     def append(self, value: NDArray) -> None:
         """Append a 1D encoded array at the end.

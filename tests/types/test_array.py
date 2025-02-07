@@ -28,16 +28,44 @@ def test_init():
     assert array.attrs == attrs | {"datatype": "array<1>{real}"}
 
 
-def test_resize():
+def test_resize_and_capacity():
     array = Array(nda=np.array([1, 2, 3, 4]))
+    assert array.get_capacity() == 4
+
     array.resize(3)
+    assert array.get_capacity() == 4
     assert (array.nda == np.array([1, 2, 3])).all()
+
+    array.resize(5)
+    assert array.get_capacity() >= 5
+
+    array.clear(trim=True)
+    assert array.get_capacity() == 0
+    assert len(array) == 0
 
 
 def test_insert():
     a = Array(np.array([1, 2, 3, 4]))
     a.insert(2, [-1, -1])
     assert a == Array([1, 2, -1, -1, 3, 4])
+
+    with pytest.raises(IndexError):
+        a.insert(10, 10)
+
+
+def test_append():
+    a = Array(np.array([1, 2, 3, 4]))
+    a.append(-1)
+    assert a == Array([1, 2, 3, 4, -1])
+
+
+def test_replace():
+    a = Array(np.array([1, 2, 3, 4]))
+    a.replace(2, -1)
+    assert a == Array([1, 2, -1, 4])
+
+    with pytest.raises(IndexError):
+        a.replace(10, 10)
 
 
 def test_view():
