@@ -547,6 +547,8 @@ class LH5Iterator(Iterator):
             size=self.buffer_len,
             field_mask=self.field_mask,
         )
+        if self.friend is not None:
+            self.lh5_buffer.join(self.friend.lh5_buffer)
 
     def _generate_workers(self, n_workers: int):
         """Create n_workers copy of this iterator, dividing the files and
@@ -590,7 +592,7 @@ class LH5Iterator(Iterator):
             it.global_entry_list = None
 
             if self.friend is not None:
-                self.add_friend(friend_its[i_worker])
+                it.add_friend(friend_its[i_worker])
 
             worker_its += [it]
 
