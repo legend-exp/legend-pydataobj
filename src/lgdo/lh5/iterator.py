@@ -330,15 +330,14 @@ class LH5Iterator(typing.Iterator):
     def read(self, i_entry: int, n_entries: int | None = None) -> LGDO:
         "Read the nextlocal chunk of events, starting at entry."
         self.lh5_buffer.resize(0)
-        
+
         if n_entries is None:
             n_entries = self.buffer_len
-        elif n_entries==0:
+        elif n_entries == 0:
             return self.lh5_buffer
         elif n_entries > self.buffer_len:
             msg = "n_entries cannot be larger than buffer_len"
             raise ValueError(msg)
-        
 
         # if file hasn't been opened yet, search through files
         # sequentially until we find the right one
@@ -509,8 +508,10 @@ class LH5Iterator(typing.Iterator):
         """Read next buffer_len entries and return lh5_table and iterator entry."""
         n_entries = self.n_entries
         if n_entries is not None:
-            n_entries = min(self.buffer_len, n_entries+self.i_start-self.next_i_entry)
-        
+            n_entries = min(
+                self.buffer_len, n_entries + self.i_start - self.next_i_entry
+            )
+
         buf = self.read(self.next_i_entry, n_entries)
         if len(buf) == 0:
             raise StopIteration
