@@ -64,6 +64,11 @@ def _h5_write_array(
         if "hdf5_settings" in obj.attrs:
             h5py_kwargs |= obj.attrs["hdf5_settings"]
 
+        # HACK: a tuple is strictly requested for the "chunks" setting, but
+        # we'd like to pass a list too in some situations
+        if "chunks" in h5py_kwargs and isinstance(h5py_kwargs["chunks"], list):
+            h5py_kwargs["chunks"] = tuple(h5py_kwargs["chunks"])
+
         # create HDF5 dataset
         ds = group.create_dataset(name, data=nda, **h5py_kwargs)
 

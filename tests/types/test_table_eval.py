@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dbetto
 import hist
 import numpy as np
 import pytest
@@ -85,6 +86,19 @@ def test_eval_dependency():
     res = obj.eval("lgdo.Array([1,2,3])", {}, modules={"lgdo": lgdo})
     assert res == lgdo.Array([1, 2, 3])
 
+    # test with module returning np.array
+    assert obj.eval("np.sum(a)", {}, modules={"np": np}).value == np.int64(10)
+
     # check bad type
     with pytest.raises(RuntimeError):
         obj.eval("hist.Hist()", modules={"hist": hist})
+
+    # check impossible numexpr can still run
+    assert np.allclose(
+        obj.eval(
+            "a*args.value",
+            {"args": dbetto.AttrsDict({"value": 2})},
+            modules={"lgdo": lgdo},
+        ).view_as("np"),
+        [2, 4, 6, 8],
+    )

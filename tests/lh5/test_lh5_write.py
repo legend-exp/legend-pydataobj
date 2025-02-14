@@ -44,6 +44,19 @@ def test_write_with_hdf5_compression(lgnd_file, tmptestdir):
         assert h5f["/geds/raw/waveform/values"].compression is None
         assert h5f["/geds/raw/waveform/values"].shuffle is False
 
+    store.write(
+        wft.values,
+        "/geds/raw/waveform/values",
+        f"{tmptestdir}/tmp-pygama-hdf5-compressed-wfs.lh5",
+        wo_mode="overwrite_file",
+        chunks=[1, 10],
+        compression=None,
+        shuffle=False,
+    )
+    with h5py.File(f"{tmptestdir}/tmp-pygama-hdf5-compressed-wfs.lh5") as h5f:
+        assert h5f["/geds/raw/waveform/values"].compression is None
+        assert h5f["/geds/raw/waveform/values"].shuffle is False
+
 
 def test_write_empty_vov(tmptestdir):
     vov = types.VectorOfVectors(flattened_data=[], cumulative_length=[])
