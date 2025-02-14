@@ -219,3 +219,37 @@ def test_iterate(more_lgnd_files):
             field_mask=["is_valid_0vbb", "timestamp", "zacEmax_ctc_cal"],
             buffer_len=5,
         )
+
+
+def test_range(lgnd_file):
+    lh5_it = lh5.LH5Iterator(
+        lgnd_file,
+        "/geds/raw",
+        field_mask=["baseline"],
+        buffer_len=5,
+        i_start = 7,
+        n_entries = 13
+    )
+
+    # Test error when n_entries > buffer_len
+    with pytest.raises(ValueError):
+        lh5_obj = lh5_it.read(4, n_entries=7)
+        
+    lh5_obj = lh5_it.read(4, n_entries=3)
+    assert len(lh5_obj) == 3
+    assert isinstance(lh5_obj, lgdo.Table)
+    assert list(lh5_obj.keys()) == ["baseline"]
+    assert (
+        lh5_obj["baseline"].nda == np.array([14353, 14254, 14525])
+    ).all()
+
+    exp_i_entries = [7, 12, 17]
+    exp_lens = [5, 5, 3]
+    for lh5_obj, exp_i, exp_len in zip(lh5_it, exp_i_entries, exp_lens):
+        entry = lh5_it.current_i_entry
+        assert len(lh5_obj) == exp_len
+        assert entry == exp_i
+        assert all(lh5_it.current_local_entries == np.arange(entry, entry + exp_len))
+        assert all(lh5_it.current_global_entries == np.arange(entry, entry + exp_len))
+        assert all(lh5_it.current_files == [lgnd_file] * exp_len)
+        assert all(lh5_it.current_groups == ["/geds/raw"] * exp_len)
