@@ -68,6 +68,8 @@ class LH5Iterator(typing.Iterator):
         base_path: str = "",
         entry_list: list[int] | list[list[int]] | None = None,
         entry_mask: list[bool] | list[list[bool]] | None = None,
+        i_start: int = 0,
+        n_entries: int | None = None,
         field_mask: dict[str, bool] | list[str] | tuple[str] | None = None,
         buffer_len: int = "100*MB",
         file_cache: int = 10,
@@ -92,6 +94,10 @@ class LH5Iterator(typing.Iterator):
         entry_mask
             mask of entries to read. If a list of arrays is provided, expect
             one for each file. Ignore if a selection list is provided.
+        i_start
+            index of first entry to start at when iterating
+        n_entries
+            number of entries to read before terminating iteration
         field_mask
             mask of which fields to read. See :meth:`LH5Store.read` for
             more details.
@@ -186,6 +192,8 @@ class LH5Iterator(typing.Iterator):
             msg = f"can't open any files from {lh5_files}"
             raise RuntimeError(msg)
 
+        self.i_start = i_start
+        self.n_entries = n_entries
         self.current_i_entry = 0
         self.next_i_entry = 0
 
@@ -319,13 +327,22 @@ class LH5Iterator(typing.Iterator):
                 )
         return self.global_entry_list
 
-    def read(self, i_entry: int) -> LGDO:
+    def read(self, i_entry: int, n_entries: int | None = None) -> LGDO:
         "Read the nextlocal chunk of events, starting at entry."
-        i_file = np.searchsorted(self.entry_map, i_entry, "right")
         self.lh5_buffer.resize(0)
+        
+        if n_entries is None:
+            n_entries = self.buffer_len
+        elif n_entries==0:
+            return self.lh5_buffer
+        elif n_entries > self.buffer_len:
+            msg = "n_entries cannot be larger than buffer_len"
+            raise ValueError(msg)
+        
 
         # if file hasn't been opened yet, search through files
         # sequentially until we find the right one
+        i_file = np.searchsorted(self.entry_map, i_entry, "right")
         if i_file < len(self.lh5_files) and self.entry_map[i_file] == np.iinfo("q").max:
             while i_file < len(self.lh5_files) and i_entry >= self._get_file_cumentries(
                 i_file
@@ -336,7 +353,7 @@ class LH5Iterator(typing.Iterator):
             return self.lh5_buffer
         local_i_entry = i_entry - self._get_file_cumentries(i_file - 1)
 
-        while len(self.lh5_buffer) < self.buffer_len and i_file < len(self.file_map):
+        while len(self.lh5_buffer) < n_entries and i_file < len(self.file_map):
             # Loop through files
             local_idx = self.get_file_entrylist(i_file)
             if local_idx is not None and len(local_idx) == 0:
@@ -349,7 +366,7 @@ class LH5Iterator(typing.Iterator):
                 self.groups[i_file],
                 self.lh5_files[i_file],
                 start_row=i_local,
-                n_rows=self.buffer_len - len(self.lh5_buffer),
+                n_rows=n_entries - len(self.lh5_buffer),
                 idx=local_idx,
                 field_mask=self.field_mask,
                 obj_buf=self.lh5_buffer,
@@ -485,12 +502,16 @@ class LH5Iterator(typing.Iterator):
     def __iter__(self) -> typing.Iterator:
         """Loop through entries in blocks of size buffer_len."""
         self.current_i_entry = 0
-        self.next_i_entry = 0
+        self.next_i_entry = self.i_start
         return self
 
     def __next__(self) -> tuple[LGDO, int, int]:
         """Read next buffer_len entries and return lh5_table and iterator entry."""
-        buf = self.read(self.next_i_entry)
+        n_entries = self.n_entries
+        if n_entries is not None:
+            n_entries = min(self.buffer_len, n_entries+self.i_start-self.next_i_entry)
+        
+        buf = self.read(self.next_i_entry, n_entries)
         if len(buf) == 0:
             raise StopIteration
         self.next_i_entry = self.current_i_entry + len(buf)
