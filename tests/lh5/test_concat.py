@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
+
+from lgdo import lh5, types
 from lgdo.lh5 import concat
-from lgdo import  lh5, types
 
 
 def test_concat(lgnd_test_data, tmptestdir):
-
     infile1 = lgnd_test_data.get_path(
         "lh5/prod-ref-l200/generated/tier/raw/phy/p03/r001/l200-p03-r001-phy-20230322T160139Z-tier_raw.lh5"
     )
@@ -15,7 +15,7 @@ def test_concat(lgnd_test_data, tmptestdir):
         "lh5/prod-ref-l200/generated/tier/raw/phy/p03/r001/l200-p03-r001-phy-20230322T170202Z-tier_raw.lh5"
     )
     outfile = f"{tmptestdir}/out.lh5"
-    concat.lh5concat(output = outfile, lh5_files  = [infile1, infile2], overwrite = True)
+    concat.lh5concat(output=outfile, lh5_files=[infile1, infile2], overwrite=True)
 
     assert lh5.ls(outfile) == [
         "ch1057600",
@@ -80,14 +80,23 @@ def test_concat(lgnd_test_data, tmptestdir):
         assert np.array_equal(tbl.tracelist[i], tbl2.tracelist[i - 10])
         assert np.array_equal(tbl.waveform.values[i], tbl2.waveform.values[i - 10])
 
-
-    concat.lh5concat(output = outfile,lh5_files =[infile1,infile2],overwrite = True,include_list=["ch1057600/raw/waveform/*"])
+    concat.lh5concat(
+        output=outfile,
+        lh5_files=[infile1, infile2],
+        overwrite=True,
+        include_list=["ch1057600/raw/waveform/*"],
+    )
     assert lh5.ls(outfile) == [
         "ch1057600",
     ]
 
-    concat.lh5concat(output = outfile,lh5_files =[infile1,infile2],overwrite = True,include_list=["ch1057600/raw/waveform/values"])
-    
+    concat.lh5concat(
+        output=outfile,
+        lh5_files=[infile1, infile2],
+        overwrite=True,
+        include_list=["ch1057600/raw/waveform/values"],
+    )
+
     assert lh5.ls(outfile, "ch1057600/raw/waveform/") == [
         "ch1057600/raw/waveform/values",
     ]
@@ -95,7 +104,12 @@ def test_concat(lgnd_test_data, tmptestdir):
     tbl, _ = store.read("ch1057600/raw", outfile)
     assert isinstance(tbl, types.Table)
 
-    concat.lh5concat(output = outfile,lh5_files =[infile1,infile2],overwrite = True,exclude_list=["ch1057600/raw/waveform/values"])
+    concat.lh5concat(
+        output=outfile,
+        lh5_files=[infile1, infile2],
+        overwrite=True,
+        exclude_list=["ch1057600/raw/waveform/values"],
+    )
     assert lh5.ls(outfile) == [
         "ch1057600",
         "ch1059201",
@@ -140,14 +154,12 @@ def test_concat(lgnd_test_data, tmptestdir):
     store.write(struct2, "stp", infile2, wo_mode="overwrite_file")
 
     outfile = f"{tmptestdir}/concat_test_struct_out.lh5"
-    concat.lh5concat(output = outfile, lh5_files=[ infile1, infile2],  overwrite = True)
+    concat.lh5concat(output=outfile, lh5_files=[infile1, infile2], overwrite=True)
 
     out_stp = store.read("stp", outfile)[0]
     assert out_stp.attrs["datatype"] == "struct{x}"
     assert np.all(out_stp.x["col"].nda == np.array([0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1]))
 
-
     # check for reasonable failures
     with pytest.raises(RuntimeError):
-        concat.lh5concat(output = outfile, lh5_files=[ infile1],  overwrite = True)
-    
+        concat.lh5concat(output=outfile, lh5_files=[infile1], overwrite=True)
