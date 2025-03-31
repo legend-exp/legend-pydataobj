@@ -11,10 +11,10 @@ log = logging.getLogger(__name__)
 def lh5concat(
     lh5_files: list,
     output: str,
-    overwrite: bool,
+    overwrite: bool = False,
     *,
-    include_list: list | None,
-    exclude_list: list | None,
+    include_list: list | None = None,
+    exclude_list: list | None = None,
 ) -> None:
     """Concatenate LGDO Arrays, VectorOfVectors and Tables in LH5 files.
 
@@ -69,6 +69,7 @@ def lh5concat(
     h5f0 = store.gimme_file(file0)
     lgdos = {}
     lgdo_structs = {}
+
     # loop over object list in the first file
     for name in obj_list:
         # now loop over groups starting from root
@@ -110,8 +111,7 @@ def lh5concat(
 
     if lgdos == {}:
         msg = "did not find any field to concatenate, exit"
-        log.error(msg)
-        return
+        raise RuntimeError(msg)
 
     # 2. remove (nested) table fields based on obj_list
 
