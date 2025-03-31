@@ -18,6 +18,7 @@ __all__ = [
     "DEFAULT_HDF5_SETTINGS",
     "LH5Iterator",
     "LH5Store",
+    "concat",
     "load_dfs",
     "load_nda",
     "ls",
