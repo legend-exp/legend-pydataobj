@@ -138,7 +138,7 @@ class VectorOfVectors(LGDO):
             # FIXME: have to copy the buffers, otherwise self will not own the
             # data and self.resize() will fail. Is it possible to avoid this?
             flattened_data = np.copy(
-                container.pop(f"node{data.ndim-1}-data", np.empty(0, dtype=dtype))
+                container.pop(f"node{data.ndim - 1}-data", np.empty(0, dtype=dtype))
             )
 
             # if user-provided dtype is different than dtype from Awkward, cast
