@@ -34,7 +34,7 @@ def build_field_mask(field_mask: Mapping[str, bool] | Collection[str]) -> defaul
             default = not field_mask[next(iter(field_mask.keys()))]
         return defaultdict(lambda: default, field_mask)
     if isinstance(field_mask, (list, tuple, set)):
-        return defaultdict(bool, {field: True for field in field_mask})
+        return defaultdict(bool, dict.fromkeys(field_mask, True))
     if isinstance(field_mask, defaultdict):
         return field_mask
     msg = "bad field_mask type"
