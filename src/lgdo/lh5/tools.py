@@ -1,16 +1,10 @@
 from __future__ import annotations
 
 import fnmatch
-import glob
 import logging
-import os
 from copy import copy
-from warnings import warn
 
 import h5py
-import numpy as np
-import pandas as pd
-from numpy.typing import NDArray
 
 from . import utils
 from .store import LH5Store
@@ -223,108 +217,3 @@ def show(
             break
 
         key = k_new
-
-
-def load_nda(
-    f_list: str | list[str],
-    par_list: list[str],
-    lh5_group: str = "",
-    idx_list: list[NDArray | list | tuple] | None = None,
-) -> dict[str, NDArray]:
-    r"""Build a dictionary of :class:`numpy.ndarray`\ s from LH5 data.
-
-    Given a list of files, a list of LH5 table parameters, and an optional
-    group path, return a NumPy array with all values for each parameter.
-
-    Parameters
-    ----------
-    f_list
-        A list of files. Can contain wildcards.
-    par_list
-        A list of parameters to read from each file.
-    lh5_group
-        group path within which to find the specified parameters.
-    idx_list
-        for fancy-indexed reads. Must be one index array for each file in
-        `f_list`.
-
-    Returns
-    -------
-    par_data
-        A dictionary of the parameter data keyed by the elements of `par_list`.
-        Each entry contains the data for the specified parameter concatenated
-        over all files in `f_list`.
-    """
-    warn(
-        "load_nda() is deprecated. "
-        "Please replace it with LH5Store.read(...).view_as('np'), "
-        "or just read_as(..., 'np'). "
-        "load_nda() will be removed in a future release.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-
-    if isinstance(f_list, str):
-        f_list = [f_list]
-        if idx_list is not None:
-            idx_list = [idx_list]
-    if idx_list is not None and len(f_list) != len(idx_list):
-        msg = f"f_list length ({len(f_list)}) != idx_list length ({len(idx_list)})!"
-        raise ValueError(msg)
-
-    # Expand wildcards
-    f_list = [f for f_wc in f_list for f in sorted(glob.glob(os.path.expandvars(f_wc)))]
-
-    sto = LH5Store()
-    par_data = {par: [] for par in par_list}
-    for ii, ff in enumerate(f_list):
-        f = sto.gimme_file(ff, "r")
-        for par in par_list:
-            if f"{lh5_group}/{par}" not in f:
-                msg = f"'{lh5_group}/{par}' not in file {ff}"
-                raise RuntimeError(msg)
-
-            if idx_list is None:
-                data, _ = sto.read(f"{lh5_group}/{par}", f)
-            else:
-                data, _ = sto.read(f"{lh5_group}/{par}", f, idx=idx_list[ii])
-            if not data:
-                continue
-            par_data[par].append(data.nda)
-    return {par: np.concatenate(par_data[par]) for par in par_list}
-
-
-def load_dfs(
-    f_list: str | list[str],
-    par_list: list[str],
-    lh5_group: str = "",
-    idx_list: list[NDArray | list | tuple] | None = None,
-) -> pd.DataFrame:
-    """Build a :class:`pandas.DataFrame` from LH5 data.
-
-    Given a list of files (can use wildcards), a list of LH5 columns, and
-    optionally the group path, return a :class:`pandas.DataFrame` with all
-    values for each parameter.
-
-    See Also
-    --------
-    :func:`load_nda`
-
-    Returns
-    -------
-    dataframe
-        contains columns for each parameter in `par_list`, and rows containing
-        all data for the associated parameters concatenated over all files in
-        `f_list`.
-    """
-    warn(
-        "load_dfs() is deprecated. "
-        "Please replace it with LH5Store.read(...).view_as('pd'), "
-        "or just read_as(..., 'pd'). "
-        "load_dfs() will be removed in a future release.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return pd.DataFrame(
-        load_nda(f_list, par_list, lh5_group=lh5_group, idx_list=idx_list)
-    )

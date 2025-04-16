@@ -11,7 +11,7 @@ from ._serializers.write.array import DEFAULT_HDF5_SETTINGS
 from .core import read, read_as, write
 from .iterator import LH5Iterator
 from .store import LH5Store
-from .tools import load_dfs, load_nda, ls, show
+from .tools import ls, show
 from .utils import read_n_rows
 
 __all__ = [
@@ -19,8 +19,6 @@ __all__ = [
     "LH5Iterator",
     "LH5Store",
     "concat",
-    "load_dfs",
-    "load_nda",
     "ls",
     "read",
     "read_as",
