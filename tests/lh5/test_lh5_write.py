@@ -17,7 +17,7 @@ def test_write_compressed_lgnd_waveform_table(enc_lgnd_file):
 
 def test_write_with_hdf5_compression(lgnd_file, tmptestdir):
     store = lh5.LH5Store()
-    wft, n_rows = store.read("/geds/raw/waveform", lgnd_file)
+    wft = store.read("/geds/raw/waveform", lgnd_file)
     store.write(
         wft,
         "/geds/raw/waveform",
@@ -68,7 +68,7 @@ def test_write_empty_vov(tmptestdir):
         group="/data",
     )
 
-    obj, _ = store.read("/data/vov", f"{tmptestdir}/tmp-pygama-lgdo-empty-vov.lh5")
+    obj = store.read("/data/vov", f"{tmptestdir}/tmp-pygama-lgdo-empty-vov.lh5")
     assert obj == vov
 
 
@@ -136,7 +136,7 @@ def test_write_object_overwrite_table_no_deletion(caplog, tmptestdir):
     ]
 
     # Now, check that the data were overwritten
-    tb_dat, _ = store.read("my_group", f"{tmptestdir}/write_object_overwrite_test.lh5")
+    tb_dat = store.read("my_group", f"{tmptestdir}/write_object_overwrite_test.lh5")
     assert np.array_equal(tb_dat["dset1"].nda, np.ones(10))
 
 
@@ -162,7 +162,7 @@ def test_write_object_overwrite_table_with_deletion(caplog, tmptestdir):
     )  # Now, try to overwrite with a different field
 
     # Now, check that the data were overwritten
-    tb_dat, _ = store.read("my_group", f"{tmptestdir}/write_object_overwrite_test.lh5")
+    tb_dat = store.read("my_group", f"{tmptestdir}/write_object_overwrite_test.lh5")
     assert np.array_equal(tb_dat["dset2"].nda, np.ones(10))
 
     # Also make sure that the first table's fields aren't lurking around the lh5 file!
@@ -193,7 +193,7 @@ def test_write_object_overwrite_table_with_deletion(caplog, tmptestdir):
     )  # Now, try to overwrite with a different field
 
     # Now, check that the data were overwritten
-    tb_dat, _ = store.read(
+    tb_dat = store.read(
         "my_group/my_table", f"{tmptestdir}/write_object_overwrite_test.lh5"
     )
     assert np.array_equal(tb_dat["dset2"].nda, np.ones(10))
@@ -249,7 +249,7 @@ def test_write_object_overwrite_lgdo(caplog, tmptestdir):
     ]
 
     # Now, check that the data were overwritten
-    tb_dat, _ = store.read(
+    tb_dat = store.read(
         "my_group/my_table", f"{tmptestdir}/write_object_overwrite_test.lh5"
     )
     assert np.array_equal(tb_dat["values"].nda, np.ones((10, 10)))
@@ -268,9 +268,7 @@ def test_write_object_overwrite_lgdo(caplog, tmptestdir):
     )
 
     # Now, check that the data were overwritten
-    array_dat, _ = store.read(
-        "my_array", f"{tmptestdir}/write_object_overwrite_test.lh5"
-    )
+    array_dat = store.read("my_array", f"{tmptestdir}/write_object_overwrite_test.lh5")
     expected_out_array = np.append(np.zeros(5), np.ones(20))
 
     assert np.array_equal(array_dat.nda, expected_out_array)
@@ -288,7 +286,7 @@ def test_write_object_overwrite_lgdo(caplog, tmptestdir):
     )
 
     # Now, check that the data were overwritten
-    scalar_dat, _ = store.read(
+    scalar_dat = store.read(
         "my_scalar", f"{tmptestdir}/write_object_overwrite_test.lh5"
     )
 
@@ -307,7 +305,7 @@ def test_write_object_overwrite_lgdo(caplog, tmptestdir):
         write_start=1,
     )  # start overwriting the second list of lists
 
-    vector_dat, _ = store.read(
+    vector_dat = store.read(
         "my_vector", f"{tmptestdir}/write_object_overwrite_test.lh5"
     )
 
@@ -398,7 +396,7 @@ def test_write_object_append_column(tmptestdir):
     )
 
     # Now, check that the data were appended
-    tb_dat, _ = store.read(
+    tb_dat = store.read(
         "my_group/my_table", f"{tmptestdir}/write_object_append_column_test.lh5"
     )
     assert isinstance(tb_dat, types.Table)
@@ -453,9 +451,7 @@ def test_write_histogram(caplog, tmptestdir):
     )
 
     # Now, check that the data were overwritten
-    h3, _ = store.read(
-        "my_group/my_histogram", f"{tmptestdir}/write_histogram_test.lh5"
-    )
+    h3 = store.read("my_group/my_histogram", f"{tmptestdir}/write_histogram_test.lh5")
     assert np.array_equal(h3.weights.nda, np.array([[10, 10], [10, 10]]))
     assert h3.binning[0].edges[0] == 2
     assert h3.binning[1].edges[-1] == 7
@@ -521,9 +517,7 @@ def test_write_histogram_variable(caplog, tmptestdir):
     )
 
     # Now, check that the data were overwritten
-    h3, _ = store.read(
-        "my_group/my_histogram", f"{tmptestdir}/write_histogram_test.lh5"
-    )
+    h3 = store.read("my_group/my_histogram", f"{tmptestdir}/write_histogram_test.lh5")
     assert np.array_equal(h3.weights.nda, np.array([[10, 10], [10, 10]]))
     assert np.array_equal(h3.binning[0].edges, np.array([2, 3.5, 4]))
     with pytest.raises(TypeError):

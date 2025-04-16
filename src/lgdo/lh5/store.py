@@ -5,7 +5,6 @@ HDF5 files.
 
 from __future__ import annotations
 
-import bisect
 import logging
 import os
 import sys
@@ -15,11 +14,11 @@ from inspect import signature
 from typing import Any
 
 import h5py
-import numpy as np
 from numpy.typing import ArrayLike
 
 from .. import types
 from . import _serializers, utils
+from .core import read
 
 log = logging.getLogger(__name__)
 
@@ -155,7 +154,7 @@ class LH5Store:
         """Returns an LH5 object appropriate for use as a pre-allocated buffer
         in a read loop. Sets size to `size` if object has a size.
         """
-        obj, n_rows = self.read(name, lh5_file, n_rows=0, field_mask=field_mask)
+        obj = self.read(name, lh5_file, n_rows=0, field_mask=field_mask)
         if hasattr(obj, "resize") and size is not None:
             obj.resize(new_size=size)
         return obj
@@ -182,72 +181,20 @@ class LH5Store:
         """
         # grab files from store
         if isinstance(lh5_file, (str, h5py.File)):
-            lh5_obj = self.gimme_file(lh5_file, "r", **file_kwargs)[name]
+            h5f = self.gimme_file(lh5_file, "r", **file_kwargs)
         else:
-            lh5_files = list(lh5_file)
-            n_rows_read = 0
-
-            for i, h5f in enumerate(lh5_files):
-                if (
-                    isinstance(idx, (list, tuple))
-                    and len(idx) > 0
-                    and not np.isscalar(idx[0])
-                ):
-                    # a list of lists: must be one per file
-                    idx_i = idx[i]
-                elif idx is not None:
-                    # make idx a proper tuple if it's not one already
-                    if not (isinstance(idx, tuple) and len(idx) == 1):
-                        idx = (idx,)
-                    # idx is a long continuous array
-                    n_rows_i = utils.read_n_rows(name, h5f)
-                    # find the length of the subset of idx that contains indices
-                    # that are less than n_rows_i
-                    n_rows_to_read_i = bisect.bisect_left(idx[0], n_rows_i)
-                    # now split idx into idx_i and the remainder
-                    idx_i = np.array(idx[0])[:n_rows_to_read_i]
-                    idx = np.array(idx[0])[n_rows_to_read_i:] - n_rows_i
-                else:
-                    idx_i = None
-                n_rows_i = n_rows - n_rows_read
-
-                obj_buf, n_rows_read_i = self.read(
-                    name,
-                    h5f,
-                    start_row,
-                    n_rows_i,
-                    idx_i,
-                    use_h5idx,
-                    field_mask,
-                    obj_buf,
-                    obj_buf_start,
-                    decompress,
-                )
-
-                n_rows_read += n_rows_read_i
-                if n_rows_read >= n_rows or obj_buf is None:
-                    return obj_buf, n_rows_read
-                start_row = 0
-                obj_buf_start += n_rows_read_i
-            return obj_buf, n_rows_read
-
-        if isinstance(idx, (list, tuple)) and len(idx) > 0 and not np.isscalar(idx[0]):
-            idx = idx[0]
-        if isinstance(idx, np.ndarray) and idx.dtype == np.dtype("?"):
-            idx = np.where(idx)[0]
-
-        return _serializers._h5_read_lgdo(
-            lh5_obj.id,
-            lh5_obj.file.filename,
-            lh5_obj.name,
-            start_row=start_row,
-            n_rows=n_rows,
-            idx=idx,
-            use_h5idx=use_h5idx,
-            field_mask=field_mask,
-            obj_buf=obj_buf,
-            obj_buf_start=obj_buf_start,
-            decompress=decompress,
+            h5f = [self.gimme_file(f, "r", **file_kwargs) for f in lh5_file]
+        return read(
+            name,
+            h5f,
+            start_row,
+            n_rows,
+            idx,
+            use_h5idx,
+            field_mask,
+            obj_buf,
+            obj_buf_start,
+            decompress,
         )
 
     def write(

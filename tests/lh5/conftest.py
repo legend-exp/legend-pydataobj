@@ -120,7 +120,7 @@ def lh5_file(tmptestdir):
 @pytest.fixture(scope="module")
 def enc_lgnd_file(lgnd_file, tmptestdir):
     store = lh5.LH5Store()
-    wft, n_rows = store.read("/geds/raw/waveform", lgnd_file)
+    wft = store.read("/geds/raw/waveform", lgnd_file)
     wft.values.attrs["compression"] = compression.RadwareSigcompress(codec_shift=-32768)
     store.write(
         wft,

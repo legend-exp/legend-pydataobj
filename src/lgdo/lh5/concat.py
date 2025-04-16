@@ -76,7 +76,7 @@ def _get_lgdos(file, obj_list):
                 continue
 
             # read as little as possible
-            obj, _ = store.read(current, h5f0, n_rows=1)
+            obj = store.read(current, h5f0, n_rows=1)
             if isinstance(obj, (Table, Array, VectorOfVectors)):
                 lgdos.append(current)
 
@@ -139,12 +139,6 @@ def _remove_nested_fields(lgdos: dict, obj_list: list):
         _inplace_table_filter(key, val, obj_list)
 
 
-def _slice(obj, n_rows):
-    ak_obj = obj.view_as("ak")[:n_rows]
-    obj_type = type(obj)
-    return obj_type(ak_obj)
-
-
 def lh5concat(
     lh5_files: list,
     output: str,
@@ -186,8 +180,8 @@ def lh5concat(
     # loop over lgdo objects
     for lgdo in lgdos:
         # iterate over the files
-        for lh5_obj, _, n_rows in LH5Iterator(lh5_files, lgdo):
-            data = {lgdo: _slice(lh5_obj, n_rows)}
+        for lh5_obj in LH5Iterator(lh5_files, lgdo):
+            data = {lgdo: lh5_obj}
 
             # remove the nested fields
             _remove_nested_fields(data, obj_list)

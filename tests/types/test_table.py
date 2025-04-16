@@ -15,7 +15,6 @@ from lgdo import Table
 def test_init():
     tbl = Table()
     assert not tbl.size
-    assert tbl.loc == 0
 
     tbl = Table(size=10)
     assert tbl.size == 10
@@ -79,25 +78,69 @@ def test_datatype_name():
     assert tbl.datatype_name() == "table"
 
 
-def test_push_row():
-    tbl = Table()
-    tbl.push_row()
-    assert tbl.loc == 1
+def test_resize_and_capacity():
+    col_dict = {
+        "a": lgdo.Array(nda=np.array([1, 2, 3, 4])),
+        "b": lgdo.Array(nda=np.array([5, 6, 7, 8])),
+    }
+    tbl = Table(col_dict=col_dict)
+
+    assert len(tbl) == 4
+    assert tbl.get_capacity() == [4, 4]
+
+    tbl.reserve_capacity([5, 7])
+    assert len(tbl) == 4
+    assert tbl.get_capacity() == [5, 7]
+
+    tbl.resize(6)
+    assert len(tbl) == 6
+    assert tbl.get_capacity()[0] >= 6
+    assert tbl.get_capacity()[1] == 7
+
+    tbl.trim_capacity()
+    assert len(tbl) == 6
+    assert tbl.get_capacity() == [6, 6]
+
+    with pytest.raises(ValueError):
+        tbl.reserve_capacity(3)
+
+    tbl.clear(trim=True)
+    assert len(tbl) == 0
+    assert tbl.get_capacity() == [0, 0]
 
 
-def test_is_full():
-    tbl = Table(size=2)
-    tbl.push_row()
-    assert tbl.is_full() is False
-    tbl.push_row()
-    assert tbl.is_full() is True
+def test_append():
+    col_dict = {
+        "a": lgdo.Array(nda=np.array([1, 2, 3, 4])),
+        "b": lgdo.Array(nda=np.array([5, 6, 7, 8])),
+    }
+
+    tbl = Table(col_dict=col_dict)
+    tbl.append({"a": -1, "b": -1})
+    assert len(tbl) == 5
+    assert tbl == Table(
+        {
+            "a": lgdo.Array(nda=np.array([1, 2, 3, 4, -1])),
+            "b": lgdo.Array(nda=np.array([5, 6, 7, 8, -1])),
+        }
+    )
 
 
-def test_clear():
-    tbl = Table()
-    tbl.push_row()
-    tbl.clear()
-    assert tbl.loc == 0
+def test_insert():
+    col_dict = {
+        "a": lgdo.Array(nda=np.array([1, 2, 3, 4])),
+        "b": lgdo.Array(nda=np.array([5, 6, 7, 8])),
+    }
+
+    tbl = Table(col_dict=col_dict)
+    tbl.insert(1, {"a": -1, "b": -1})
+    assert len(tbl) == 5
+    assert tbl == Table(
+        {
+            "a": lgdo.Array(nda=np.array([1, -1, 2, 3, 4])),
+            "b": lgdo.Array(nda=np.array([5, -1, 6, 7, 8])),
+        }
+    )
 
 
 def test_add_field():

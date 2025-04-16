@@ -4,6 +4,7 @@ import bisect
 import inspect
 import sys
 from collections.abc import Mapping, Sequence
+from contextlib import suppress
 from typing import Any
 
 import h5py
@@ -92,8 +93,7 @@ def read(
         will be set to ``True``, while the rest will default to ``False``.
     obj_buf
         Read directly into memory provided in `obj_buf`. Note: the buffer
-        will be expanded to accommodate the data requested. To maintain the
-        buffer length, send in ``n_rows = len(obj_buf)``.
+        will be resized to accommodate the data retrieved.
     obj_buf_start
         Start location in ``obj_buf`` for read. For concatenating data to
         array-like objects.
@@ -106,12 +106,8 @@ def read(
 
     Returns
     -------
-    (object, n_rows_read)
-        `object` is the read-out object `n_rows_read` is the number of rows
-        successfully read out. Essential for arrays when the amount of data
-        is smaller than the object buffer.  For scalars and structs
-        `n_rows_read` will be``1``. For tables it is redundant with
-        ``table.loc``. If `obj_buf` is ``None``, only `object` is returned.
+    object
+        the read-out object
     """
     if isinstance(lh5_file, h5py.File):
         lh5_obj = lh5_file[name]
@@ -119,12 +115,12 @@ def read(
         lh5_file = h5py.File(lh5_file, mode="r", locking=locking)
         lh5_obj = lh5_file[name]
     else:
-        lh5_files = list(lh5_file)
+        if obj_buf is not None:
+            obj_buf.resize(obj_buf_start)
+        else:
+            obj_buf_start = 0
 
-        n_rows_read = 0
-        obj_buf_is_new = False
-
-        for i, h5f in enumerate(lh5_files):
+        for i, h5f in enumerate(lh5_file):
             if (
                 isinstance(idx, (list, tuple))
                 and len(idx) > 0
@@ -146,33 +142,26 @@ def read(
                 idx = np.array(idx[0])[n_rows_to_read_i:] - n_rows_i
             else:
                 idx_i = None
-            n_rows_i = n_rows - n_rows_read
 
-            obj_ret = read(
+            obj_buf_start_i = len(obj_buf) if obj_buf else 0
+            n_rows_i = n_rows - (obj_buf_start_i - obj_buf_start)
+
+            obj_buf = read(
                 name,
                 h5f,
-                start_row,
+                start_row if i == 0 else 0,
                 n_rows_i,
                 idx_i,
                 use_h5idx,
                 field_mask,
                 obj_buf,
-                obj_buf_start,
+                obj_buf_start_i,
                 decompress,
             )
-            if isinstance(obj_ret, tuple):
-                obj_buf, n_rows_read_i = obj_ret
-                obj_buf_is_new = True
-            else:
-                obj_buf = obj_ret
-                n_rows_read_i = len(obj_buf)
 
-            n_rows_read += n_rows_read_i
-            if n_rows_read >= n_rows or obj_buf is None:
-                return obj_buf, n_rows_read
-            start_row = 0
-            obj_buf_start += n_rows_read_i
-        return obj_buf if obj_buf_is_new else (obj_buf, n_rows_read)
+            if obj_buf is None or (len(obj_buf) - obj_buf_start) >= n_rows:
+                return obj_buf
+        return obj_buf
 
     if isinstance(idx, (list, tuple)) and len(idx) > 0 and not np.isscalar(idx[0]):
         idx = idx[0]
@@ -192,8 +181,10 @@ def read(
         obj_buf_start=obj_buf_start,
         decompress=decompress,
     )
+    with suppress(AttributeError):
+        obj.resize(obj_buf_start + n_rows_read)
 
-    return obj if obj_buf is None else (obj, n_rows_read)
+    return obj
 
 
 def write(
