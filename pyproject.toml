@@ -81,7 +81,7 @@ test = [
 
 [project.scripts]
 lh5ls = "lgdo.cli:lh5ls"
-lh5concat = "lgdo.cli:lh5concat"
+lh5concat = "lgdo.cli:lh5concat_cli"
 
 [tool.setuptools]
 include-package-data = true
