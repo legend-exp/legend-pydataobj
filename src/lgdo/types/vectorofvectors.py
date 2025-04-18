@@ -476,7 +476,10 @@ class VectorOfVectors(LGDOCollection):
             else:
                 nan_val = np.nan
             vovutils._nb_fill(
-                vec, lens, nan_val, self.flattened_data.nda[start : cum_lens[-1]]
+                vec,
+                lens,
+                np.array([nan_val]).astype(self.flattened_data.nda.dtype),
+                self.flattened_data.nda[start : cum_lens[-1]],
             )
 
             # add new vector(s) length to cumulative_length
