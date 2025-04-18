@@ -127,7 +127,7 @@ class WaveformTable(Table):
                 dt = Array(nda=dt, shape=shape, dtype=dt_dtype)
             else:
                 dt = Array(fill_val=dt, shape=shape, dtype=dt_dtype)
-    
+
         if dt_units is not None:
             dt.attrs["units"] = f"{dt_units}"
 
@@ -172,9 +172,13 @@ class WaveformTable(Table):
                         else np.dtype(np.float64)
                     )
                 if isinstance(values, np.ndarray):
-                    values = ArrayOfEqualSizedArrays(dims=(1, 1), nda=values, shape=shape, dtype=dtype)
+                    values = ArrayOfEqualSizedArrays(
+                        dims=(1, 1), nda=values, shape=shape, dtype=dtype
+                    )
                 else:
-                    values = ArrayOfEqualSizedArrays(dims=(1, 1), fill_val=0, shape=shape, dtype=dtype)
+                    values = ArrayOfEqualSizedArrays(
+                        dims=(1, 1), fill_val=0, shape=shape, dtype=dtype
+                    )
 
         if values_units is not None:
             values.attrs["units"] = f"{values_units}"
@@ -209,7 +213,7 @@ class WaveformTable(Table):
             return
         shape = self.values.nda.shape
         shape = (shape[0], wf_len)
-        self.values.nda.resize(shape, refcheck=True)
+        self.values.resize(shape)
 
     def resize_wf_len(self, new_len: int) -> None:
         """Alias for `wf_len.setter`, for when we want to make it clear in
