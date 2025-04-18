@@ -6,7 +6,7 @@ corresponding utilities.
 from __future__ import annotations
 
 import logging
-from collections.abc import Iterator, Collection
+from collections.abc import Collection, Iterator
 from typing import Any
 
 import awkward as ak
@@ -131,7 +131,7 @@ class Array(LGDOCollection):
         increased to accommodate new rows; in this case double capacity.
         If trim is True, capacity will be set to match size. If new_size
         is an int, do not change size of inner dimensions.
-        
+
         If new_size is a collection, internal memory will be re-allocated, so
         this should be done only rarely!"""
 

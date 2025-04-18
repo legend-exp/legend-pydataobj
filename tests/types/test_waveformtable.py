@@ -25,7 +25,9 @@ def test_init():
     assert (wft.values.nda == np.zeros(shape=(10, 1000))).all()
     assert wft.values.nda.dtype == np.float64
 
-    wft = WaveformTable(size=10, dt=np.zeros(5), t0=np.zeros(5), values=np.zeros((5, 50)))
+    wft = WaveformTable(
+        size=10, dt=np.zeros(5), t0=np.zeros(5), values=np.zeros((5, 50))
+    )
     assert (wft.t0.nda == np.zeros(10)).all()
     assert (wft.dt.nda == np.zeros(10)).all()
     assert isinstance(wft.values, lgdo.ArrayOfEqualSizedArrays)
@@ -94,5 +96,5 @@ def test_init():
     assert wft.values.nda.dtype == np.float32
 
     wft = WaveformTable(10, wf_len=20)
-    wft.wf_len=30
-    assert wft.wf_len==30
+    wft.wf_len = 30
+    assert wft.wf_len == 30
