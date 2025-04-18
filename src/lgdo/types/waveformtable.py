@@ -112,12 +112,10 @@ class WaveformTable(Table):
         if not isinstance(t0, Array):
             shape = (size,)
             t0_dtype = t0.dtype if hasattr(t0, "dtype") else np.float32
-            nda = (
-                t0 if isinstance(t0, np.ndarray) else np.full(shape, t0, dtype=t0_dtype)
-            )
-            if nda.shape != shape:
-                nda.resize(shape, refcheck=True)
-            t0 = Array(nda=nda)
+            if isinstance(t0, np.ndarray):
+                t0 = Array(nda=t0, shape=shape, dtype=t0_dtype)
+            else:
+                t0 = Array(fill_val=t0, shape=shape, dtype=t0_dtype)
 
         if t0_units is not None:
             t0.attrs["units"] = f"{t0_units}"
@@ -125,12 +123,11 @@ class WaveformTable(Table):
         if not isinstance(dt, Array):
             shape = (size,)
             dt_dtype = dt.dtype if hasattr(dt, "dtype") else np.float32
-            nda = (
-                dt if isinstance(dt, np.ndarray) else np.full(shape, dt, dtype=dt_dtype)
-            )
-            if nda.shape != shape:
-                nda.resize(shape, refcheck=True)
-            dt = Array(nda=nda)
+            if isinstance(dt, np.ndarray):
+                dt = Array(nda=dt, shape=shape, dtype=dt_dtype)
+            else:
+                dt = Array(fill_val=dt, shape=shape, dtype=dt_dtype)
+    
         if dt_units is not None:
             dt.attrs["units"] = f"{dt_units}"
 
@@ -174,14 +171,11 @@ class WaveformTable(Table):
                         if hasattr(values, "dtype")
                         else np.dtype(np.float64)
                     )
-                nda = (
-                    values
-                    if isinstance(values, np.ndarray)
-                    else np.zeros(shape, dtype=dtype)
-                )
-                if nda.shape != shape:
-                    nda.resize(shape, refcheck=True)
-                values = ArrayOfEqualSizedArrays(dims=(1, 1), nda=nda)
+                if isinstance(values, np.ndarray):
+                    values = ArrayOfEqualSizedArrays(dims=(1, 1), nda=values, shape=shape, dtype=dtype)
+                else:
+                    values = ArrayOfEqualSizedArrays(dims=(1, 1), fill_val=0, shape=shape, dtype=dtype)
+
         if values_units is not None:
             values.attrs["units"] = f"{values_units}"
 
