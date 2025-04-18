@@ -6,7 +6,7 @@ corresponding utilities.
 from __future__ import annotations
 
 import logging
-from collections.abc import Iterator
+from collections.abc import Iterator, Collection
 from typing import Any
 
 import awkward as ak
@@ -126,19 +126,27 @@ class Array(LGDOCollection):
         "Set capacity to be minimum needed to support Array size"
         self.reserve_capacity(np.prod(self.shape))
 
-    def resize(self, new_size: int, trim=False) -> None:
+    def resize(self, new_size: int | Collection[int], trim=False) -> None:
         """Set size of Array in rows. Only change capacity if it must be
         increased to accommodate new rows; in this case double capacity.
-        If trim is True, capacity will be set to match size."""
+        If trim is True, capacity will be set to match size. If new_size
+        is an int, do not change size of inner dimensions.
+        
+        If new_size is a collection, internal memory will be re-allocated, so
+        this should be done only rarely!"""
 
-        self._size = new_size
+        if isinstance(new_size, Collection):
+            self._size = new_size[0]
+            self._nda.resize(new_size)
+        else:
+            self._size = new_size
 
-        if trim and new_size != self.get_capacity:
-            self.reserve_capacity(new_size)
+            if trim and new_size != self.get_capacity:
+                self.reserve_capacity(new_size)
 
-        # If capacity is not big enough, set to next power of 2 big enough
-        if new_size > self.get_capacity():
-            self.reserve_capacity(int(2 ** (np.ceil(np.log2(new_size)))))
+            # If capacity is not big enough, set to next power of 2 big enough
+            if new_size > self.get_capacity():
+                self.reserve_capacity(int(2 ** (np.ceil(np.log2(new_size)))))
 
     def append(self, value: np.ndarray) -> None:
         "Append value to end of array (with copy)"

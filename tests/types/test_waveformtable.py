@@ -92,3 +92,7 @@ def test_init():
 
     wft = WaveformTable(t0=[1, 1, 1], dt=[2, 2, 2], wf_len=1000, dtype=np.float32)
     assert wft.values.nda.dtype == np.float32
+
+    wft = WaveformTable(10, wf_len=20)
+    wft.wf_len=30
+    assert wft.wf_len==30

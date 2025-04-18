@@ -209,7 +209,7 @@ class WaveformTable(Table):
             return
         shape = self.values.nda.shape
         shape = (shape[0], wf_len)
-        self.values.nda.resize(shape, refcheck=True)
+        self.values.resize(shape)
 
     def resize_wf_len(self, new_len: int) -> None:
         """Alias for `wf_len.setter`, for when we want to make it clear in
