@@ -14,7 +14,7 @@ import pytest
 import lgdo
 from lgdo import Array, VectorOfVectors, lh5
 
-VovColl = namedtuple("VovColl", ["v2d", "v3d", "v4d"])
+VovColl = namedtuple("VovColl", ["v2d", "v3d", "v4d", "v2d_uint", "v2d_float"])
 
 
 @pytest.fixture
@@ -28,8 +28,14 @@ def testvov():
             [[[5, 3], [1]]],
         ]
     )
+    v2d_uint = VectorOfVectors(
+        [[1, 2], [3, 4, 5], [2], [4, 8, 9, 7], [5, 3, 1]], dtype="uint16"
+    )
+    v2d_float = VectorOfVectors(
+        [[1, 2], [3, 4, 5], [2], [4, 8, 9, 7], [5, 3, 1]], dtype="float32"
+    )
 
-    return VovColl(v2d, v3d, v4d)
+    return VovColl(v2d, v3d, v4d, v2d_uint, v2d_float)
 
 
 def test_init(testvov):
@@ -381,38 +387,52 @@ def test_replace(testvov):
 
 
 def test_set_vector_unsafe(testvov):
-    testvov = testvov.v2d
+    for entry in ["v2d", "v2d_uint", "v2d_float"]:
+        current_testvov = testvov._asdict()[entry]
 
-    desired = [
-        np.array([1, 2], dtype=testvov.dtype),
-        np.array([3, 4, 5], dtype=testvov.dtype),
-        np.array([2], dtype=testvov.dtype),
-        np.array([4, 8, 9, 7], dtype=testvov.dtype),
-        np.array([5, 3, 1], dtype=testvov.dtype),
-    ]
-    desired_aoa = np.zeros(shape=(5, 4), dtype=testvov.dtype)
-    desired_lens = np.array([len(arr) for arr in desired])
+        desired = [
+            np.array([1, 2], dtype=current_testvov.dtype),
+            np.array([3, 4, 5], dtype=current_testvov.dtype),
+            np.array([2], dtype=current_testvov.dtype),
+            np.array([4, 8, 9, 7], dtype=current_testvov.dtype),
+            np.array([5, 3, 1], dtype=current_testvov.dtype),
+        ]
+        desired_aoa = np.zeros(shape=(5, 4), dtype=current_testvov.dtype)
+        desired_lens = np.array([len(arr) for arr in desired])
 
-    # test sequential filling
-    second_vov = lgdo.VectorOfVectors(shape_guess=(5, 5), dtype=testvov.dtype)
-    for i, arr in enumerate(desired):
-        second_vov._set_vector_unsafe(i, arr)
-        desired_aoa[i, : len(arr)] = arr
-    assert testvov == second_vov
+        # test sequential filling
+        second_vov = lgdo.VectorOfVectors(
+            shape_guess=(5, 5), dtype=current_testvov.dtype
+        )
+        for i, arr in enumerate(desired):
+            second_vov._set_vector_unsafe(i, arr)
+            desired_aoa[i, : len(arr)] = arr
+        assert current_testvov == second_vov
 
-    # test vectorized filling
-    third_vov = lgdo.VectorOfVectors(shape_guess=(5, 5), dtype=testvov.dtype)
-    third_vov._set_vector_unsafe(0, desired_aoa, desired_lens)
-    assert testvov == third_vov
+        # test vectorized filling
+        third_vov = lgdo.VectorOfVectors(
+            shape_guess=(5, 5), dtype=current_testvov.dtype
+        )
+        third_vov._set_vector_unsafe(0, desired_aoa, desired_lens)
+        assert current_testvov == third_vov
 
-    # test vectorized filling when len is longer than array
-    fourth_vov = lgdo.VectorOfVectors(shape_guess=(5, 5), dtype=testvov.dtype)
-    desired_lens[3] = 10
-    fourth_vov._set_vector_unsafe(0, desired_aoa, desired_lens)
-    exp_entry_w_overflow = np.concatenate(
-        [desired[3], np.array([np.iinfo(testvov.dtype).min] * 6)]
-    )
-    assert np.all(fourth_vov[3] == exp_entry_w_overflow)
+        # test vectorized filling when len is longer than array
+        fourth_vov = lgdo.VectorOfVectors(
+            shape_guess=(5, 5), dtype=current_testvov.dtype
+        )
+        desired_lens[3] = 10
+        fourth_vov._set_vector_unsafe(0, desired_aoa, desired_lens)
+        if current_testvov.dtype in ["int32", "int64", "uint16", "uint32"]:
+            exp_entry_w_overflow = np.concatenate(
+                [desired[3], np.array([np.iinfo(current_testvov.dtype).min] * 6)]
+            )
+        else:
+            exp_entry_w_overflow = np.concatenate([desired[3], np.array([np.nan] * 6)])
+
+        assert np.all(
+            np.nan_to_num(fourth_vov[3], nan=0)
+            == np.nan_to_num(exp_entry_w_overflow, nan=0)
+        )
 
 
 def test_iter(testvov):

@@ -131,7 +131,7 @@ def _nb_fill(
     for i, ll in enumerate(len_in):
         stop = start + ll
         if ll > max_len:
-            flattened_array_out[start : start + max_len] = aoa_in[i, :]
+            flattened_array_out[start : start + max_len] = aoa_in[i, :max_len]
             flattened_array_out[start + max_len : stop] = nan_val
         else:
             flattened_array_out[start:stop] = aoa_in[i, :ll]
