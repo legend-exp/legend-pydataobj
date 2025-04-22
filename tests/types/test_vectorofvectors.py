@@ -508,3 +508,47 @@ def test_pickle(testvov):
 
     for i in range(len(desired)):
         assert np.array_equal(desired[i], ex[i])
+
+
+def test_bytestrings():
+    for string in [b"a", b"p01", b"V00000A"]:
+        # test bytestring
+        v = VectorOfVectors(
+            flattened_data=np.full(5, string, dtype=f"S{len(string)}"),
+            cumulative_length=np.array([2, 5], dtype="uint32"),
+        )
+        assert v.flattened_data.dtype == f"S{len(string)}"
+        assert v.flattened_data.nda[0] == string
+
+        # test bytestring view_as
+        v = VectorOfVectors(
+            flattened_data=np.full(5, string, dtype=f"S{len(string)}"),
+            cumulative_length=np.array([2, 5], dtype="uint32"),
+        )
+        ak_arr = v.view_as("ak", with_units=False)
+        assert isinstance(ak_arr, ak.Array)
+        assert ak_arr[0][0] == string
+
+    v = VectorOfVectors(
+        flattened_data=np.full(5, string, dtype="S7"),
+        cumulative_length=np.array([2, 5], dtype="uint32"),
+    )
+
+    # test bytestring with ak Array
+    ak_arr = v.view_as("ak", with_units=False)
+    v = VectorOfVectors(ak_arr)
+    assert v.flattened_data.dtype == "S7"
+    assert v.flattened_data.nda[0] == b"V00000A"
+
+    # test nested bytestring VoVoV
+
+    v = VectorOfVectors(
+        flattened_data=v,
+        cumulative_length=np.array([2], dtype="uint32"),
+    )
+    assert v.flattened_data.flattened_data.dtype == "S7"
+    assert v.flattened_data.flattened_data.nda[0] == b"V00000A"
+
+    ak_arr = v.view_as("ak", with_units=False)
+    assert isinstance(ak_arr, ak.Array)
+    assert ak_arr[0][0][0] == b"V00000A"
