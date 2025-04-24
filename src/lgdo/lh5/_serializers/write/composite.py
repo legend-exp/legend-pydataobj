@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import logging
-import os
 from inspect import signature
+from pathlib import Path
 
 import h5py
 
@@ -53,7 +53,7 @@ def _h5_write_lgdo(
     # change any object in the file. So we use file:append for
     # write_object:overwrite.
     if not isinstance(lh5_file, h5py.File):
-        mode = "w" if wo_mode == "of" or not os.path.exists(lh5_file) else "a"
+        mode = "w" if wo_mode == "of" or not Path(lh5_file).exists() else "a"
         lh5_file = h5py.File(lh5_file, mode=mode, **file_kwargs)
 
     log.debug(

@@ -122,7 +122,7 @@ extend-select = [
   "PIE",      # flake8-pie
   "PL",       # pylint
   "PT",       # flake8-pytest-style
-  #"PTH",      # flake8-use-pathlib
+  "PTH",      # flake8-use-pathlib
   "RET",      # flake8-return
   "RUF",      # Ruff-specific
   "SIM",      # flake8-simplify
@@ -167,7 +167,7 @@ minversion = "6.0"
 addopts = ["-ra", "--showlocals", "--strict-markers", "--strict-config"]
 xfail_strict = true
 filterwarnings = ["error", 'ignore:\nPyarrow:DeprecationWarning']
-log_cli_level = "info"
+log_cli_level = "INFO"
 testpaths = "tests"
 
 [tool.codespell]

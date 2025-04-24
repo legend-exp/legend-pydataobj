@@ -6,11 +6,11 @@ HDF5 files.
 from __future__ import annotations
 
 import logging
-import os
 import sys
 from collections import OrderedDict
 from collections.abc import Mapping, Sequence
 from inspect import signature
+from pathlib import Path
 from typing import Any
 
 import h5py
@@ -92,16 +92,16 @@ class LH5Store:
             return self.files[lh5_file]
 
         if self.base_path != "":
-            full_path = os.path.join(self.base_path, lh5_file)
+            full_path = Path(self.base_path) / lh5_file
         else:
-            full_path = lh5_file
+            full_path = Path(lh5_file)
 
-        file_exists = os.path.exists(full_path)
+        file_exists = full_path.exists()
         if mode != "r":
-            directory = os.path.dirname(full_path)
-            if directory != "" and not os.path.exists(directory):
+            directory = full_path.parent
+            if directory != "" and not full_path.parent.exists():
                 log.debug(f"making path {directory}")
-                os.makedirs(directory)
+                directory.mkdir(parents=True, exist_ok=True)
 
         if mode == "r" and not file_exists:
             msg = f"file {full_path} not found"
