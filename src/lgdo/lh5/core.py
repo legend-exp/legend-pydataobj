@@ -113,7 +113,11 @@ def read(
         lh5_obj = lh5_file[name]
     elif isinstance(lh5_file, str):
         lh5_file = h5py.File(lh5_file, mode="r", locking=locking)
-        lh5_obj = lh5_file[name]
+        try:
+            lh5_obj = lh5_file[name]
+        except KeyError as ke:
+            err = f"Object {name} not found in file {lh5_file.filename}"
+            raise KeyError(err) from ke
     else:
         if obj_buf is not None:
             obj_buf.resize(obj_buf_start)
