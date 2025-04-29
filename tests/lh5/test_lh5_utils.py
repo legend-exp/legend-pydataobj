@@ -51,3 +51,10 @@ def test_expand_path(lgnd_test_data):
 
     # Check if it finds a list of files correctly
     assert sorted(utils.expand_path(f"{base_dir}/*.lh5", list=True)) == sorted(files)
+
+    # check with base_path specified
+    base_path = base_dir.parent
+    assert (
+        utils.expand_path(f"{base_dir.name}/*20230318T012144Z*", base_path=base_path)
+        == Path(files[0]).relative_to(base_path).as_posix()
+    )

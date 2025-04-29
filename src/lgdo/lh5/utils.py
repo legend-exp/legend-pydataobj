@@ -154,7 +154,7 @@ def expand_vars(expr: str, substitute: dict[str, str] | None = None) -> str:
 
     # use provided mapping
     # then expand env variables
-    return os.path.expandvars(string.Template(expr).safe_substitute(substitute))
+    return os.path.expandvars(string.Template(str(expr)).safe_substitute(substitute))
 
 
 def expand_path(
