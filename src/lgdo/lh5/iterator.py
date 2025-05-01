@@ -491,12 +491,16 @@ class LH5Iterator(typing.Iterator):
         return cur_groups
 
     def __len__(self) -> int:
-        """Return the total number of entries."""
-        return (
-            self._get_file_cumentries(len(self.lh5_files) - 1)
-            if len(self.entry_map) > 0
-            else 0
-        )
+        """Return the total number of entries to be read."""
+        if len(self.entry_map) == 0:
+            return 0
+        if self.n_entries is None:
+            return self._get_file_cumentries(len(self.lh5_files) - 1)
+        # only check as many files as we strictly need to
+        for i in range(len(self.lh5_files)):
+            if self.n_entries < self._get_file_cumentries(i):
+                return self.n_entries
+        return self._get_file_cumentries(len(self.lh5_files) - 1)
 
     def __iter__(self) -> typing.Iterator:
         """Loop through entries in blocks of size buffer_len."""
