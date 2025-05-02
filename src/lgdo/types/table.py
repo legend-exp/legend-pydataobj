@@ -144,9 +144,15 @@ class Table(Struct, LGDOCollection):
 
     def insert(self, i: int, vals: dict) -> None:
         "Insert vals into table at row i. Vals is a mapping from table key to val"
+        new_size = None
         for k, ar in self.items():
             ar.insert(i, vals[k])
-        self.size += 1
+            if new_size is None:
+                new_size = len(ar)
+            elif new_size != len(ar):
+                msg = "inserted vals must all have same length"
+                raise ValueError(msg)
+        self.size = new_size
 
     def add_field(
         self, name: str, obj: LGDOCollection, use_obj_size: bool = False

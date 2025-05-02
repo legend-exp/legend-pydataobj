@@ -113,11 +113,8 @@ class VectorOfVectors(LGDOCollection):
                 data = ak.Array(data)
 
             if data.ndim < 2:
-                msg = (
-                    "cannot initialize a VectorOfVectors with "
-                    f"{data.ndim}-dimensional data"
-                )
-                raise ValueError(msg)
+                # treat as a single-row VoV
+                data = ak.Array([data])
 
             # make sure it's not a record array
             if not vovutils._ak_is_valid(data):
@@ -357,7 +354,7 @@ class VectorOfVectors(LGDOCollection):
         """
         self.insert(len(self), new)
 
-    def insert(self, i: int, new: NDArray) -> None:
+    def insert(self, i: int, new: VectorOfVectors | NDArray) -> None:
         """Insert a vector at index `i`.
 
         `self.flattened_data` (and therefore `self.cumulative_length`) is
@@ -377,11 +374,15 @@ class VectorOfVectors(LGDOCollection):
             if i > len(self):
                 msg = f"index {i} is out of bounds for vector with size {len(self)}"
                 raise IndexError(msg)
+            if not isinstance(new, VectorOfVectors):
+                new = VectorOfVectors(new)
 
             i_start = 0 if i == 0 else self.cumulative_length[i - 1]
-            self.flattened_data.insert(i_start, new)
-            self.cumulative_length.insert(i, i_start)
-            self.cumulative_length[i:] += np.uint32(len(new))
+            self.cumulative_length[i:] += new.cumulative_length[-1]
+            if i > 0:
+                new.cumulative_length[:] += self.cumulative_length[i - 1]
+            self.cumulative_length.insert(i, new.cumulative_length)
+            self.flattened_data.insert(i_start, new.flattened_data)
         else:
             raise NotImplementedError
 

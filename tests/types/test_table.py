@@ -141,6 +141,14 @@ def test_insert():
             "b": lgdo.Array(nda=np.array([5, -1, 6, 7, 8])),
         }
     )
+    tbl.insert(0, {"a": [-1, -1], "b": [-1, -1]})
+    assert len(tbl) == 7
+    assert tbl == Table(
+        {
+            "a": lgdo.Array(nda=np.array([-1, -1, 1, -1, 2, 3, 4])),
+            "b": lgdo.Array(nda=np.array([-1, -1, 5, -1, 6, 7, 8])),
+        }
+    )
 
 
 def test_add_field():
