@@ -75,7 +75,9 @@ class LH5Iterator:
         buffer_len: int = "100*MB",
         file_cache: int = 10,
         file_map: NDArray[int] = None,
-        friend: typing.Iterator | None = None,
+        friend: Collection[LH5Iterator] = None,
+        friend_prefix: str = "",
+        friend_suffix: str = "",
     ) -> None:
         """
         Parameters
@@ -234,21 +236,35 @@ class LH5Iterator:
                     self.local_entry_list[i_file] = np.nonzero(local_mask)[0]
 
         # Attach the friend
-        if friend is not None:
-            if not isinstance(friend, typing.Iterator):
-                msg = "Friend must be an Iterator"
+        if isinstance(friend, LH5Iterator):
+            self.friend = [friend]
+        elif friend is None:
+            self.friend = []
+        else:
+            self.friend = friend
+
+        if isinstance(friend_prefix, str):
+            friend_prefix = [friend_prefix] * len(self.friend)
+        if isinstance(friend_suffix, str):
+            friend_suffix = [friend_suffix] * len(self.friend)
+
+        if len(self.friend) > 0:
+            fr_buf_len = min(fr.buffer_len for fr in self.friend)
+            self.buffer_len = max(self.buffer_len, fr_buf_len)
+
+        for fr, prefix, suffix in zip(self.friend, friend_prefix, friend_suffix):
+            if not isinstance(friend, LH5Iterator):
+                msg = "Friend must be an LH5Iterator"
                 raise ValueError(msg)
 
             # set buffer_lens to be equal
-            if self.buffer_len < friend.buffer_len:
-                friend.buffer_len = self.buffer_len
-                friend.lh5_buffer.resize(self.buffer_len)
-            elif self.buffer_len > friend.buffer_len:
-                self.buffer_len = friend.buffer_len
-                self.lh5_buffer.resize(friend.buffer_len)
-
-            self.lh5_buffer.join(friend.lh5_buffer)
-        self.friend = friend
+            fr.buffer_len = self.buffer_len
+            self.lh5_buffer.join(
+                fr.lh5_buffer,
+                keep_mine=True,
+                prefix=prefix,
+                suffix=suffix,
+            )
 
     def _get_file_cumlen(self, i_file: int) -> int:
         """Helper to get cumulative file length of file"""
@@ -383,16 +399,16 @@ class LH5Iterator:
 
         self.current_i_entry = i_entry
 
-        if self.friend is not None:
-            self.friend.read(i_entry)
+        for friend in self.friend:
+            friend.read(i_entry)
 
         return self.lh5_buffer
 
-    def reset_field_mask(self, mask):
+    def reset_field_mask(self, mask: Collection[str] | Collection[Collection[str]]):
         """Replaces the field mask of this iterator and any friends with mask"""
         self.field_mask = mask
-        if self.friend is not None:
-            self.friend.reset_field_mask(mask)
+        for friend in self.friend:
+            friend.reset_field_mask(mask)
 
     @property
     def current_local_entries(self) -> NDArray[int]:

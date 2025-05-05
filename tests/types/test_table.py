@@ -290,3 +290,39 @@ def test_pickle():
     assert ex.attrs["datatype"] == obj.attrs["datatype"]
     for key, val in col_dict.items():
         assert ex[key] == val
+
+
+def test_confict_resolution():
+    col_dict1 = {
+        "a": lgdo.Array(nda=np.array([1, 2, 3, 4])),
+        "b": lgdo.Array(nda=np.array([5, 6, 7, 8])),
+        "c": lgdo.Array(nda=np.array([9, 10, 11, 12])),
+    }
+    tb1 = Table(col_dict=col_dict1)
+    col_dict2 = {
+        "b": lgdo.Array(nda=np.array([13, 14, 15, 16])),
+        "d": lgdo.Array(nda=np.array([17, 18, 19, 20])),
+        "e": lgdo.Array(nda=np.array([21, 22, 23, 24])),
+    }
+    tb2 = Table(col_dict=col_dict2)
+
+    tb1.join(tb2)
+    assert {"a", "b", "c", "d", "e"} == set(tb1)
+    assert all(tb1["b"].nda == np.array([13, 14, 15, 16]))
+
+    tb1 = Table(col_dict=col_dict1)
+    tb1.join(tb2, keep_mine=True)
+    assert {"a", "b", "c", "d", "e"} == set(tb1)
+    assert all(tb1["b"].nda == np.array([5, 6, 7, 8]))
+
+    tb1 = Table(col_dict=col_dict1)
+    tb1.join(tb2, prefix="tb2_")
+    assert {"a", "b", "c", "tb2_b", "tb2_d", "tb2_e"} == set(tb1)
+    assert all(tb1["b"].nda == np.array([5, 6, 7, 8]))
+    assert all(tb1["tb2_b"].nda == np.array([13, 14, 15, 16]))
+
+    tb1 = Table(col_dict=col_dict1)
+    tb1.join(tb2, suffix="_tb2")
+    assert {"a", "b", "c", "b_tb2", "d_tb2", "e_tb2"} == set(tb1)
+    assert all(tb1["b"].nda == np.array([5, 6, 7, 8]))
+    assert all(tb1["b_tb2"].nda == np.array([13, 14, 15, 16]))

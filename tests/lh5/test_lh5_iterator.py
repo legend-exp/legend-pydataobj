@@ -103,6 +103,14 @@ def more_lgnd_files(lgnd_test_data):
         ],
         [
             lgnd_test_data.get_path(
+                "lh5/prod-ref-l200/generated/tier/dsp/cal/p03/r001/l200-p03-r001-cal-20230318T012144Z-tier_dsp.lh5"
+            ),
+            lgnd_test_data.get_path(
+                "lh5/prod-ref-l200/generated/tier/dsp/cal/p03/r001/l200-p03-r001-cal-20230318T012228Z-tier_dsp.lh5"
+            ),
+        ],
+        [
+            lgnd_test_data.get_path(
                 "lh5/prod-ref-l200/generated/tier/hit/cal/p03/r001/l200-p03-r001-cal-20230318T012144Z-tier_hit.lh5"
             ),
             lgnd_test_data.get_path(
@@ -120,7 +128,7 @@ def test_friend(more_lgnd_files):
         buffer_len=5,
     )
     lh5_it = lh5.LH5Iterator(
-        more_lgnd_files[1],
+        more_lgnd_files[2],
         "ch1084803/hit",
         field_mask=["is_valid_0vbb"],
         buffer_len=5,
@@ -134,11 +142,85 @@ def test_friend(more_lgnd_files):
     assert set(lh5_obj.keys()) == {"waveform", "baseline", "is_valid_0vbb"}
 
 
+def test_friend_conflict(more_lgnd_files):
+    lh5_raw_it = lh5.LH5Iterator(
+        more_lgnd_files[0],
+        "ch1084803/raw",
+        field_mask=["waveform", "baseline"],
+        buffer_len=5,
+    )
+
+    lh5_it = lh5.LH5Iterator(
+        more_lgnd_files[1],
+        "ch1084803/dsp",
+        field_mask=["baseline", "wf_max"],
+        buffer_len=5,
+        friend=lh5_raw_it,
+    )
+    lh5_obj = lh5_it.read(0)
+    assert set(lh5_obj.keys()) == {"waveform", "baseline", "wf_max"}
+    assert lh5_obj["waveform"] == lh5.read(
+        "ch1084803/raw/waveform", more_lgnd_files[0], n_rows=5
+    )
+    assert lh5_obj["baseline"] == lh5.read(
+        "ch1084803/dsp/baseline", more_lgnd_files[1], n_rows=5
+    )
+    assert lh5_obj["wf_max"] == lh5.read(
+        "ch1084803/dsp/wf_max", more_lgnd_files[1], n_rows=5
+    )
+
+    lh5_it = lh5.LH5Iterator(
+        more_lgnd_files[1],
+        "ch1084803/dsp",
+        field_mask=["baseline", "wf_max"],
+        buffer_len=5,
+        friend=lh5_raw_it,
+        friend_prefix="raw_",
+    )
+    lh5_obj = lh5_it.read(0)
+    assert set(lh5_obj.keys()) == {"raw_waveform", "raw_baseline", "baseline", "wf_max"}
+    assert lh5_obj["raw_waveform"] == lh5.read(
+        "ch1084803/raw/waveform", more_lgnd_files[0], n_rows=5
+    )
+    assert lh5_obj["raw_baseline"] == lh5.read(
+        "ch1084803/raw/baseline", more_lgnd_files[0], n_rows=5
+    )
+    assert lh5_obj["baseline"] == lh5.read(
+        "ch1084803/dsp/baseline", more_lgnd_files[1], n_rows=5
+    )
+    assert lh5_obj["wf_max"] == lh5.read(
+        "ch1084803/dsp/wf_max", more_lgnd_files[1], n_rows=5
+    )
+
+    lh5_it = lh5.LH5Iterator(
+        more_lgnd_files[1],
+        "ch1084803/dsp",
+        field_mask=["baseline", "wf_max"],
+        buffer_len=5,
+        friend=lh5_raw_it,
+        friend_suffix="_raw",
+    )
+    lh5_obj = lh5_it.read(0)
+    assert set(lh5_obj.keys()) == {"waveform_raw", "baseline_raw", "baseline", "wf_max"}
+    assert lh5_obj["waveform_raw"] == lh5.read(
+        "ch1084803/raw/waveform", more_lgnd_files[0], n_rows=5
+    )
+    assert lh5_obj["baseline_raw"] == lh5.read(
+        "ch1084803/raw/baseline", more_lgnd_files[0], n_rows=5
+    )
+    assert lh5_obj["baseline"] == lh5.read(
+        "ch1084803/dsp/baseline", more_lgnd_files[1], n_rows=5
+    )
+    assert lh5_obj["wf_max"] == lh5.read(
+        "ch1084803/dsp/wf_max", more_lgnd_files[1], n_rows=5
+    )
+
+
 def test_iterate(more_lgnd_files):
     # iterate through all hit groups in all files; there are 10 entries in
     # each group/file
     lh5_it = lh5.LH5Iterator(
-        more_lgnd_files[1],
+        more_lgnd_files[2],
         ["ch1084803/hit", "ch1084804/hit", "ch1121600/hit"],
         field_mask=["is_valid_0vbb", "timestamp", "zacEmax_ctc_cal"],
         entry_list=[0, 1, 2, 3, 5, 8, 13, 21, 34, 55],
@@ -148,8 +230,8 @@ def test_iterate(more_lgnd_files):
     exp_loc_entries = [[0, 1, 2, 3, 5], [8, 3, 1, 4, 5]]
     exp_glob_entries = [[0, 1, 2, 3, 5], [8, 13, 21, 34, 55]]
     exp_files = [
-        [more_lgnd_files[1][0]] * 5,
-        [more_lgnd_files[1][0]] * 3 + [more_lgnd_files[1][1]] * 2,
+        [more_lgnd_files[2][0]] * 5,
+        [more_lgnd_files[2][0]] * 3 + [more_lgnd_files[2][1]] * 2,
     ]
     exp_groups = [
         ["ch1084803/hit"] * 5,
@@ -173,7 +255,7 @@ def test_iterate(more_lgnd_files):
         assert all(lh5_it.current_groups == exp_groups[entry // 5])
 
     lh5_it = lh5.LH5Iterator(
-        more_lgnd_files[1],
+        more_lgnd_files[2],
         ["ch1084803/hit", "ch1084804/hit", "ch1121600/hit"],
         field_mask=["is_valid_0vbb", "timestamp", "zacEmax_ctc_cal"],
         entry_list=[[0, 1, 2, 3, 5, 8], [3], [1], [4], [], [5]],
@@ -193,7 +275,7 @@ def test_iterate(more_lgnd_files):
     )
 
     lh5_it = lh5.LH5Iterator(
-        more_lgnd_files[1],
+        more_lgnd_files[2],
         [["ch1084803/hit", "ch1084804/hit"], ["ch1084803/hit", "ch1121600/hit"]],
         field_mask=["is_valid_0vbb", "timestamp", "zacEmax_ctc_cal"],
         buffer_len=5,
@@ -206,7 +288,7 @@ def test_iterate(more_lgnd_files):
 
     with pytest.raises(ValueError):
         lh5.LH5Iterator(
-            more_lgnd_files[1],
+            more_lgnd_files[2],
             [["ch1084803/hit", "ch1084804/hit"], "ch1084803/hit"],
             field_mask=["is_valid_0vbb", "timestamp", "zacEmax_ctc_cal"],
             buffer_len=5,
@@ -214,7 +296,7 @@ def test_iterate(more_lgnd_files):
 
     with pytest.raises(ValueError):
         lh5.LH5Iterator(
-            more_lgnd_files[1],
+            more_lgnd_files[2],
             [["ch1084803/hit"], ["ch1084804/hit"], ["ch1084803/hit"]],
             field_mask=["is_valid_0vbb", "timestamp", "zacEmax_ctc_cal"],
             buffer_len=5,
