@@ -215,6 +215,19 @@ def test_friend_conflict(more_lgnd_files):
         "ch1084803/dsp/wf_max", more_lgnd_files[1], n_rows=5
     )
 
+    lh5_it.reset_field_mask(["waveform_raw", "baseline", "wf_max"])
+    lh5_obj = lh5_it.read(0)
+    assert set(lh5_obj.keys()) == {"waveform_raw", "baseline", "wf_max"}
+    assert lh5_obj["waveform_raw"] == lh5.read(
+        "ch1084803/raw/waveform", more_lgnd_files[0], n_rows=5
+    )
+    assert lh5_obj["baseline"] == lh5.read(
+        "ch1084803/dsp/baseline", more_lgnd_files[1], n_rows=5
+    )
+    assert lh5_obj["wf_max"] == lh5.read(
+        "ch1084803/dsp/wf_max", more_lgnd_files[1], n_rows=5
+    )
+
 
 def test_iterate(more_lgnd_files):
     # iterate through all hit groups in all files; there are 10 entries in

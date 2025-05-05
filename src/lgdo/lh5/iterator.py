@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import typing
 from collections.abc import Collection, Mapping
 from warnings import warn
 
@@ -9,12 +8,10 @@ import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
 
-from ..types import Array, Scalar, Struct, VectorOfVectors
+from ..types import Table
 from ..units import default_units_registry as ureg
 from .store import LH5Store
 from .utils import expand_path
-
-LGDO = typing.Union[Array, Scalar, Struct, VectorOfVectors]
 
 
 class LH5Iterator:
@@ -172,40 +169,48 @@ class LH5Iterator:
 
         # Map to last iterator entry for each file
         self.entry_map = np.full(len(self.lh5_files), np.iinfo("q").max, "q")
-        self.buffer_len = buffer_len
 
-        if len(self.lh5_files) > 0:
-            f = self.lh5_files[0]
-            g = self.groups[0]
-            n_rows = self.lh5_st.read_n_rows(g, f)
+        self.friend = []
+        self.friend_prefix = []
+        self.friend_suffix = []
 
-            if isinstance(self.buffer_len, str):
-                self.buffer_len = ureg.Quantity(buffer_len)
-            if isinstance(self.buffer_len, ureg.Quantity):
-                self.buffer_len = int(
-                    self.buffer_len
-                    / (self.lh5_st.read_size_in_bytes(g, f) * ureg.B)
-                    * n_rows
-                )
-
-            self.lh5_buffer = self.lh5_st.get_buffer(
-                g,
-                f,
-                size=self.buffer_len,
-                field_mask=field_mask,
-            )
-            if file_map is None:
-                self.file_map[0] = n_rows
-        else:
+        if len(self.lh5_files) == 0:
             msg = f"can't open any files from {lh5_files}"
             raise RuntimeError(msg)
+
+        # lh5 buffer will contain all fields and be used for I/O (with a field mask)
+        self.lh5_buffer = self.lh5_st.get_buffer(
+            self.groups[0],
+            self.lh5_files[0],
+            size=0,
+        )
+        self.available_fields = set(self.lh5_buffer)
+
+        # set field mask and buffer length
+        self.reset_field_mask(field_mask)
+        self.buffer_len = buffer_len
+
+        # Attach the friend(s)
+        if friend is None:
+            friend = []
+        elif isinstance(friend, LH5Iterator):
+            friend = [friend]
+
+        if len(friend) > 0:
+            fr_buf_len = min(fr.buffer_len for fr in friend)
+            self.buffer_len = min(self.buffer_len, fr_buf_len)
+
+        if isinstance(friend_prefix, str):
+            friend_prefix = [friend_prefix] * len(friend)
+        if isinstance(friend_suffix, str):
+            friend_suffix = [friend_suffix] * len(friend)
+        for fr, prefix, suffix in zip(friend, friend_prefix, friend_suffix):
+            self.add_friend(fr, prefix, suffix)
 
         self.i_start = i_start
         self.n_entries = n_entries
         self.current_i_entry = 0
         self.next_i_entry = 0
-
-        self.field_mask = field_mask
 
         # List of entry indices from each file
         self.local_entry_list = None
@@ -234,37 +239,6 @@ class LH5Iterator:
                 self.local_entry_list = [[]] * len(self.file_map)
                 for i_file, local_mask in enumerate(entry_mask):
                     self.local_entry_list[i_file] = np.nonzero(local_mask)[0]
-
-        # Attach the friend
-        if isinstance(friend, LH5Iterator):
-            self.friend = [friend]
-        elif friend is None:
-            self.friend = []
-        else:
-            self.friend = friend
-
-        if isinstance(friend_prefix, str):
-            friend_prefix = [friend_prefix] * len(self.friend)
-        if isinstance(friend_suffix, str):
-            friend_suffix = [friend_suffix] * len(self.friend)
-
-        if len(self.friend) > 0:
-            fr_buf_len = min(fr.buffer_len for fr in self.friend)
-            self.buffer_len = max(self.buffer_len, fr_buf_len)
-
-        for fr, prefix, suffix in zip(self.friend, friend_prefix, friend_suffix):
-            if not isinstance(friend, LH5Iterator):
-                msg = "Friend must be an LH5Iterator"
-                raise ValueError(msg)
-
-            # set buffer_lens to be equal
-            fr.buffer_len = self.buffer_len
-            self.lh5_buffer.join(
-                fr.lh5_buffer,
-                keep_mine=True,
-                prefix=prefix,
-                suffix=suffix,
-            )
 
     def _get_file_cumlen(self, i_file: int) -> int:
         """Helper to get cumulative file length of file"""
@@ -349,7 +323,7 @@ class LH5Iterator:
                 )
         return self.global_entry_list
 
-    def read(self, i_entry: int, n_entries: int | None = None) -> LGDO:
+    def read(self, i_entry: int, n_entries: int | None = None) -> Table:
         "Read the nextlocal chunk of events, starting at entry."
         self.lh5_buffer.resize(0)
 
@@ -404,11 +378,114 @@ class LH5Iterator:
 
         return self.lh5_buffer
 
-    def reset_field_mask(self, mask: Collection[str] | Collection[Collection[str]]):
-        """Replaces the field mask of this iterator and any friends with mask"""
-        self.field_mask = mask
-        for friend in self.friend:
-            friend.reset_field_mask(mask)
+    @property
+    def buffer_len(self):
+        return self._buffer_len
+
+    @buffer_len.setter
+    def buffer_len(self, buffer_len: str | ureg.Quantity | int):
+        if isinstance(buffer_len, str):
+            buffer_len = ureg.Quantity(buffer_len)
+        if isinstance(buffer_len, ureg.Quantity):
+            f = self.lh5_files[0]
+            g = self.groups[0]
+            buffer_len = int(
+                buffer_len
+                / (self.lh5_st.read_size_in_bytes(g, f) * ureg.B)
+                * self.lh5_st.read_n_rows(g, f)
+            )
+
+        self._buffer_len = buffer_len
+        for fr in self.friend:
+            fr.buffer_len = buffer_len
+
+    def add_friend(self, friend: LH5Iterator, prefix: str = "", suffix: str = ""):
+        """Add a friend which will be iterated alongside this, returning a Table
+        joining the contents of each.
+
+        Parameters
+        ----------
+        friend
+            LH5Iterator to be friended to this one
+        prefix
+            string prepended to field names; useful for disambiguating conflicts
+        suffix
+            string appended to field names; useful for disambiguating conflicts
+        """
+        if not isinstance(friend, LH5Iterator):
+            msg = "Friend must be an LH5Iterator"
+            raise ValueError(msg)
+
+        # set buffer_lens to be equal
+        if friend.buffer_len > self.buffer_len:
+            friend.buffer_len = self.buffer_len
+        elif friend.buffer_len < self.buffer_len:
+            self.buffer_len = friend.buffer_len
+        friend.lh5_buffer.resize(len(self.lh5_buffer))
+
+        self.friend += [friend]
+        self.friend_prefix += [prefix]
+        self.friend_suffix += [suffix]
+        self.lh5_buffer.join(
+            friend.lh5_buffer,
+            keep_mine=True,
+            prefix=prefix,
+            suffix=suffix,
+        )
+
+    def reset_field_mask(
+        self, mask: Collection[str] | Collection[Collection[str]] | None
+    ):
+        """Replaces the field mask of this iterator and any friends with mask.
+
+        - If ``None``, set this and all friends to have no mask.
+        - If a collection of strings, set the mask
+          for this and all friends; in the case of a conflict, use first column found. If a
+          prefix or suffix is included for the friend, it must be included in this mask
+        - If a collection of collections, use the first item to set this mask, and subsequent
+          items to set friend masks. In this case, do not include prefixes or suffixes in names
+        """
+        if mask is None:
+            self.field_mask = self.available_fields
+
+            for fr in self.friend:
+                fr.reset_field_mask(None)
+
+            remaining_fields = []
+
+        elif isinstance(mask, Collection) and all(isinstance(m, str) for m in mask):
+            mask = set(mask)
+            self.field_mask = mask & set(self.available_fields)
+            mask -= self.field_mask
+
+            for fr, pre, suf in zip(
+                self.friend, self.friend_prefix, self.friend_suffix
+            ):
+                mask_lookup = {
+                    f"{pre}{field}{suf}": field for field in fr.available_fields
+                }
+                fr_mask = {mask_lookup[field] for field in mask if field in mask_lookup}
+                fr.reset_field_mask(fr_mask)
+                mask -= set(mask_lookup)
+
+            remaining_fields = mask
+
+        self.lh5_buffer = self.lh5_st.get_buffer(
+            self.groups[0],
+            self.lh5_files[0],
+            size=0,
+            field_mask=self.field_mask,
+        )
+        for fr, pre, suf in zip(self.friend, self.friend_prefix, self.friend_suffix):
+            self.lh5_buffer.join(
+                fr.lh5_buffer,
+                keep_mine=True,
+                prefix=pre,
+                suffix=suf,
+            )
+
+        if len(remaining_fields) > 0:
+            logging.warning(f"Fields {remaining_fields} in field mask were not found")
 
     @property
     def current_local_entries(self) -> NDArray[int]:
@@ -530,7 +607,7 @@ class LH5Iterator:
         self.next_i_entry = self.i_start
         return self
 
-    def __next__(self) -> LGDO:
+    def __next__(self) -> Table:
         """Read next buffer_len entries and return lh5_table and iterator entry."""
         n_entries = self.n_entries
         if n_entries is not None:
