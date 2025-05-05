@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import typing
+from collections.abc import Collection, Mapping
 from warnings import warn
 
 import numpy as np
@@ -16,7 +17,7 @@ from .utils import expand_path
 LGDO = typing.Union[Array, Scalar, Struct, VectorOfVectors]
 
 
-class LH5Iterator(typing.Iterator):
+class LH5Iterator:
     """
     A class for iterating through one or more LH5 files, one block of entries
     at a time. This also accepts an entry list/mask to enable event selection,
@@ -63,14 +64,14 @@ class LH5Iterator(typing.Iterator):
 
     def __init__(
         self,
-        lh5_files: str | list[str],
-        groups: str | list[str] | list[list[str]],
+        lh5_files: str | Collection[str],
+        groups: str | Collection[str] | Collection[Collection[str]],
         base_path: str = "",
-        entry_list: list[int] | list[list[int]] | None = None,
-        entry_mask: list[bool] | list[list[bool]] | None = None,
+        entry_list: Collection[int] | Collection[Collection[int]] = None,
+        entry_mask: Collection[bool] | Collection[Collection[bool]] = None,
         i_start: int = 0,
-        n_entries: int | None = None,
-        field_mask: dict[str, bool] | list[str] | tuple[str] | None = None,
+        n_entries: int = None,
+        field_mask: Mapping[str, bool] | Collection[str] = None,
         buffer_len: int = "100*MB",
         file_cache: int = 10,
         file_map: NDArray[int] = None,
@@ -115,25 +116,30 @@ class LH5Iterator(typing.Iterator):
             The friend should have the same length and entry list. A single
             LH5 table containing columns from both iterators will be returned.
             Note that buffer_len will be set to the minimum of the two.
+        friend_prefix
+            prefix for fields in friend iterator for resolving naming conflicts
+        friend_suffix
+            suffix for fields in friend iterator for resolving naming conflicts
         """
         self.lh5_st = LH5Store(base_path=base_path, keep_open=file_cache)
 
         # List of files, with wildcards and env vars expanded
         if isinstance(lh5_files, str):
             lh5_files = [lh5_files]
-        elif not isinstance(lh5_files, (list, set, tuple)):
+        elif not isinstance(lh5_files, Collection):
             msg = "lh5_files must be a string or list of strings"
             raise ValueError(msg)
 
         if isinstance(groups, str):
             groups = [[groups]] * len(lh5_files)
-        elif not isinstance(groups, list):
+        elif not isinstance(groups, Collection):
             msg = "group must be a string or appropriate list"
             raise ValueError(msg)
         elif all(isinstance(g, str) for g in groups):
             groups = [groups] * len(lh5_files)
         elif len(groups) == len(lh5_files) and all(
-            isinstance(gr_list, (list, set, tuple)) for gr_list in groups
+            isinstance(gr_list, Collection) and not isinstance(gr_list, str)
+            for gr_list in groups
         ):
             pass
         else:
@@ -502,13 +508,13 @@ class LH5Iterator(typing.Iterator):
                 return self.n_entries
         return self._get_file_cumentries(len(self.lh5_files) - 1)
 
-    def __iter__(self) -> typing.Iterator:
+    def __iter__(self):
         """Loop through entries in blocks of size buffer_len."""
         self.current_i_entry = 0
         self.next_i_entry = self.i_start
         return self
 
-    def __next__(self) -> tuple[LGDO, int, int]:
+    def __next__(self) -> LGDO:
         """Read next buffer_len entries and return lh5_table and iterator entry."""
         n_entries = self.n_entries
         if n_entries is not None:
