@@ -7,6 +7,7 @@ import logging
 import os
 import string
 from collections.abc import Mapping, Sequence
+from pathlib import Path
 from typing import Any
 
 import h5py
@@ -153,7 +154,7 @@ def expand_vars(expr: str, substitute: dict[str, str] | None = None) -> str:
 
     # use provided mapping
     # then expand env variables
-    return os.path.expandvars(string.Template(expr).safe_substitute(substitute))
+    return os.path.expandvars(string.Template(str(expr)).safe_substitute(substitute))
 
 
 def expand_path(
@@ -183,14 +184,15 @@ def expand_path(
         Unique absolute path, or list of all absolute paths
     """
     if base_path is not None and base_path != "":
-        base_path = os.path.expanduser(os.path.expandvars(base_path))
-        path = os.path.join(base_path, path)
+        base_path = Path(os.path.expandvars(base_path)).expanduser()
+        path = base_path / path
 
     # first expand variables
     _path = expand_vars(path, substitute)
 
     # then expand wildcards
-    paths = sorted(glob.glob(os.path.expanduser(_path)))
+    # pathlib glob works differently so use glob for now
+    paths = sorted(glob.glob(str(Path(_path).expanduser())))  # noqa: PTH207
 
     if base_path is not None and base_path != "":
         paths = [os.path.relpath(p, base_path) for p in paths]

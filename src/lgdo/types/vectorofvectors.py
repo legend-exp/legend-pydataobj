@@ -127,20 +127,48 @@ class VectorOfVectors(LGDOCollection):
 
             # ak.to_buffer helps in de-serialization
             # NOTE: ak.to_packed() needed?
-            form, length, container = ak.to_buffers(ak.to_packed(data))
+            form, _, container = ak.to_buffers(ak.to_packed(data))
 
-            # NOTE: node#-data is not even in the dict if the awkward array is empty
-            # NOTE: if the data arg was a numpy array, to_buffers() preserves
-            # the original dtype
-            # FIXME: have to copy the buffers, otherwise self will not own the
-            # data and self.resize() will fail. Is it possible to avoid this?
-            flattened_data = np.copy(
-                container.pop(f"node{data.ndim - 1}-data", np.empty(0, dtype=dtype))
-            )
+            # check if bytestring
+            curr = form
+            for _ in range(data.ndim - 1):
+                curr = curr.content
+            if (
+                "__array__" in curr.parameters
+                and curr.parameters["__array__"] == "bytestring"
+            ):
+                diffs = np.diff(container[f"node{data.ndim - 1}-offsets"])
+                if (diffs != diffs[0]).all():
+                    err_msg = "Non uniform string lengths not supported"
+                    raise NotImplementedError(err_msg)
+                flattened_data = np.asarray(
+                    ak.enforce_type(
+                        ak.unflatten(
+                            container.pop(
+                                f"node{data.ndim}-data", np.empty(0, dtype=dtype)
+                            ),
+                            diffs[0],
+                        ),
+                        "bytes",
+                    )
+                )
 
-            # if user-provided dtype is different than dtype from Awkward, cast
-            # NOTE: makes a copy only if needed
-            flattened_data = np.asarray(flattened_data, dtype=dtype)
+                # if user-provided dtype is different than dtype from Awkward, cast
+                # NOTE: makes a copy only if needed
+                flattened_data = np.asarray(flattened_data, dtype=dtype)
+            else:
+                # NOTE: node#-data is not even in the dict if the awkward array is empty
+                # NOTE: if the data arg was a numpy array, to_buffers() preserves
+                # the original dtype
+                # FIXME: have to copy the buffers, otherwise self will not own the
+                # data and self.resize() will fail. Is it possible to avoid this?
+                flattened_data = np.copy(
+                    container.pop(f"node{data.ndim - 1}-data", np.empty(0, dtype=dtype))
+                )
+
+                # if user-provided dtype is different than dtype from Awkward, cast
+                # NOTE: makes a copy only if needed
+                flattened_data = np.asarray(flattened_data, dtype=dtype)
 
             # start from innermost VoV and build nested structure
             for i in range(data.ndim - 2, -1, -1):
@@ -631,11 +659,25 @@ class VectorOfVectors(LGDOCollection):
             offsets[1:] = self.cumulative_length.nda
             offsets[0] = 0
 
-            content = (
-                ak.contents.NumpyArray(self.flattened_data.nda)
-                if self.ndim == 2
-                else self.flattened_data.view_as(library, with_units=with_units).layout
-            )
+            if self.ndim != 2:
+                content = self.flattened_data.view_as(
+                    library, with_units=with_units
+                ).layout
+            # need to handle strings separately
+            elif np.issubdtype(self.flattened_data.nda.dtype, np.bytes_):
+                byte_arrays = []
+                for s in self.flattened_data.nda:
+                    # Convert each string to array of bytes
+                    byte_array = np.frombuffer(s, dtype=np.uint8)
+                    byte_arrays.append(byte_array)
+                max_len = max(len(b) for b in byte_arrays)
+                raw_arrays = ak.contents.NumpyArray(np.concatenate(byte_arrays))
+                array_of_chars = ak.contents.RegularArray(
+                    raw_arrays, max_len, parameters={"__array__": "bytes"}
+                )
+                content = ak.enforce_type(array_of_chars, "bytes", highlevel=False)
+            else:
+                content = ak.contents.NumpyArray(self.flattened_data.nda)
 
             layout = ak.contents.ListOffsetArray(
                 offsets=ak.index.Index(offsets),
