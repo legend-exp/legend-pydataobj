@@ -434,12 +434,12 @@ class LH5Iterator:
         )
 
     def reset_field_mask(
-        self, mask: Collection[str] | Collection[Collection[str]] | None
+        self, mask: Collection[str] | Mapping[str, bool] | Collection[Collection[str]] | Collection[Mapping[str, bool]] | None
     ):
         """Replaces the field mask of this iterator and any friends with mask.
 
         - If ``None``, set this and all friends to have no mask.
-        - If a collection of strings, set the mask
+        - If a collection of strings or mapping from strings to bools, set the mask
           for this and all friends; in the case of a conflict, use first column found. If a
           prefix or suffix is included for the friend, it must be included in this mask
         - If a collection of collections, use the first item to set this mask, and subsequent
@@ -452,6 +452,22 @@ class LH5Iterator:
                 fr.reset_field_mask(None)
 
             remaining_fields = []
+
+        elif isinstance(mask, Mapping):
+            self.field_mask = { field:mask[field] for field in self.available_fields if field in mask }
+            mask = { field:mask[field] for field in mask if field not in self.field_mask }
+
+            for fr, pre, suf in zip(
+                self.friend, self.friend_prefix, self.friend_suffix
+            ):
+                mask_lookup = {
+                    f"{pre}{field}{suf}": field for field in fr.available_fields
+                }
+                fr_mask = { mask_lookup[field]:mask[field] for field in mask_lookup if field in mask }
+                fr.reset_field_mask(fr_mask)
+                mask = { field:mask[field] for field in mask if field not in mask_lookup }
+
+            remaining_fields = mask
 
         elif isinstance(mask, Collection) and all(isinstance(m, str) for m in mask):
             mask = set(mask)
