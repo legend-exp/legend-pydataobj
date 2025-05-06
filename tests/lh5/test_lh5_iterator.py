@@ -230,10 +230,8 @@ def test_friend_conflict(more_lgnd_files):
 
     lh5_it.reset_field_mask({"baseline_raw": False, "wf_max": False})
     lh5_obj = lh5_it.read(0)
-    assert {"waveform_raw", "baseline"}.issubset(set(lh5_obj.keys())) and {
-        "baseline_raw",
-        "wf_max",
-    }.isdisjoint(set(lh5_obj.keys()))
+    assert {"waveform_raw", "baseline"}.issubset(set(lh5_obj.keys()))
+    assert {"baseline_raw", "wf_max"}.isdisjoint(set(lh5_obj.keys()))
     assert lh5_obj["waveform_raw"] == lh5.read(
         "ch1084803/raw/waveform", more_lgnd_files[0], n_rows=5
     )
