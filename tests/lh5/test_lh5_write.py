@@ -540,7 +540,7 @@ def test_write_histogram_variable(caplog, tmptestdir):
 
 
 def test_write_append_struct(tmptestdir):
-    outfile = str(tmptestdir / "test-write-append-struct.lh5")
+    outfile = f"{tmptestdir}/test-write-append-struct.lh5"
     st = types.Struct({"arr1": types.Table({"a": types.Array([1, 2, 3])})})
     lh5.write(st, "struct", outfile, wo_mode="of")
     st2 = types.Struct({"arr2": types.Table({"a": types.Array([1, 2, 3])})})
@@ -569,7 +569,6 @@ def test_write_append_struct(tmptestdir):
             wo_mode="ac",
         )
 
-    outfile = str(tmptestdir / "test-write-append-struct.lh5")
     lh5.write(
         types.Table({"arr1": types.Array([1, 2, 3])}), "struct", outfile, wo_mode="of"
     )
@@ -584,7 +583,6 @@ def test_write_append_struct(tmptestdir):
         )
 
     # append to empty struct
-    outfile = str(tmptestdir / "test-write-append-struct.lh5")
     lh5.write(types.Struct({}), "struct", outfile, wo_mode="of")
     st2 = types.Struct({"arr2": types.Table({"a": types.Array([1, 2, 3])})})
     lh5.write(st2, "struct", outfile, wo_mode="ac")
