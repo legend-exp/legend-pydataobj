@@ -531,3 +531,53 @@ def test_write_histogram_variable(caplog, tmptestdir):
     assert h3.attrs["testattr"] == "test"
     assert h3["weights"].attrs["weightattr"] == "testweight"
     assert h3.binning[0].attrs["binningattr"] == "testbinning"
+
+
+def test_write_append_struct(tmptestdir):
+    outfile = str(tmptestdir / "test-write-append-struct.lh5")
+    st = types.Struct({"arr1": types.Array([1, 2, 3])})
+    lh5.write(st, "struct", outfile, wo_mode="of")
+    st2 = types.Struct({"arr2": types.Array([4, 5, 6])})
+    lh5.write(st2, "struct", outfile, wo_mode="ac")
+
+    result = lh5.read("struct", outfile)
+    assert list(result.keys()) == ["arr1", "arr2"]
+    assert len(result.arr1) == len(st.arr1)
+    assert len(result.arr2) == len(st2.arr2)
+
+    # test error when appending existing field
+    with pytest.raises(lh5.exceptions.LH5EncodeError):
+        lh5.write(
+            types.Struct({"arr2": types.Array([4, 5, 6])}),
+            "struct",
+            outfile,
+            wo_mode="ac",
+        )
+
+    outfile = str(tmptestdir / "test-write-append-struct.lh5")
+    lh5.write(
+        types.Table({"arr1": types.Array([1, 2, 3])}), "struct", outfile, wo_mode="of"
+    )
+
+    # error if appending to object of different type
+    with pytest.raises(lh5.exceptions.LH5EncodeError):
+        lh5.write(
+            types.Struct({"arr2": types.Array([4, 5, 6])}),
+            "struct",
+            outfile,
+            wo_mode="ac",
+        )
+
+    outfile = str(tmptestdir / "test-write-append-struct.lh5")
+    lh5.write(
+        types.Table({"arr1": types.Array([1, 2, 3])}), "struct", outfile, wo_mode="of"
+    )
+
+    # error if appending to object of different type
+    with pytest.raises(lh5.exceptions.LH5EncodeError):
+        lh5.write(
+            types.Table({"arr2": types.Array([4, 5, 6, 7])}),
+            "struct",
+            outfile,
+            wo_mode="ac",
+        )
