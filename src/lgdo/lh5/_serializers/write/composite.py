@@ -186,19 +186,31 @@ def _h5_write_struct(
     write_start=0,
     **h5py_kwargs,
 ):
+    # this works for structs and derived (tables)
     assert isinstance(obj, types.Struct)
 
     # In order to append a column, we need to update the
-    # `table{old_fields}` value in `group.attrs['datatype"]` to include
-    # the new fields.  One way to do this is to override
-    # `obj.attrs["datatype"]` to include old and new fields. Then we
-    # can write the fields to the table as normal.
+    # `struct/table{old_fields}` value in `group.attrs['datatype"]` to include
+    # the new fields. One way to do this is to override `obj.attrs["datatype"]`
+    # to include old and new fields. Then we can write the fields to the
+    # struct/table as normal.
     if wo_mode == "ac":
+        if name not in group:
+            msg = "Cannot append column to non-existing struct on disk"
+            raise LH5EncodeError(msg, lh5_file, group, name)
+
         old_group = utils.get_h5_group(name, group)
+        if "datatype" not in old_group.attrs:
+            msg = "Cannot append column to an existing  non-LGDO object on disk"
+            raise LH5EncodeError(msg, lh5_file, group, name)
+
         lgdotype = datatype.datatype(old_group.attrs["datatype"])
         fields = datatype.get_struct_fields(old_group.attrs["datatype"])
-        if not issubclass(lgdotype, types.Struct):
-            msg = f"Trying to append columns to an object of type {lgdotype.__name__}"
+        if lgdotype is not type(obj):
+            msg = (
+                "Trying to append columns to an object of different "
+                f"type {lgdotype.__name__}!={type(obj)}"
+            )
             raise LH5EncodeError(msg, lh5_file, group, name)
 
         # If the mode is `append_column`, make sure we aren't appending
@@ -211,8 +223,12 @@ def _h5_write_struct(
                 "column(s) to a table with the same field(s)"
             )
             raise LH5EncodeError(msg, lh5_file, group, name)
+
         # It doesn't matter what key we access, as all fields in the old table have the same size
-        if old_group[next(iter(old_group.keys()))].size != obj.size:
+        if (
+            isinstance(obj, types.Table)
+            and old_group[next(iter(old_group.keys()))].size != obj.size
+        ):
             msg = (
                 f"Table sizes don't match. Trying to append column of size {obj.size} "
                 f"to a table of size {old_group[next(iter(old_group.keys()))].size}."
@@ -222,16 +238,25 @@ def _h5_write_struct(
         # Now we can append the obj.keys() to the old fields, and then update obj.attrs.
         fields.extend(list(obj.keys()))
         obj.attrs.pop("datatype")
-        obj.attrs["datatype"] = "table" + "{" + ",".join(fields) + "}"
+
+        obj.attrs["datatype"] = obj.datatype_name() + "{" + ",".join(fields) + "}"
+
+        # propagating wo_mode="ac" to nested LGDOs does not make any sense
+        wo_mode = "append"
+
+        # overwrite attributes of the existing struct
+        attrs_overwrite = True
+    else:
+        attrs_overwrite = wo_mode == "o"
 
     group = utils.get_h5_group(
         name,
         group,
         grp_attrs=obj.attrs,
-        overwrite=(wo_mode in ["o", "ac"]),
+        overwrite=attrs_overwrite,
     )
     # If the mode is overwrite, then we need to peek into the file's
-    # table's existing fields.  If we are writing a new table to the
+    # table's existing fields. If we are writing a new table to the
     # group that does not contain an old field, we should delete that
     # old field from the file
     if wo_mode == "o":
@@ -260,11 +285,9 @@ def _h5_write_struct(
         else:
             obj_fld = obj[field]
 
-        # Convert keys to string for dataset names
-        f = str(field)
         _h5_write_lgdo(
             obj_fld,
-            f,
+            str(field),
             lh5_file,
             group=group,
             start_row=start_row,
