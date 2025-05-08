@@ -12,7 +12,7 @@ def test_init():
     assert (wft.dt.nda == np.full(1024, fill_value=1)).all()
     assert isinstance(wft.values, lgdo.VectorOfVectors)
     assert len(wft.values) == 1024
-    assert wft.attrs == {"datatype": "table{t0,dt,values}"}
+    assert wft.attrs == {"datatype": "table{dt,t0,values}"}
 
     wft = WaveformTable(dt_units="ns", values_units="adc")
     assert wft.dt.attrs["units"] == "ns"

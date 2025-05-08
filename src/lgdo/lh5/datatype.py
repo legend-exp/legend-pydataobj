@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from collections import OrderedDict
+from itertools import permutations as perm
 
 from .. import types as lgdo
 
@@ -14,7 +15,10 @@ _lgdo_datatype_map: dict[str, lgdo.LGDO] = OrderedDict(
             lgdo.ArrayOfEncodedEqualSizedArrays,
             r"^array_of_encoded_equalsized_arrays<1,1>\{.+\}$",
         ),
-        (lgdo.Histogram, r"^struct\{binning,weights,isdensity\}$"),
+        (
+            lgdo.Histogram,
+            rf"^struct\{{(?:{'|'.join([','.join(p) for p in perm(['binning', 'weights', 'isdensity'])])})\}}$",
+        ),
         (lgdo.Struct, r"^struct\{.*\}$"),
         (lgdo.Table, r"^table\{.*\}$"),
         (lgdo.FixedSizeArray, r"^fixedsize_array<\d+>\{.+\}$"),

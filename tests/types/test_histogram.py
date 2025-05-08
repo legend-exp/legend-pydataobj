@@ -98,7 +98,7 @@ def test_init_np():
 def test_datatype_name():
     h = Histogram(np.array([1, 1]), (np.array([0, 1, 2]),))
     assert h.datatype_name() == "struct"
-    assert h.form_datatype() == "struct{binning,weights,isdensity}"
+    assert h.form_datatype() == "struct{binning,isdensity,weights}"
 
 
 def test_axes():
@@ -266,7 +266,7 @@ def test_view_as_np():
 
 def test_not_like_table():
     h = Histogram(np.array([1, 1]), (np.array([0, 1, 2]),))
-    assert h.form_datatype() == "struct{binning,weights,isdensity}"
+    assert h.form_datatype() == "struct{binning,isdensity,weights}"
     with pytest.raises(AttributeError):
         x = h.x  # noqa: F841
     with pytest.raises(TypeError):
