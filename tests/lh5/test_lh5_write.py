@@ -535,9 +535,9 @@ def test_write_histogram_variable(caplog, tmptestdir):
 
 def test_write_append_struct(tmptestdir):
     outfile = str(tmptestdir / "test-write-append-struct.lh5")
-    st = types.Struct({"arr1": types.Array([1, 2, 3])})
+    st = types.Struct({"arr1": types.Table({"a": types.Array([1, 2, 3])})})
     lh5.write(st, "struct", outfile, wo_mode="of")
-    st2 = types.Struct({"arr2": types.Array([4, 5, 6])})
+    st2 = types.Struct({"arr2": types.Table({"a": types.Array([1, 2, 3])})})
     lh5.write(st2, "struct", outfile, wo_mode="ac")
 
     result = lh5.read("struct", outfile)
@@ -553,11 +553,6 @@ def test_write_append_struct(tmptestdir):
             outfile,
             wo_mode="ac",
         )
-
-    outfile = str(tmptestdir / "test-write-append-struct.lh5")
-    lh5.write(
-        types.Table({"arr1": types.Array([1, 2, 3])}), "struct", outfile, wo_mode="of"
-    )
 
     # error if appending to object of different type
     with pytest.raises(lh5.exceptions.LH5EncodeError):
@@ -581,3 +576,13 @@ def test_write_append_struct(tmptestdir):
             outfile,
             wo_mode="ac",
         )
+
+    # append to empty struct
+    outfile = str(tmptestdir / "test-write-append-struct.lh5")
+    lh5.write(types.Struct({}), "struct", outfile, wo_mode="of")
+    st2 = types.Struct({"arr2": types.Table({"a": types.Array([1, 2, 3])})})
+    lh5.write(st2, "struct", outfile, wo_mode="ac")
+
+    result = lh5.read("struct", outfile)
+    assert list(result.keys()) == ["arr2"]
+    assert len(result.arr2) == len(st2.arr2)
