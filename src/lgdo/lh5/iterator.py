@@ -4,8 +4,9 @@ import logging
 from collections.abc import Callable, Collection, Iterator, Mapping
 from copy import deepcopy
 from functools import partial
-from multiprocessing.pool import Pool
-from typing import Any, Union
+from itertools import chain
+from multiprocessing.pool import Pool, AsyncResult
+from typing import Any, Iterator, Union
 from warnings import warn
 
 import awkward as ak
@@ -668,7 +669,9 @@ class LH5Iterator:
                     base_path=self.lh5_st.base_path, keep_open=self.lh5_st.keep_open
                 )
             elif k == "friend":
-                result.friend = None
+                result.friend = []
+                result.friend_prefix = []
+                result.friend_suffix = []
             else:
                 setattr(result, k, deepcopy(v, memo))
         return result
@@ -695,14 +698,13 @@ class LH5Iterator:
             size=self.buffer_len,
             field_mask=self.field_mask,
         )
-        if self.friend is not None:
-            self.lh5_buffer.join(self.friend.lh5_buffer)
+        for fr, pre, suf in zip(self.friend, self.friend_prefix, self.friend_suffix):
+            self.lh5_buffer.join(fr, pre, suf)
 
     def _generate_workers(self, n_workers: int):
         """Create n_workers copy of this iterator, dividing the files and
         groups between them. These are intended for parallel use"""
-        if self.friend is not None:
-            friend_its = self.friend._generate_workers(n_workers)
+        friend_its = [ fr._generate_workers(n_workers) for fr in self.friend ]
 
         i_files = np.linspace(0, len(self.lh5_files), n_workers + 1).astype("int")
         # if we have an entry list, get local entries for all files
@@ -739,19 +741,24 @@ class LH5Iterator:
                 it.local_entry_list = local_entry_list[s]
             it.global_entry_list = None
 
-            if self.friend is not None:
-                it.add_friend(friend_its[i_worker])
+            for fr, pre, suf in zip(friend_its, self.friend_prefix, self.friend_suffix):
+                it.add_friend(fr[i_worker], pre, suf)
 
             worker_its += [it]
 
         return worker_its
 
     def map(
-        self, fun: Callable[Table, LH5Iterator], processes: Pool | int = None
-    ) -> list(Any):
+        self,
+        fun: Callable[Table, LH5Iterator],
+        processes: Pool | int = None,
+        chunks: int = None,
+        ordered: bool = True,
+    ) -> Iterator[Any]:
         """Map function over iterator blocks and return order-preserving list
         of outputs. Can be multi-threaded provided there are no attempts
-        to modify existing objects.
+        to modify existing objects. Results will be returned asynchronously for
+        each chunk.
 
         Parameters
         ----------
@@ -760,15 +767,27 @@ class LH5Iterator:
             Outputs of function will be collected in list and returned
         processes:
             number of processes or multiprocessing processor pool
+        chunks:
+            number of chunks to divide iterator into if multiprocessing. By
+            default use one chunk per thread
+        ordered
+            if set to ``False``, may return results out of order if multiprocessing
         """
         if processes is None:
             return _map_helper(fun, self)
         if isinstance(processes, int):
             processes = Pool(processes)
-        it_pool = self._generate_workers(processes._processes)
-        result = processes.map(partial(_map_helper, fun), it_pool)
 
-        return [r for res in result for r in res]
+        if chunks is None:
+            chunks = processes._processes
+        it_pool = self._generate_workers(chunks)
+
+        if ordered:
+            result = processes.imap(partial(_map_helper, fun), it_pool)
+        else:
+            result = processes.imap_unordered(partial(_map_helper, fun), it_pool)
+
+        return chain.from_iterable(result)
 
     def accumulate(
         self,
