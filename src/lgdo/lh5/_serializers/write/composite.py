@@ -186,19 +186,20 @@ def _h5_write_struct(
     write_start=0,
     **h5py_kwargs,
 ):
+    # this works for structs and derived (tables)
     assert isinstance(obj, types.Struct)
 
     # In order to append a column, we need to update the
-    # `table{old_fields}` value in `group.attrs['datatype"]` to include
+    # `struct/table{old_fields}` value in `group.attrs['datatype"]` to include
     # the new fields.  One way to do this is to override
     # `obj.attrs["datatype"]` to include old and new fields. Then we
-    # can write the fields to the table as normal.
+    # can write the fields to the struct/table as normal.
     if wo_mode == "ac":
         old_group = utils.get_h5_group(name, group)
         lgdotype = datatype.datatype(old_group.attrs["datatype"])
         fields = datatype.get_struct_fields(old_group.attrs["datatype"])
-        if not issubclass(lgdotype, types.Struct):
-            msg = f"Trying to append columns to an object of type {lgdotype.__name__}"
+        if lgdotype is not type(obj):
+            msg = f"Trying to append columns to an object of different type {lgdotype.__name__}!={type(obj)}"
             raise LH5EncodeError(msg, lh5_file, group, name)
 
         # If the mode is `append_column`, make sure we aren't appending
@@ -211,8 +212,12 @@ def _h5_write_struct(
                 "column(s) to a table with the same field(s)"
             )
             raise LH5EncodeError(msg, lh5_file, group, name)
+
         # It doesn't matter what key we access, as all fields in the old table have the same size
-        if old_group[next(iter(old_group.keys()))].size != obj.size:
+        if (
+            isinstance(obj, types.Table)
+            and old_group[next(iter(old_group.keys()))].size != obj.size
+        ):
             msg = (
                 f"Table sizes don't match. Trying to append column of size {obj.size} "
                 f"to a table of size {old_group[next(iter(old_group.keys()))].size}."
@@ -222,7 +227,8 @@ def _h5_write_struct(
         # Now we can append the obj.keys() to the old fields, and then update obj.attrs.
         fields.extend(list(obj.keys()))
         obj.attrs.pop("datatype")
-        obj.attrs["datatype"] = "table" + "{" + ",".join(fields) + "}"
+
+        obj.attrs["datatype"] = obj.datatype_name() + "{" + ",".join(fields) + "}"
 
     group = utils.get_h5_group(
         name,
