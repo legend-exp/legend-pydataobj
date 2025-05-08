@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-import os
+from pathlib import Path
 
 import awkward as ak
 import h5py
@@ -114,8 +114,8 @@ def test_write_object_overwrite_table_no_deletion(caplog, tmptestdir):
     caplog.set_level(logging.DEBUG)
     caplog.clear()
 
-    if os.path.exists(f"{tmptestdir}/write_object_overwrite_test.lh5"):
-        os.remove(f"{tmptestdir}/write_object_overwrite_test.lh5")
+    if Path(f"{tmptestdir}/write_object_overwrite_test.lh5").exists():
+        Path(f"{tmptestdir}/write_object_overwrite_test.lh5").unlink()
 
     tb1 = types.Table(col_dict={"dset1": types.Array(np.zeros(10))})
     tb2 = types.Table(
@@ -145,8 +145,8 @@ def test_write_object_overwrite_table_with_deletion(caplog, tmptestdir):
     caplog.set_level(logging.DEBUG)
     caplog.clear()
 
-    if os.path.exists(f"{tmptestdir}/write_object_overwrite_test.lh5"):
-        os.remove(f"{tmptestdir}/write_object_overwrite_test.lh5")
+    if Path(f"{tmptestdir}/write_object_overwrite_test.lh5").exists():
+        Path(f"{tmptestdir}/write_object_overwrite_test.lh5").unlink()
 
     tb1 = types.Table(col_dict={"dset1": types.Array(np.zeros(10))})
     tb2 = types.Table(
@@ -170,8 +170,8 @@ def test_write_object_overwrite_table_with_deletion(caplog, tmptestdir):
         assert "dset1" not in list(lh5file["my_group"].keys())
 
     # Make sure the same behavior happens when we nest the table in a group
-    if os.path.exists(f"{tmptestdir}/write_object_overwrite_test.lh5"):
-        os.remove(f"{tmptestdir}/write_object_overwrite_test.lh5")
+    if Path(f"{tmptestdir}/write_object_overwrite_test.lh5").exists():
+        Path(f"{tmptestdir}/write_object_overwrite_test.lh5").unlink()
 
     tb1 = types.Table(col_dict={"dset1": types.Array(np.zeros(10))})
     tb2 = types.Table(
@@ -209,8 +209,8 @@ def test_write_object_overwrite_lgdo(caplog, tmptestdir):
     caplog.clear()
 
     # Start with an types.WaveformTable
-    if os.path.exists(f"{tmptestdir}/write_object_overwrite_test.lh5"):
-        os.remove(f"{tmptestdir}/write_object_overwrite_test.lh5")
+    if Path(f"{tmptestdir}/write_object_overwrite_test.lh5").exists():
+        Path(f"{tmptestdir}/write_object_overwrite_test.lh5").unlink()
 
     tb1 = types.WaveformTable(
         t0=np.zeros(10),
@@ -316,8 +316,8 @@ def test_write_object_overwrite_lgdo(caplog, tmptestdir):
 # Test that when we try to overwrite an existing column in a table we fail
 def test_write_object_append_column(tmptestdir):
     # Try to append an array to a table
-    if os.path.exists(f"{tmptestdir}/write_object_append_column_test.lh5"):
-        os.remove(f"{tmptestdir}/write_object_append_column_test.lh5")
+    if Path(f"{tmptestdir}/write_object_append_column_test.lh5").exists():
+        Path(f"{tmptestdir}/write_object_append_column_test.lh5").unlink()
 
     array1 = types.Array(np.zeros(10))
     tb1 = types.Table(col_dict={"dset1`": types.Array(np.ones(10))})
@@ -332,8 +332,8 @@ def test_write_object_append_column(tmptestdir):
         )  # Now, try to append a column to an array
 
     # Try to append a table that has a same key as the old table
-    if os.path.exists(f"{tmptestdir}/write_object_append_column_test.lh5"):
-        os.remove(f"{tmptestdir}/write_object_append_column_test.lh5")
+    if Path(f"{tmptestdir}/write_object_append_column_test.lh5").exists():
+        Path(f"{tmptestdir}/write_object_append_column_test.lh5").unlink()
 
     tb1 = types.Table(
         col_dict={
@@ -355,8 +355,8 @@ def test_write_object_append_column(tmptestdir):
         )  # Now, try to append a column with a same field
 
     # try appending a column that is larger than one that exists
-    if os.path.exists(f"{tmptestdir}/write_object_append_column_test.lh5"):
-        os.remove(f"{tmptestdir}/write_object_append_column_test.lh5")
+    if Path(f"{tmptestdir}/write_object_append_column_test.lh5").exists():
+        Path(f"{tmptestdir}/write_object_append_column_test.lh5").unlink()
 
     tb1 = types.Table(col_dict={"dset1": types.Array(np.zeros(10))})
     tb2 = types.Table(
@@ -373,8 +373,8 @@ def test_write_object_append_column(tmptestdir):
         )  # Now, try to append a column with a different field size
 
     # Finally successfully append a column
-    if os.path.exists(f"{tmptestdir}/write_object_append_column_test.lh5"):
-        os.remove(f"{tmptestdir}/write_object_append_column_test.lh5")
+    if Path(f"{tmptestdir}/write_object_append_column_test.lh5").exists():
+        Path(f"{tmptestdir}/write_object_append_column_test.lh5").unlink()
 
     tb1 = types.Table(col_dict={"dset1": types.Array(np.zeros(10))})
     tb2 = types.Table(
@@ -410,8 +410,8 @@ def test_write_histogram(caplog, tmptestdir):
     caplog.clear()
 
     # Start with an types.Histogram
-    if os.path.exists(f"{tmptestdir}/write_histogram_test.lh5"):
-        os.remove(f"{tmptestdir}/write_histogram_test.lh5")
+    if Path(f"{tmptestdir}/write_histogram_test.lh5").exists():
+        Path(f"{tmptestdir}/write_histogram_test.lh5").unlink()
 
     h1 = types.Histogram(
         np.array([[1, 1], [1, 1]]), (np.array([0, 1, 2]), np.array([2.1, 2.2, 2.3]))
@@ -484,8 +484,8 @@ def test_write_histogram_variable(caplog, tmptestdir):
     caplog.clear()
 
     # Start with an types.Histogram
-    if os.path.exists(f"{tmptestdir}/write_histogram_test.lh5"):
-        os.remove(f"{tmptestdir}/write_histogram_test.lh5")
+    if Path(f"{tmptestdir}/write_histogram_test.lh5").exists():
+        Path(f"{tmptestdir}/write_histogram_test.lh5").unlink()
 
     h1 = types.Histogram(
         np.array([[1, 1], [1, 1]]), (np.array([0, 1.2, 2]), np.array([2.1, 2.5, 2.3]))
@@ -531,3 +531,58 @@ def test_write_histogram_variable(caplog, tmptestdir):
     assert h3.attrs["testattr"] == "test"
     assert h3["weights"].attrs["weightattr"] == "testweight"
     assert h3.binning[0].attrs["binningattr"] == "testbinning"
+
+
+def test_write_append_struct(tmptestdir):
+    outfile = str(tmptestdir / "test-write-append-struct.lh5")
+    st = types.Struct({"arr1": types.Table({"a": types.Array([1, 2, 3])})})
+    lh5.write(st, "struct", outfile, wo_mode="of")
+    st2 = types.Struct({"arr2": types.Table({"a": types.Array([1, 2, 3])})})
+    lh5.write(st2, "struct", outfile, wo_mode="ac")
+
+    result = lh5.read("struct", outfile)
+    assert list(result.keys()) == ["arr1", "arr2"]
+    assert len(result.arr1) == len(st.arr1)
+    assert len(result.arr2) == len(st2.arr2)
+
+    # test error when appending existing field
+    with pytest.raises(lh5.exceptions.LH5EncodeError):
+        lh5.write(
+            types.Struct({"arr2": types.Array([4, 5, 6])}),
+            "struct",
+            outfile,
+            wo_mode="ac",
+        )
+
+    # error if appending to object of different type
+    with pytest.raises(lh5.exceptions.LH5EncodeError):
+        lh5.write(
+            types.Struct({"arr2": types.Array([4, 5, 6])}),
+            "struct",
+            outfile,
+            wo_mode="ac",
+        )
+
+    outfile = str(tmptestdir / "test-write-append-struct.lh5")
+    lh5.write(
+        types.Table({"arr1": types.Array([1, 2, 3])}), "struct", outfile, wo_mode="of"
+    )
+
+    # error if appending to object of different type
+    with pytest.raises(lh5.exceptions.LH5EncodeError):
+        lh5.write(
+            types.Table({"arr2": types.Array([4, 5, 6, 7])}),
+            "struct",
+            outfile,
+            wo_mode="ac",
+        )
+
+    # append to empty struct
+    outfile = str(tmptestdir / "test-write-append-struct.lh5")
+    lh5.write(types.Struct({}), "struct", outfile, wo_mode="of")
+    st2 = types.Struct({"arr2": types.Table({"a": types.Array([1, 2, 3])})})
+    lh5.write(st2, "struct", outfile, wo_mode="ac")
+
+    result = lh5.read("struct", outfile)
+    assert list(result.keys()) == ["arr2"]
+    assert len(result.arr2) == len(st2.arr2)

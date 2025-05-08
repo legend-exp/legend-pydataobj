@@ -1,20 +1,20 @@
 from __future__ import annotations
 
-import os
 import shutil
 import uuid
 from getpass import getuser
+from pathlib import Path
 from tempfile import gettempdir
 
 import pytest
 from legendtestdata import LegendTestData
 
-_tmptestdir = os.path.join(gettempdir(), f"lgdo-tests-{getuser()}-{uuid.uuid4()!s}")
+_tmptestdir = Path(gettempdir()) / f"lgdo-tests-{getuser()}-{uuid.uuid4()!s}"
 
 
 @pytest.fixture(scope="session")
 def tmptestdir():
-    os.mkdir(_tmptestdir)
+    Path(_tmptestdir).mkdir(parents=True, exist_ok=True)
     return _tmptestdir
 
 

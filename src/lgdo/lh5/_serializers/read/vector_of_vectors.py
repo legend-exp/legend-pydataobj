@@ -123,7 +123,7 @@ def _h5_read_vector_of_vectors(
                 )
                 msg = (
                     f"cumulative_length non-increasing between entries "
-                    f"{start_row} and {start_row+n_rows_read}"
+                    f"{start_row} and {start_row + n_rows_read}"
                 )
                 raise LH5DecodeError(msg, fname, oname)
 

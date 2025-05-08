@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
 import pytest
 
@@ -36,7 +37,7 @@ def test_expand_path(lgnd_test_data):
             "lh5/prod-ref-l200/generated/tier/dsp/cal/p03/r001/l200-p03-r001-cal-20230318T012228Z-tier_dsp.lh5"
         ),
     ]
-    base_dir = os.path.dirname(files[0])
+    base_dir = Path(files[0]).parent
 
     assert utils.expand_path(f"{base_dir}/*20230318T012144Z*") == files[0]
 
@@ -50,3 +51,10 @@ def test_expand_path(lgnd_test_data):
 
     # Check if it finds a list of files correctly
     assert sorted(utils.expand_path(f"{base_dir}/*.lh5", list=True)) == sorted(files)
+
+    # check with base_path specified
+    base_path = base_dir.parent
+    assert (
+        utils.expand_path(f"{base_dir.name}/*20230318T012144Z*", base_path=base_path)
+        == Path(files[0]).relative_to(base_path).as_posix()
+    )

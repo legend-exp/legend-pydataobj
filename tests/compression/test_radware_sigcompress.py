@@ -22,7 +22,7 @@ def read_sigcompress_c_output(filename: str):
     enc_wf_c = np.empty(0, dtype=np.uint16)
     nsig_c = None
     shift = None
-    with open(filename) as f:
+    with Path(filename).open() as f:
         nsig_c = int(f.readline())  # first number in the file
         shift = int(f.readline())  # second number in the file
         for line in f.readlines():  # then the waveform
@@ -35,7 +35,7 @@ def read_sigcompress_c_output_multi(filename: str):
     enc_wf_c = []
     nsig_c = np.empty(0, dtype="uint32")
     shift = np.empty(0, dtype="int32")
-    with open(filename) as f:
+    with Path(filename).open() as f:
         for line in f:
             parts = line.split()
             nsig_c = np.append(nsig_c, np.uint32(parts[0]))

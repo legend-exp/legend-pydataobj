@@ -45,7 +45,7 @@ browsed easily in python like any `HDF5 <https://www.hdfgroup.org>`_ file using
 from __future__ import annotations
 
 from ._version import version as __version__
-from .lh5_store import LH5Iterator, LH5Store, load_dfs, load_nda, ls, show
+from .lh5 import LH5Iterator, ls, read, read_as, read_n_rows, show, write
 from .types import (
     LGDO,
     Array,
@@ -69,7 +69,6 @@ __all__ = [
     "FixedSizeArray",
     "Histogram",
     "LH5Iterator",
-    "LH5Store",
     "Scalar",
     "Struct",
     "Table",
@@ -77,8 +76,10 @@ __all__ = [
     "VectorOfVectors",
     "WaveformTable",
     "__version__",
-    "load_dfs",
-    "load_nda",
     "ls",
+    "read",
+    "read_as",
+    "read_n_rows",
     "show",
+    "write",
 ]

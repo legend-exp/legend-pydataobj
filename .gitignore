@@ -1,5 +1,8 @@
 /src/lgdo/_version.py
 
+#uv
+uv.lock
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

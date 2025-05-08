@@ -113,7 +113,11 @@ def read(
         lh5_obj = lh5_file[name]
     elif isinstance(lh5_file, str):
         lh5_file = h5py.File(lh5_file, mode="r", locking=locking)
-        lh5_obj = lh5_file[name]
+        try:
+            lh5_obj = lh5_file[name]
+        except KeyError as ke:
+            err = f"Object {name} not found in file {lh5_file.filename}"
+            raise KeyError(err) from ke
     else:
         if obj_buf is not None:
             obj_buf.resize(obj_buf_start)
@@ -264,11 +268,13 @@ def write(
           end of array is the same as ``append``.
         - ``overwrite_file`` or ``of``: delete file if present prior to
           writing to it. `write_start` should be 0 (its ignored).
-        - ``append_column`` or ``ac``: append columns from an
-          :class:`~.lgdo.table.Table` `obj` only if there is an existing
-          :class:`~.lgdo.table.Table` in the `lh5_file` with the same
-          `name` and :class:`~.lgdo.table.Table.size`. If the sizes don't
-          match, or if there are matching fields, it errors out.
+        - ``append_column`` or ``ac``: append fields/columns from an
+          :class:`~.lgdo.struct.Struct` `obj` (and derived types such as
+          :class:`~.lgdo.table.Table`) only if there is an existing
+          :class:`~.lgdo.struct.Struct` in the `lh5_file` with the same `name`.
+          If there are matching fields, it errors out. If appending to a
+          ``Table`` and the size of the new column is different from the size
+          of the existing table, it errors out.
     write_start
         row in the output file (if already existing) to start overwriting
         from.

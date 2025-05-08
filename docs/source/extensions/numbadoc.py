@@ -1,4 +1,4 @@
-# ruff: noqa
+# ruff: noqa: ARG002 ARG003 PLW2901 RUF005
 
 """
 This sphinx extension aims to improve the documentation of numba-decorated
