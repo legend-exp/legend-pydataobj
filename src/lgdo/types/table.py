@@ -81,8 +81,9 @@ class Table(Struct, LGDOCollection):
             col_dict = _ak_to_lgdo_or_col_dict(col_dict)
 
         # call Struct constructor
-        Struct.__init__(self, obj_dict=col_dict)
-        LGDOCollection.__init__(self, attrs=attrs)
+        Struct.__init__(self, obj_dict=col_dict, attrs=attrs)
+        # no need to call the LGDOCollection constructor, as we are calling the
+        # Struct constructor already
 
         # if col_dict is not empty, set size according to it
         # if size is also supplied, resize all fields to match it

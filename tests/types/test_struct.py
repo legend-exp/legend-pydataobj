@@ -58,10 +58,10 @@ def test_add_field():
     assert struct["scalar1"].__class__.__name__ == "Scalar"
 
     struct.add_field("array1", lgdo.Array(shape=(700, 21), dtype="f", fill_val=2))
-    assert struct.attrs["datatype"] == "struct{scalar1,array1}"
+    assert struct.attrs["datatype"] == "struct{array1,scalar1}"
 
     struct["array2"] = lgdo.Array(shape=(700, 21), dtype="f", fill_val=2)
-    assert struct.attrs["datatype"] == "struct{scalar1,array1,array2}"
+    assert struct.attrs["datatype"] == "struct{array1,array2,scalar1}"
 
 
 def test_getattr():
