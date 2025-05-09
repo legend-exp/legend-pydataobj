@@ -239,7 +239,9 @@ def _h5_write_struct(
         fields.extend(list(obj.keys()))
         obj.attrs.pop("datatype")
 
-        obj.attrs["datatype"] = obj.datatype_name() + "{" + ",".join(fields) + "}"
+        obj.attrs["datatype"] = (
+            obj.datatype_name() + "{" + ",".join(sorted(fields)) + "}"
+        )
 
         # propagating wo_mode="ac" to nested LGDOs does not make any sense
         wo_mode = "append"
