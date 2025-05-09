@@ -5,7 +5,7 @@ from collections.abc import Callable, Collection, Iterator, Mapping
 from copy import deepcopy
 from functools import partial
 from itertools import chain
-from multiprocessing.pool import Pool, AsyncResult
+from concurrent.futures import Executor, ProcessPoolExecutor
 from typing import Any, Iterator, Union
 from warnings import warn
 
@@ -751,7 +751,7 @@ class LH5Iterator:
     def map(
         self,
         fun: Callable[Table, LH5Iterator],
-        processes: Pool | int = None,
+        processes: Executor | int = None,
         chunks: int = None,
         ordered: bool = True,
     ) -> Iterator[Any]:
@@ -776,23 +776,23 @@ class LH5Iterator:
         if processes is None:
             return _map_helper(fun, self)
         if isinstance(processes, int):
-            processes = Pool(processes)
+            processes = ProcessPoolExecutor(processes)
 
         if chunks is None:
-            chunks = processes._processes
+            chunks = processes._max_workers
         it_pool = self._generate_workers(chunks)
 
         if ordered:
-            result = processes.imap(partial(_map_helper, fun), it_pool)
+            result = processes.map(partial(_map_helper, fun), it_pool)
         else:
-            result = processes.imap_unordered(partial(_map_helper, fun), it_pool)
+            result = processes.map(partial(_map_helper, fun), it_pool)
 
         return chain.from_iterable(result)
 
     def accumulate(
         self,
         fun: Callable[Table, LH5Iterator],
-        processes: Pool | int = None,
+        processes: Executor | int = None,
         operator: Callable = None,
         init: Any = None,
         merge: Callable = None,
@@ -819,14 +819,14 @@ class LH5Iterator:
         if processes is None:
             return _accumulate_helper(fun, operator, init, self)
         if isinstance(processes, int):
-            processes = Pool(processes)
-        it_pool = self._generate_workers(processes._processes)
+            processes = ProcessPoolExecutor(processes)
+        it_pool = self._generate_workers(processes._max_workers)
         results = processes.map(
             partial(_accumulate_helper, fun, operator, init), it_pool
         )
 
         # merge the results
-        accumulator = results.pop(0)
+        accumulator = next(results)
         if merge is None:
             merge = operator
         for addend in results:
@@ -842,7 +842,7 @@ class LH5Iterator:
     def query(
         self,
         filter: Callable | str,
-        processes: Pool | int = None,
+        processes: Executor | int = None,
     ):
         """
         Query the data files in the iterator and return the selected data
@@ -868,17 +868,17 @@ class LH5Iterator:
         if filter is None:
             return self.accumulate(_identity, processes, self.lh5_buffer.append)
         if isinstance(filter, str):
-            return pd.concat(self.map(_pandas_query(filter), processes))
+            return pd.concat(list(self.map(_pandas_query(filter), processes)))
         if isinstance(filter, Callable):
             test = filter(self.lh5_buffer, self)
             if isinstance(test, LGDOCollection):
                 return self.accumulate(filter, processes, test.append)
             if isinstance(test, pd.DataFrame):
-                return pd.concat(self.map(filter, processes))
+                return pd.concat(list(self.map(filter, processes)))
             if isinstance(test, np.ndarray):
-                return np.concatenate(self.map(filter, processes))
+                return np.concatenate(list(self.map(filter, processes)))
             if isinstance(test, ak.Array):
-                return ak.concatenate(self.map(filter, processes))
+                return ak.concatenate(list(self.map(filter, processes)))
             msg = f"Cannot call query with return type {test.__class__}. "
             "Allowed return types: LGDOCollection, np.array, pd.DataFrame, ak.Array"
             raise ValueError(msg)
@@ -890,7 +890,7 @@ class LH5Iterator:
         self,
         ax: Hist | axis | Collection[axis],
         filter: Callable | str = None,
-        processes: Pool | int = None,
+        processes: Executor | int = None,
         keys: Collection[str] | str = None,
         **hist_kwargs,
     ) -> Hist:
