@@ -5,6 +5,7 @@ utilities.
 
 from __future__ import annotations
 
+import copy
 import logging
 import re
 from collections.abc import Iterator, Mapping, MutableMapping
@@ -48,7 +49,21 @@ class Struct(LGDO, MutableMapping):
         if obj_dict is not None:
             self.update(obj_dict)
 
-        # call LGDO constructor to setup attributes
+        # check the datatype attribute passed by the user and sort the fields
+        # to ensure consistent behavior
+        if attrs is not None and "datatype" in attrs:
+            _attrs = copy.copy(dict(attrs))
+
+            if not _is_struct_datatype(self.datatype_name(), _attrs["datatype"]):
+                msg = (
+                    f"datatype attribute ({self.attrs['datatype']}) is not "
+                    f"compatible with class datatype!"
+                )
+                raise ValueError(msg)
+
+            _attrs["datatype"] = _sort_datatype_fields(_attrs["datatype"])
+            attrs = _attrs
+
         super().__init__(attrs)
 
     def datatype_name(self) -> str:
@@ -56,7 +71,10 @@ class Struct(LGDO, MutableMapping):
 
     def form_datatype(self) -> str:
         return (
-            self.datatype_name() + "{" + ",".join([str(k) for k in self.keys()]) + "}"
+            self.datatype_name()
+            + "{"
+            + ",".join(sorted([str(k) for k in self.keys()]))
+            + "}"
         )
 
     def update_datatype(self) -> None:
@@ -194,3 +212,34 @@ class Struct(LGDO, MutableMapping):
             "not possible. Call view_as() on the fields instead."
         )
         raise NotImplementedError(msg)
+
+
+def _is_struct_datatype(dt_name, expr):
+    return re.search("^" + dt_name + r"\{(.*)\}$", expr) is not None
+
+
+def _get_struct_fields(expr: str) -> list[str]:
+    assert _is_struct_datatype(".*", expr)
+
+    arr = re.search(r"\{(.*)\}$", expr).group(1).split(",")
+    if arr == [""]:
+        arr = []
+
+    return sorted(arr)
+
+
+def _struct_datatype_equal(dt_name, dt1, dt2):
+    if any(not _is_struct_datatype(dt_name, dt) for dt in (dt1, dt2)):
+        return False
+
+    return _get_struct_fields(dt1) == _get_struct_fields(dt2)
+
+
+def _sort_datatype_fields(expr):
+    assert _is_struct_datatype(".*", expr)
+
+    match = re.search(r"^(.*)\{.*\}$", expr)
+    struct_type = match.group(1)
+    fields = _get_struct_fields(expr)
+
+    return struct_type + "{" + ",".join(sorted([str(k) for k in fields])) + "}"
