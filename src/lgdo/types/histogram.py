@@ -305,10 +305,10 @@ class Histogram(Struct):
 
         b = Struct({f"axis_{i}": a for i, a in enumerate(b)})
 
-        super().__init__(
-            {"binning": b, "weights": w, "isdensity": Scalar(isdensity)},
-            attrs,
-        )
+        super().add_field("binning", b)
+        super().add_field("weights", w)
+        super().add_field("isdensity", Scalar(isdensity))
+        LGDO.__init__(self, attrs)
 
     @property
     def isdensity(self) -> bool:
@@ -419,9 +419,9 @@ class Histogram(Struct):
     def __setitem__(self, name: str, obj: LGDO) -> None:
         # do not allow for new attributes on this
         known_keys = ("binning", "weights", "isdensity")
-        if name in known_keys and not dict.__contains__(self, name):
+        if name in known_keys and name not in self:
             # but allow initialization while unpickling (after __init__() this is unreachable)
-            dict.__setitem__(self, name, obj)
+            Struct.__setitem__(self, name, obj)
         else:
             msg = "histogram fields cannot be mutated "
             raise AttributeError(msg)
