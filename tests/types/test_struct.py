@@ -58,10 +58,10 @@ def test_add_field():
     assert struct["scalar1"].__class__.__name__ == "Scalar"
 
     struct.add_field("array1", lgdo.Array(shape=(700, 21), dtype="f", fill_val=2))
-    assert struct.attrs["datatype"] == "struct{scalar1,array1}"
+    assert struct.attrs["datatype"] == "struct{array1,scalar1}"
 
     struct["array2"] = lgdo.Array(shape=(700, 21), dtype="f", fill_val=2)
-    assert struct.attrs["datatype"] == "struct{scalar1,array1,array2}"
+    assert struct.attrs["datatype"] == "struct{array1,array2,scalar1}"
 
 
 def test_getattr():
@@ -80,6 +80,29 @@ def test_remove_field():
 
     struct.remove_field("array1", delete=True)
     assert list(struct.keys()) == []
+
+
+def test_nested_access():
+    struct = lgdo.Struct()
+    struct.add_field("struct1/scalar1", lgdo.Scalar(value=10))
+    struct.add_field("struct1/struct2/scalar2", lgdo.Scalar(value=20))
+    struct.add_field("struct1/scalar3", lgdo.Scalar(value=30))
+
+    assert "struct1" in struct
+    assert "struct1/struct2" in struct
+    assert "struct1/struct2/scalar2" in struct
+    assert "struct1/scalar2" not in struct
+
+    assert set(struct.keys()) == {"struct1"}
+    assert set(struct["struct1"].keys()) == {"scalar1", "struct2", "scalar3"}
+    assert set(struct["struct1/struct2"].keys()) == {"scalar2"}
+    assert struct["struct1/scalar1"] == lgdo.Scalar(value=10)
+    assert struct["struct1/struct2/scalar2"] == lgdo.Scalar(value=20)
+    assert struct["struct1/scalar3"] == lgdo.Scalar(value=30)
+
+    struct.remove_field("struct1/scalar1")
+    struct.remove_field("struct1/struct2")
+    assert set(struct["struct1"].keys()) == {"scalar3"}
 
 
 def test_pickle():

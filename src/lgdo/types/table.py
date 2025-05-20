@@ -81,8 +81,9 @@ class Table(Struct, LGDOCollection):
             col_dict = _ak_to_lgdo_or_col_dict(col_dict)
 
         # call Struct constructor
-        Struct.__init__(self, obj_dict=col_dict)
-        LGDOCollection.__init__(self, attrs=attrs)
+        Struct.__init__(self, obj_dict=col_dict, attrs=attrs)
+        # no need to call the LGDOCollection constructor, as we are calling the
+        # Struct constructor already
 
         # if col_dict is not empty, set size according to it
         # if size is also supplied, resize all fields to match it
@@ -171,9 +172,12 @@ class Table(Struct, LGDOCollection):
         use_obj_size
             if ``True``, resize the table to match the length of `obj`.
         """
-        if not hasattr(obj, "__len__"):
-            msg = "cannot add field of type"
-            raise TypeError(msg, type(obj).__name__)
+        if not isinstance(obj, LGDO):
+            if isinstance(obj, Mapping):
+                obj = Table(obj, size=self.size)
+            else:
+                msg = "cannot add field of type"
+                raise TypeError(msg, type(obj).__name__)
 
         super().add_field(name, obj)
 
@@ -192,6 +196,10 @@ class Table(Struct, LGDOCollection):
             )
             new_size = len(obj) if use_obj_size else self.size
             self.resize(new_size=new_size)
+
+    def replace(self, i: int, vals: Mapping | Table) -> None:
+        for k, ar in self.items():
+            ar.replace(i, vals[k])
 
     def add_column(
         self, name: str, obj: LGDOCollection, use_obj_size: bool = False
