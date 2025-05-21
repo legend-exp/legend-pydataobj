@@ -8,7 +8,7 @@ from __future__ import annotations
 import copy
 import logging
 import re
-from collections.abc import Iterator, Mapping, MutableMapping
+from collections.abc import Iterable, Iterator, Mapping, MutableMapping
 from itertools import chain
 from typing import Any
 
