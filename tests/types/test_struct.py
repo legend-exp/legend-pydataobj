@@ -104,57 +104,56 @@ def test_nested_access():
     struct.remove_field("struct1/struct2")
     assert set(struct["struct1"].keys()) == {"scalar3"}
 
+
 def test_update():
-    st_final = lgdo.Struct( {
-        "a": {
-            "b": lgdo.Scalar(1),
+    st_final = lgdo.Struct(
+        {
+            "a": {
+                "b": lgdo.Scalar(1),
+                "c": lgdo.Scalar(3),
+                "d": lgdo.Scalar(5),
+            }
+        }
+    )
+
+    st = lgdo.Struct({"a": {"b": lgdo.Scalar(1), "c": lgdo.Scalar(2)}})
+    st.update(
+        lgdo.Struct(
+            {
+                "a": {
+                    "c": lgdo.Scalar(3),
+                    "d": lgdo.Scalar(5),
+                }
+            }
+        )
+    )
+    assert st == st_final
+
+    st = lgdo.Struct({"a": {"b": lgdo.Scalar(1), "c": lgdo.Scalar(2)}})
+    st.update(
+        {
+            "a/c": lgdo.Scalar(3),
+            "a/d": lgdo.Scalar(5),
+        }
+    )
+    assert st == st_final
+
+    st = lgdo.Struct({"a": {"b": lgdo.Scalar(1), "c": lgdo.Scalar(2)}})
+    st.update(
+        a={
             "c": lgdo.Scalar(3),
             "d": lgdo.Scalar(5),
         }
-    })
-
-    st = lgdo.Struct( {
-        "a": {
-            "b": lgdo.Scalar(1),
-            "c": lgdo.Scalar(2)
-        }
-    })
-    st.update(lgdo.Struct({
-        "a": {
-            "c": lgdo.Scalar(3),
-            "d": lgdo.Scalar(5),
-        }
-    }))
+    )
     assert st == st_final
 
-    st = lgdo.Struct( {
-        "a": {
-            "b": lgdo.Scalar(1),
-            "c": lgdo.Scalar(2)
-        }
-    })
-    st.update( {
-        "a/c": lgdo.Scalar(3),
-        "a/d": lgdo.Scalar(5),
-    })
-    assert st == st_final
-
-    st = lgdo.Struct( {
-        "a": {
-            "b": lgdo.Scalar(1),
-            "c": lgdo.Scalar(2)
-        }
-    })
-    st.update( a = {"c":lgdo.Scalar(3), "d":lgdo.Scalar(5), } )
-    assert st == st_final
-
-    st = lgdo.Struct( {
-        "a": {
-            "b": lgdo.Scalar(1),
-            "c": lgdo.Scalar(2)
-        }
-    })
-    st.update( [ ("a/c", lgdo.Scalar(3)), ("a/d", lgdo.Scalar(5)), ] )
+    st = lgdo.Struct({"a": {"b": lgdo.Scalar(1), "c": lgdo.Scalar(2)}})
+    st.update(
+        [
+            ("a/c", lgdo.Scalar(3)),
+            ("a/d", lgdo.Scalar(5)),
+        ]
+    )
     assert st == st_final
 
 
