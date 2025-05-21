@@ -753,7 +753,6 @@ class LH5Iterator:
         fun: Callable[Table, LH5Iterator],
         processes: Executor | int = None,
         chunks: int = None,
-        ordered: bool = True,
     ) -> Iterator[Any]:
         """Map function over iterator blocks and return order-preserving list
         of outputs. Can be multi-threaded provided there are no attempts
@@ -770,8 +769,6 @@ class LH5Iterator:
         chunks:
             number of chunks to divide iterator into if multiprocessing. By
             default use one chunk per thread
-        ordered
-            if set to ``False``, may return results out of order if multiprocessing
         """
         if processes is None:
             return _map_helper(fun, self)
@@ -782,10 +779,7 @@ class LH5Iterator:
             chunks = processes._max_workers
         it_pool = self._generate_workers(chunks)
 
-        if ordered:
-            result = processes.map(partial(_map_helper, fun), it_pool)
-        else:
-            result = processes.map(partial(_map_helper, fun), it_pool)
+        result = processes.map(partial(_map_helper, fun), it_pool)
 
         return chain.from_iterable(result)
 
