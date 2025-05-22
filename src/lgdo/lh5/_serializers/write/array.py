@@ -6,11 +6,10 @@ import h5py
 import numpy as np
 
 from .... import types
+from ... import settings
 from ...exceptions import LH5EncodeError
 
 log = logging.getLogger(__name__)
-
-DEFAULT_HDF5_SETTINGS: dict[str, ...] = {"shuffle": True, "compression": "gzip"}
 
 
 def _h5_write_array(
@@ -49,7 +48,7 @@ def _h5_write_array(
             del group[name]
 
         # set default compression options
-        for k, v in DEFAULT_HDF5_SETTINGS.items():
+        for k, v in settings.DEFAULT_HDF5_SETTINGS.items():
             h5py_kwargs.setdefault(k, v)
 
         # compress using the 'compression' LGDO attribute, if available
