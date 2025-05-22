@@ -15,6 +15,30 @@ def test_write_compressed_lgnd_waveform_table(enc_lgnd_file):
     pass
 
 
+def test_write_with_hdf5_compression_global(tmptestdir):
+    data = types.Table(
+        size=1000,
+        col_dict={
+            "col1": types.Array(np.arange(0, 100, 0.1)),
+            "col2": types.Array(np.random.default_rng().random(1000)),
+        },
+    )
+    outfile = f"{tmptestdir}/write_hdf5_data_global_var.lh5"
+
+    lh5.settings.DEFAULT_HDF5_SETTINGS["shuffle"] = False
+    lh5.settings.DEFAULT_HDF5_SETTINGS["compression"] = "lzf"
+
+    lh5.write(data, "data", outfile, wo_mode="of")
+
+    with h5py.File(outfile) as h5f:
+        assert h5f["/data/col1"].shuffle is False
+        assert h5f["/data/col1"].compression == "lzf"
+
+    lh5.settings.DEFAULT_HDF5_SETTINGS = lh5.settings.default_hdf5_settings()
+    assert lh5.settings.DEFAULT_HDF5_SETTINGS["shuffle"] is True
+    assert lh5.settings.DEFAULT_HDF5_SETTINGS["compression"] == "gzip"
+
+
 def test_write_with_hdf5_compression(lgnd_file, tmptestdir):
     store = lh5.LH5Store()
     wft = store.read("/geds/raw/waveform", lgnd_file)
