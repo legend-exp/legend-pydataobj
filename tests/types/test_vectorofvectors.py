@@ -472,6 +472,7 @@ def test_set_vector_unsafe(testvov):
             == np.nan_to_num(exp_entry_w_overflow, nan=0)
         )
 
+
 def test_iter(testvov):
     testvov = testvov.v2d
 

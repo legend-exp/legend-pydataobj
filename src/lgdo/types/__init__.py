@@ -16,12 +16,12 @@ from .waveformtable import WaveformTable
 
 __all__ = [
     "LGDO",
-    "LGDOCollection",
     "Array",
     "ArrayOfEncodedEqualSizedArrays",
     "ArrayOfEqualSizedArrays",
     "FixedSizeArray",
     "Histogram",
+    "LGDOCollection",
     "Scalar",
     "Struct",
     "Table",
