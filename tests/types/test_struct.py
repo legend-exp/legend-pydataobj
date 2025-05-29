@@ -105,6 +105,58 @@ def test_nested_access():
     assert set(struct["struct1"].keys()) == {"scalar3"}
 
 
+def test_update():
+    st_final = lgdo.Struct(
+        {
+            "a": {
+                "b": lgdo.Scalar(1),
+                "c": lgdo.Scalar(3),
+                "d": lgdo.Scalar(5),
+            }
+        }
+    )
+
+    st = lgdo.Struct({"a": {"b": lgdo.Scalar(1), "c": lgdo.Scalar(2)}})
+    st.update(
+        lgdo.Struct(
+            {
+                "a": {
+                    "c": lgdo.Scalar(3),
+                    "d": lgdo.Scalar(5),
+                }
+            }
+        )
+    )
+    assert st == st_final
+
+    st = lgdo.Struct({"a": {"b": lgdo.Scalar(1), "c": lgdo.Scalar(2)}})
+    st.update(
+        {
+            "a/c": lgdo.Scalar(3),
+            "a/d": lgdo.Scalar(5),
+        }
+    )
+    assert st == st_final
+
+    st = lgdo.Struct({"a": {"b": lgdo.Scalar(1), "c": lgdo.Scalar(2)}})
+    st.update(
+        a={
+            "c": lgdo.Scalar(3),
+            "d": lgdo.Scalar(5),
+        }
+    )
+    assert st == st_final
+
+    st = lgdo.Struct({"a": {"b": lgdo.Scalar(1), "c": lgdo.Scalar(2)}})
+    st.update(
+        [
+            ("a/c", lgdo.Scalar(3)),
+            ("a/d", lgdo.Scalar(5)),
+        ]
+    )
+    assert st == st_final
+
+
 def test_pickle():
     obj_dict = {"scalar1": lgdo.Scalar(value=10)}
     attrs = {"attr1": 1}

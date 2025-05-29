@@ -8,7 +8,8 @@ from __future__ import annotations
 import copy
 import logging
 import re
-from collections.abc import Iterator, Mapping, MutableMapping
+from collections.abc import Iterable, Iterator, Mapping, MutableMapping
+from itertools import chain
 from typing import Any
 
 import numpy as np
@@ -117,6 +118,17 @@ class Struct(LGDO, MutableMapping):
 
     def __len__(self) -> int:
         return len(self.obj_dict)
+
+    def update(
+        self, other: Mapping[str, LGDO] | Iterable[str, LGDO] = (), /, **kwargs
+    ) -> None:
+        for k, v in chain(
+            other.items() if isinstance(other, Mapping) else other, kwargs.items()
+        ):
+            if isinstance(v, Mapping) and k in self:
+                self[k].update(v)
+            else:
+                self[k] = v
 
     # Note: in principle these are automatically defined by Mapping; however, they will get the length wrong for Tables
     def keys(self):
