@@ -64,6 +64,32 @@ def _h5_write_lgdo(
 
     group = utils.get_h5_group(group, lh5_file)
 
+    # if name already there just continue
+    if name not in group and "datatype" not in group.attrs:
+        top_groups = utils.get_h5_group(
+            name,
+            group,
+        )
+        group = top_groups
+        wo_mode = "o"
+        while group.name != "/":
+            curr_name = group.name
+            group = group.parent
+            if group.name != "/":
+                obj = types.Struct({curr_name[len(group.name) + 1 :]: obj})
+            else:
+                obj = types.Struct({curr_name[1:]: obj})
+            if len(group) > 1:
+                wo_mode = "ac"
+                break
+        if group.name == "/":
+            name = "/"
+        elif group.parent.name == "/":
+            name = group.name[1:]
+        else:
+            name = group.name[len(group.parent.name) + 1 :]
+        group = utils.get_h5_group(group.parent if group.name != "/" else "/", lh5_file)
+
     if wo_mode == "w" and name in group:
         msg = f"can't overwrite '{name}' in wo_mode 'write_safe'"
         raise LH5EncodeError(msg, lh5_file, group, name)
@@ -87,7 +113,7 @@ def _h5_write_lgdo(
             lh5_file,
             group=group,
             start_row=start_row,
-            n_rows=n_rows,
+            n_rows=n_rows if isinstance(obj, types.Table | types.Histogram) else None,
             wo_mode=wo_mode,
             write_start=write_start,
             **h5py_kwargs,
@@ -227,6 +253,8 @@ def _h5_write_struct(
         # It doesn't matter what key we access, as all fields in the old table have the same size
         if (
             isinstance(obj, types.Table)
+            and old_group.attrs["datatype"][:6]
+            != "struct"  # structs dont care about size
             and old_group[next(iter(old_group.keys()))].size != obj.size
         ):
             msg = (
