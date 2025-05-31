@@ -67,11 +67,17 @@ def _h5_write_lgdo(
     # if name already there just continue
     if name not in group:
         dt_check = False
-        if "datatype" not in group.attrs or group.attrs["datatype"][:6] == "struct":
+        if group.name != "/" and (
+            "datatype" not in group.attrs
+            or (
+                group.attrs["datatype"][:6] == "struct"
+                and name not in group.attrs["datatype"]
+            )
+        ):
             dt_check = True
         elif "/" in name[1:-1]:
             top_groups = utils.get_h5_group(
-                name.rsplit("/", 1)[0],
+                name[:-1].rsplit("/", 1)[0],
                 group,
             )
             while top_groups.name != "/":
@@ -127,7 +133,7 @@ def _h5_write_lgdo(
             lh5_file,
             group=group,
             start_row=start_row,
-            n_rows=n_rows if isinstance(obj, types.Table | types.Histogram) else None,
+            n_rows=n_rows,  # if isinstance(obj, types.Table | types.Histogram) else None,
             wo_mode=wo_mode,
             write_start=write_start,
             **h5py_kwargs,
