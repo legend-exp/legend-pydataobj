@@ -42,7 +42,7 @@ def test_eval_dependency():
     assert isinstance(r, lgdo.Array)
     assert np.array_equal(r.nda, obj.a.nda + obj.b.nda)
 
-    r = obj.eval("a + tbl__z")
+    r = obj.eval("a + tbl__z", library="numexpr")
     assert isinstance(r, lgdo.Array)
     assert np.array_equal(r.nda, obj.a.nda + obj.tbl.z.nda)
 
@@ -82,23 +82,20 @@ def test_eval_dependency():
 
     assert obj.eval("np.sum(a) + ak.sum(e)")
 
-    # test with modules argument, the simplest is using directly lgdo
-    res = obj.eval("lgdo.Array([1,2,3])", {}, modules={"lgdo": lgdo})
+    # test with lgdo library
+    res = obj.eval("lgdo.Array([1,2,3])", library="lgdo")
     assert res == lgdo.Array([1, 2, 3])
-
-    # test with module returning np.array
-    assert obj.eval("np.sum(a)", {}, modules={"np": np}).value == np.int64(10)
 
     # check bad type
     with pytest.raises(RuntimeError):
-        obj.eval("hist.Hist()", modules={"hist": hist})
+        obj.eval("hist.Hist()", parameters={"hist": hist})
 
     # check impossible numexpr can still run
     assert np.allclose(
         obj.eval(
-            "a*args.value",
-            {"args": dbetto.AttrsDict({"value": 2})},
-            modules={"lgdo": lgdo},
+            "a.nda*args.value",
+            parameters={"args": dbetto.AttrsDict({"value": 2})},
+            library="lgdo",
         ).view_as("np"),
         [2, 4, 6, 8],
     )
