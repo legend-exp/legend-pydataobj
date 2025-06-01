@@ -349,7 +349,7 @@ class Table(Struct, LGDOCollection):
             )
             out = evaluate(expr, raise_errors=True)
         elif library == "lgdo":
-            tb = {k: v for k, v in self.items()}
+            tb = dict(self)
             evaluate = Interpreter(
                 user_symbols=tb
                 | parameters
