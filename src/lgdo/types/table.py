@@ -7,18 +7,17 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Mapping
-from types import ModuleType
 from typing import Any
 from warnings import warn
 
 import awkward as ak
-import lgdo
 import numexpr as ne
 import numpy as np
 import pandas as pd
+from asteval import Interpreter
 from pandas.io.formats import format as fmt
 
-from asteval import Interpreter
+import lgdo
 
 from .array import Array
 from .arrayofequalsizedarrays import ArrayOfEqualSizedArrays
@@ -338,46 +337,52 @@ class Table(Struct, LGDOCollection):
             :func:`eval` as `locals` argument.
         """
         if library == "pd":
-            out = self.view_as('pd').eval(expr, local_dict=parameters)
+            out = self.view_as("pd").eval(expr, local_dict=parameters)
         elif library == "ak":
-            arr = self.view_as('ak')
-            tb = {f:arr[f] for f in arr.fields}
+            arr = self.view_as("ak")
+            tb = {f: arr[f] for f in arr.fields}
             evaluate = Interpreter(
-                user_symbols = tb | parameters | {"np":np, "ak":ak},
-                writer = log.info,
-                err_writer = log.error,
-                builtins_readonly = True,
+                user_symbols=tb | parameters | {"np": np, "ak": ak},
+                writer=log.info,
+                err_writer=log.error,
+                builtins_readonly=True,
             )
             out = evaluate(expr, raise_errors=True)
         elif library == "lgdo":
-            tb = {k:v for k,v in self.items()}
+            tb = {k: v for k, v in self.items()}
             evaluate = Interpreter(
-                user_symbols = tb | parameters | {
-                    "np":np,
-                    "lgdo":lgdo.types,
-                    "Table":Table,
-                    "Array":Array,
-                    "ArrayOfEqualSizedArrays":ArrayOfEqualSizedArrays,
-                    "VectorOfVectors":VectorOfVectors,
-                    "Struct":Struct,
-                    "Scalar":Scalar
+                user_symbols=tb
+                | parameters
+                | {
+                    "np": np,
+                    "lgdo": lgdo.types,
+                    "Table": Table,
+                    "Array": Array,
+                    "ArrayOfEqualSizedArrays": ArrayOfEqualSizedArrays,
+                    "VectorOfVectors": VectorOfVectors,
+                    "Struct": Struct,
+                    "Scalar": Scalar,
                 },
-                writer = log.info,
-                err_writer = log.error,
-                builtins_readonly = True
+                writer=log.info,
+                err_writer=log.error,
+                builtins_readonly=True,
             )
             out = evaluate(expr, raise_errors=True)
         elif library == "np":
-            tb = self.view_as('np')
+            tb = self.view_as("np")
             evaluate = Interpreter(
-                user_symbols = tb | parameters | {"np":np},
-                writer = log.info,
-                err_writer = log.error,
-                buildins_readonly = True
+                user_symbols=tb | parameters | {"np": np},
+                writer=log.info,
+                err_writer=log.error,
+                buildins_readonly=True,
             )
             out = evaluate(expr, raise_errors=True)
         elif library == "numexpr":
-            tb = { k:v.nda for k, v in self.flatten().items() if not isinstance(v, VectorOfVectors)}
+            tb = {
+                k: v.nda
+                for k, v in self.flatten().items()
+                if not isinstance(v, VectorOfVectors)
+            }
             out = ne.evaluate(expr, local_dict=tb | parameters)
         else:
             msg = f"{library} is not supported"
@@ -387,24 +392,24 @@ class Table(Struct, LGDOCollection):
             return out
 
         # if needed, convert object to LGDO
-        if isinstance(out, ak.Array) and out.fields:
+        if (isinstance(out, ak.Array) and out.fields) or isinstance(
+            out, (pd.DataFrame, dict)
+        ):
             return Table(out)
-        elif isinstance(out, (pd.DataFrame, dict)):
-            return Table(out)
-        elif isinstance(out, pd.Series):
+        if isinstance(out, pd.Series):
             return Array(out)
-        elif np.isscalar(out):
+        if np.isscalar(out):
             return Scalar(out)
-        elif isinstance(out, (np.ndarray, ak.Array)):
+        if isinstance(out, (np.ndarray, ak.Array)):
             if out.ndim == 0:
                 return Scalar(out.item())
-            elif out.ndim == 1:
+            if out.ndim == 1:
                 return Array(out)
-            elif isinstance(out, ak.Array) and "var" in out.typestr:
+            if isinstance(out, ak.Array) and "var" in out.typestr:
                 return VectorOfVectors(out)
-            elif out.ndim >= 2:
+            if out.ndim >= 2:
                 return ArrayOfEqualSizedArrays(nda=out)
-        
+
         msg = (
             f"evaluation resulted in a {type(out)} object, "
             "I don't know which LGDO this corresponds to"
