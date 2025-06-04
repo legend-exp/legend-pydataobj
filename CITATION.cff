@@ -1,6 +1,6 @@
 cff-version: 1.2.0
 title: legend-pydataobj
-doi: https://doi.org/10.5281/zenodo.10592108
+doi: 10.5281/zenodo.10592108
 date-released: 2024-01-30
 message: "If you use this software, please cite it as below."
 authors:
@@ -27,4 +27,4 @@ authors:
     orcid: https://orcid.org/0000-0002-9603-7865
   - family-names: Huber
     given-names: Manuel
-    email: info@manuelhu.de
+    orcid: https://orcid.org/0009-0000-5212-2999
