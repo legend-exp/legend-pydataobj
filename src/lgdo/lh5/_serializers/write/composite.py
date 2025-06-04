@@ -64,51 +64,55 @@ def _h5_write_lgdo(
 
     group = utils.get_h5_group(group, lh5_file)
 
-    # if name already there just continue
-    if name not in group:
-        dt_check = False
-        if group.name != "/" and (
-            "datatype" not in group.attrs
-            or (
-                group.attrs["datatype"][:6] == "struct"
-                and name not in group.attrs["datatype"]
-            )
-        ):
-            dt_check = True
-        elif "/" in name[1:-1]:
-            top_groups = utils.get_h5_group(
+    # name already in file
+    if name in group or (
+        ("datatype" in group.attrs or group == "/")
+        and (len(name) <= 2 or "/" not in name[1:-1])
+    ):
+        pass
+    # group is in file but not struct or need to create nesting
+    else:
+        # check if name is nested
+        # if name is nested, iterate up from parent
+        # otherwise we just need to iterate the group
+        if len(name) > 2 and "/" in name[1:-1]:
+            group = utils.get_h5_group(
                 name[:-1].rsplit("/", 1)[0],
                 group,
             )
-            while top_groups.name != "/":
-                if "datatype" not in top_groups.attrs:
-                    dt_check = True
-                top_groups = top_groups.parent
-        if dt_check:
-            group = utils.get_h5_group(
-                name,
-                group,
+            curr_name = (
+                name.rsplit("/", 1)[1]
+                if name[-1] != "/"
+                else name[:-1].rsplit("/", 1)[1]
             )
-            wo_mode = "o"
-            while group.name != "/":
-                curr_name = group.name
-                group = group.parent
-                if group.name != "/":
-                    obj = types.Struct({curr_name[len(group.name) + 1 :]: obj})
-                else:
-                    obj = types.Struct({curr_name[1:]: obj})
-                if len(group) > 1:
-                    wo_mode = "ac"
-                    break
-            if group.name == "/":
-                name = "/"
-            elif group.parent.name == "/":
-                name = group.name[1:]
+        else:
+            curr_name = name
+        # initialize the object to be written
+        obj = types.Struct({curr_name.replace("/", ""): obj})
+
+        # iterate up the group hierarchy until we reach the root or a group with more than one child
+        while group.name != "/":
+            if len(group) > 1:
+                break
+            curr_name = group.name
+            group = group.parent
+            if group.name != "/":
+                obj = types.Struct({curr_name[len(group.name) + 1 :]: obj})
             else:
-                name = group.name[len(group.parent.name) + 1 :]
-            group = utils.get_h5_group(
-                group.parent if group.name != "/" else "/", lh5_file
-            )
+                obj = types.Struct({curr_name[1:]: obj})
+
+        # if the group has more than one child, we need to append else we can overwrite
+        wo_mode = "ac" if len(group) > 1 else "o"
+
+        # set the new name
+        if group.name == "/":
+            name = "/"
+        elif group.parent.name == "/":
+            name = group.name[1:]
+        else:
+            name = group.name[len(group.parent.name) + 1 :]
+        # get the new group
+        group = utils.get_h5_group(group.parent if group.name != "/" else "/", lh5_file)
 
     if wo_mode == "w" and name in group:
         msg = f"can't overwrite '{name}' in wo_mode 'write_safe'"
