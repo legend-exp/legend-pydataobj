@@ -24,10 +24,10 @@ interface for encoding/decoding :class:`~.lgdo.LGDO`\ s.
 
 from __future__ import annotations
 
+from importlib import import_module
+
 from .base import WaveformCodec
 from .generic import decode, encode
-from .radware import RadwareSigcompress
-from .varlen import ULEB128ZigZagDiff
 
 __all__ = [
     "RadwareSigcompress",
@@ -36,3 +36,13 @@ __all__ = [
     "decode",
     "encode",
 ]
+
+
+def __getattr__(name):
+    if name == "RadwareSigcompress":
+        return import_module(".radware", __name__).RadwareSigcompress
+    if name == "ULEB128ZigZagDiff":
+        return import_module(".varlen", __name__).ULEB128ZigZagDiff
+    module_name = __name__
+    msg = "module {!r} has no attribute {!r}".format(module_name, name)  # noqa: UP032
+    raise AttributeError(msg)
