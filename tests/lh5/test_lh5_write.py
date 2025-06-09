@@ -612,3 +612,18 @@ def test_write_append_struct(tmptestdir):
     result = lh5.read("struct", outfile)
     assert list(result.keys()) == ["arr2"]
     assert len(result.arr2) == len(st2.arr2)
+
+
+def test_write_cleanup_on_error(tmptestdir):
+    outfile = Path(tmptestdir) / "cleanup_error.lh5"
+    h = types.Histogram(np.array([[1]]), (np.array([0, 1]), np.array([0, 1])))
+
+    lh5.write(h, "hist", outfile, wo_mode="overwrite_file")
+    with pytest.raises(lh5.exceptions.LH5EncodeError):
+        lh5.write(h, "hist", outfile, wo_mode="append")
+
+    # file should be closed so we can open it again
+    with h5py.File(outfile, "w") as h5f:
+        h5f.create_dataset("dummy", data=[1])
+    with h5py.File(outfile) as h5f:
+        assert list(h5f.keys()) == ["dummy"]

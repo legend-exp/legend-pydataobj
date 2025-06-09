@@ -111,12 +111,15 @@ def read(
     """
     if isinstance(lh5_file, h5py.File):
         lh5_obj = lh5_file[name]
+        close_file = False
     elif isinstance(lh5_file, str):
         lh5_file = h5py.File(lh5_file, mode="r", locking=locking)
+        close_file = True
         try:
             lh5_obj = lh5_file[name]
         except KeyError as ke:
             err = f"Object {name} not found in file {lh5_file.filename}"
+            lh5_file.close()
             raise KeyError(err) from ke
     else:
         if obj_buf is not None:
@@ -172,23 +175,26 @@ def read(
     if isinstance(idx, np.ndarray) and idx.dtype == np.dtype("?"):
         idx = np.where(idx)[0]
 
-    obj, n_rows_read = _serializers._h5_read_lgdo(
-        lh5_obj.id,
-        lh5_obj.file.filename,
-        lh5_obj.name,
-        start_row=start_row,
-        n_rows=n_rows,
-        idx=idx,
-        use_h5idx=use_h5idx,
-        field_mask=field_mask,
-        obj_buf=obj_buf,
-        obj_buf_start=obj_buf_start,
-        decompress=decompress,
-    )
-    with suppress(AttributeError):
-        obj.resize(obj_buf_start + n_rows_read)
-
-    return obj
+    try:
+        obj, n_rows_read = _serializers._h5_read_lgdo(
+            lh5_obj.id,
+            lh5_obj.file.filename,
+            lh5_obj.name,
+            start_row=start_row,
+            n_rows=n_rows,
+            idx=idx,
+            use_h5idx=use_h5idx,
+            field_mask=field_mask,
+            obj_buf=obj_buf,
+            obj_buf_start=obj_buf_start,
+            decompress=decompress,
+        )
+        with suppress(AttributeError):
+            obj.resize(obj_buf_start + n_rows_read)
+        return obj
+    finally:
+        if "close_file" in locals() and close_file:
+            lh5_file.close()
 
 
 def write(
