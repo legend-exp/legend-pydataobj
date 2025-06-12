@@ -192,7 +192,14 @@ class LH5Iterator:
             self.lh5_files[0],
             size=0,
         )
-        self.available_fields = set(self.lh5_buffer)
+        def get_available_fields(tab):
+            ret = set()
+            for k, v in tab.items():
+                ret |= {k}
+                if isinstance(v, Table):
+                    ret |= {f"{k}/{field}" for field in get_available_fields(v)}
+            return ret
+        self.available_fields = get_available_fields(self.lh5_buffer)
 
         # set field mask and buffer length
         self.reset_field_mask(field_mask)
@@ -448,6 +455,7 @@ class LH5Iterator:
         | Collection[Collection[str]]
         | Collection[Mapping[str, bool]]
         | None,
+        warn_missing = True,
     ):
         """Replaces the field mask of this iterator and any friends with mask.
 
@@ -523,7 +531,7 @@ class LH5Iterator:
                 suffix=suf,
             )
 
-        if len(remaining_fields) > 0:
+        if warn_missing and len(remaining_fields) > 0:
             logging.warning(f"Fields {remaining_fields} in field mask were not found")
 
     @property
@@ -696,7 +704,12 @@ class LH5Iterator:
             field_mask=self.field_mask,
         )
         for fr, pre, suf in zip(self.friend, self.friend_prefix, self.friend_suffix):
-            self.lh5_buffer.join(fr, pre, suf)
+            self.lh5_buffer.join(
+                fr.lh5_buffer,
+                keep_mine=True,
+                prefix=pre,
+                suffix=suf,
+            )
 
     def _select_groups(self, i_beg, i_end):
         """Reduce list of files and groups; used by _generate_workers"""
