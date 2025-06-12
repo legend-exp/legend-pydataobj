@@ -192,6 +192,7 @@ class LH5Iterator:
             self.lh5_files[0],
             size=0,
         )
+
         def get_available_fields(tab):
             ret = set()
             for k, v in tab.items():
@@ -199,6 +200,7 @@ class LH5Iterator:
                 if isinstance(v, Table):
                     ret |= {f"{k}/{field}" for field in get_available_fields(v)}
             return ret
+
         self.available_fields = get_available_fields(self.lh5_buffer)
 
         # set field mask and buffer length
@@ -455,7 +457,7 @@ class LH5Iterator:
         | Collection[Collection[str]]
         | Collection[Mapping[str, bool]]
         | None,
-        warn_missing = True,
+        warn_missing=True,
     ):
         """Replaces the field mask of this iterator and any friends with mask.
 
