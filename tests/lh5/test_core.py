@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 import lgdo
 from lgdo import lh5
-import pytest
 
 
 def test_read(lh5_file):
@@ -27,6 +27,7 @@ def test_write(tmptestdir):
         wo_mode="overwrite_file",
     )
     assert lh5.ls(f"{tmptestdir}/tmp-pygama-lgdo-types2.lh5")
+
 
 def test_write_safe(tmptestdir):
     # write_safe should create new file
@@ -55,7 +56,10 @@ def test_write_safe(tmptestdir):
         n_rows=3,
         wo_mode="w",
     )
-    assert lh5.ls(f"{tmptestdir}/tmp-pygama-write_safe.lh5", "data/") == ["data/struct", "data/struct2"]
+    assert lh5.ls(f"{tmptestdir}/tmp-pygama-write_safe.lh5", "data/") == [
+        "data/struct",
+        "data/struct2",
+    ]
 
     # write_safe should not allow writing to existing dataset
     with pytest.raises(lh5.exceptions.LH5EncodeError):
@@ -68,6 +72,7 @@ def test_write_safe(tmptestdir):
             n_rows=3,
             wo_mode="w",
         )
+
 
 def test_read_as(lh5_file):
     store = lh5.LH5Store()
