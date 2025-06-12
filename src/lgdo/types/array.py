@@ -152,13 +152,15 @@ class Array(LGDOCollection):
         "Append value to end of array (with copy)"
         self.insert(len(self), value)
 
-    def insert(self, i: int, value: int | float) -> None:
+    def insert(self, i: int, value: Array | np.ndarray) -> None:
         "Insert value into row i (with copy)"
         if i > len(self):
             msg = f"index {i} is out of bounds for array with size {len(self)}"
             raise IndexError(msg)
 
-        value = np.array(value)
+        if not isinstance(value, (Array, np.ndarray)):
+            value = np.array(value, dtype=self.dtype)
+
         if value.shape == self.shape[1:]:
             self.resize(len(self) + 1)
             self[i + 1 :] = self[i:-1]

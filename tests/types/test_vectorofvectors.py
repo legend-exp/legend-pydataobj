@@ -337,6 +337,26 @@ def test_insert(testvov):
     )
     assert ak.is_valid(testvov.view_as("ak"))
 
+    testvov.insert(0, [np.zeros(1), np.ones(3)])
+    assert testvov == VectorOfVectors(
+        [
+            [0],
+            [1, 1, 1],
+            [1, 2],
+            [3, 4, 5],
+            [0, 0, 0],
+            [2],
+            [4, 8, 9, 7],
+            [5, 3, 1],
+        ]
+    )
+    assert ak.is_valid(testvov.view_as("ak"))
+
+    v = VectorOfVectors(shape_guess=(3, 5), dtype="int32", fill_val=0)
+    v.insert(2, [1, 2, 3])
+    assert np.array_equal(v.cumulative_length, [5, 10, 13, 18])
+    assert np.array_equal(v[2], [1, 2, 3])
+
     v = VectorOfVectors(shape_guess=(3, 5), dtype="int32", fill_val=0)
     v.insert(2, [1, 2, 3])
     assert np.array_equal(v.cumulative_length, [5, 10, 13, 18])
@@ -415,6 +435,24 @@ def test_set_vector_unsafe(testvov):
         )
         third_vov._set_vector_unsafe(0, desired_aoa, desired_lens)
         assert current_testvov == third_vov
+
+        # test vectorized filling when len is longer than array
+        fourth_vov = lgdo.VectorOfVectors(
+            shape_guess=(5, 5), dtype=current_testvov.dtype
+        )
+        desired_lens[3] = 10
+        fourth_vov._set_vector_unsafe(0, desired_aoa, desired_lens)
+        if current_testvov.dtype in ["int32", "int64", "uint16", "uint32"]:
+            exp_entry_w_overflow = np.concatenate(
+                [desired[3], np.array([np.iinfo(current_testvov.dtype).min] * 6)]
+            )
+        else:
+            exp_entry_w_overflow = np.concatenate([desired[3], np.array([np.nan] * 6)])
+
+        assert np.all(
+            np.nan_to_num(fourth_vov[3], nan=0)
+            == np.nan_to_num(exp_entry_w_overflow, nan=0)
+        )
 
         # test vectorized filling when len is longer than array
         fourth_vov = lgdo.VectorOfVectors(
