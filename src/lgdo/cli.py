@@ -174,7 +174,6 @@ Exclude the /data/table1/col1 Table column:
         print(__version__)  # noqa: T201
         sys.exit()
 
-
     lh5concat(
         lh5_files=args.lh5_file,
         overwrite=args.overwrite,
