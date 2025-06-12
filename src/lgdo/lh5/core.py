@@ -5,6 +5,7 @@ import inspect
 import sys
 from collections.abc import Mapping, Sequence
 from contextlib import suppress
+from pathlib import Path
 from typing import Any
 
 import h5py
@@ -290,7 +291,12 @@ def write(
         datasets. **Note: `compression` Ignored if compression is specified
         as an `obj` attribute.**
     """
-    if wo_mode in ("w", "write", "of", "overwrite_file"):
+
+    if (
+        isinstance(lh5_file, str)
+        and not Path(lh5_file).is_file()
+        and wo_mode in ("w", "write_safe", "of", "overwrite_file")
+    ):
         h5py_kwargs.update(
             {
                 "fs_strategy": "page",
