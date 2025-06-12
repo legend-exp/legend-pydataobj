@@ -41,6 +41,54 @@ def test_write_objects(lh5_file):
     pass
 
 
+def test_write_safe(tmptestdir):
+    # write_safe should create new file
+    lh5_st = lh5.LH5Store()
+    struct = lgdo.Struct()
+    struct.add_field("scalar", lgdo.Scalar(value=10, attrs={"sth": 1}))
+    lh5_st.write(
+        struct,
+        "struct",
+        f"{tmptestdir}/tmp-pygama-write_safe_store.lh5",
+        group="/data",
+        start_row=1,
+        n_rows=3,
+        wo_mode="w",
+    )
+    assert lh5.ls(f"{tmptestdir}/tmp-pygama-write_safe_store.lh5")
+
+    # write_safe should add a new group to an existing file
+    lh5_st = lh5.LH5Store()
+    struct = lgdo.Struct()
+    struct.add_field("scalar", lgdo.Scalar(value=10, attrs={"sth": 1}))
+    lh5_st.write(
+        struct,
+        "struct2",
+        f"{tmptestdir}/tmp-pygama-write_safe_store.lh5",
+        group="/data",
+        start_row=1,
+        n_rows=3,
+        wo_mode="w",
+    )
+    assert lh5.ls(f"{tmptestdir}/tmp-pygama-write_safe_store.lh5", "data/") == [
+        "data/struct",
+        "data/struct2",
+    ]
+
+    # write_safe should not allow writing to existing dataset
+    lh5_st = lh5.LH5Store()
+    with pytest.raises(lh5.exceptions.LH5EncodeError):
+        lh5_st.write(
+            struct,
+            "struct",
+            f"{tmptestdir}/tmp-pygama-write_safe_store.lh5",
+            group="/data",
+            start_row=1,
+            n_rows=3,
+            wo_mode="w",
+        )
+
+
 def test_read_n_rows(lh5_file):
     store = lh5.LH5Store()
     assert store.read_n_rows("/data/struct_full/aoesa", lh5_file) == 5
