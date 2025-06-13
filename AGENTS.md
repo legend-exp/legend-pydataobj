@@ -24,4 +24,6 @@ long to initialize, be patient.
 ## Submitting a Pull Request
 
 Make sure to include a concise description of the changes and link the relevant
-pull requests or issues in the PR description.
+pull requests or issues in the PR description. If the PR addresses open issues,
+add "Closes #<issue-id>" at the end of the PR description, every issue in it's
+own line.
