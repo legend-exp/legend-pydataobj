@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+# ruff: noqa: UP007
 import logging
 from collections.abc import Sequence
+from typing import Optional, Union
 
 import awkward as ak
 import numba
@@ -17,7 +19,7 @@ log = logging.getLogger(__name__)
 
 
 def build_cl(
-    sorted_array_in: NDArray, cumulative_length_out: NDArray | None = None
+    sorted_array_in: NDArray, cumulative_length_out: Optional[NDArray] = None
 ) -> NDArray:
     """Build a cumulative length array from an array of sorted data.
 
@@ -103,7 +105,10 @@ def _nb_build_cl(sorted_array_in: NDArray, cumulative_length_out: NDArray) -> ND
     **nb_kwargs,
 )
 def _nb_fill(
-    aoa_in: NDArray, len_in: NDArray, nan_val: int | float, flattened_array_out: NDArray
+    aoa_in: NDArray,
+    len_in: NDArray,
+    nan_val: Union[int, float],
+    flattened_array_out: NDArray,
 ):
     """Vectorized function to fill flattened array from array of arrays and
     lengths. Values in aoa_in past lengths will not be copied.
@@ -138,7 +143,9 @@ def _nb_fill(
         start = stop
 
 
-def explode_cl(cumulative_length: NDArray, array_out: NDArray | None = None) -> NDArray:
+def explode_cl(
+    cumulative_length: NDArray, array_out: Optional[NDArray] = None
+) -> NDArray:
     """Explode a `cumulative_length` array.
 
     Examples
@@ -190,7 +197,7 @@ def _nb_explode_cl(cumulative_length: NDArray, array_out: NDArray) -> NDArray:
 
 
 def explode(
-    cumulative_length: NDArray, array_in: NDArray, array_out: NDArray | None = None
+    cumulative_length: NDArray, array_in: NDArray, array_out: Optional[NDArray] = None
 ) -> NDArray:
     """Explode a data array using a `cumulative_length` array.
 
@@ -251,7 +258,7 @@ def _nb_explode(
 def explode_arrays(
     cumulative_length: Array,
     arrays: Sequence[NDArray],
-    arrays_out: Sequence[NDArray] | None = None,
+    arrays_out: Optional[Sequence[NDArray]] = None,
 ) -> list[np.ndarray]:
     """Explode a set of arrays using a `cumulative_length` array.
 

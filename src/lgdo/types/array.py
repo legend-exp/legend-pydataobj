@@ -5,9 +5,10 @@ corresponding utilities.
 
 from __future__ import annotations
 
+# ruff: noqa: UP007
 import logging
 from collections.abc import Collection, Iterator
-from typing import Any
+from typing import Any, Optional, Union
 
 import awkward as ak
 import awkward_pandas as akpd
@@ -43,8 +44,8 @@ class Array(LGDOCollection):
         nda: np.ndarray = None,
         shape: tuple[int, ...] = (),
         dtype: np.dtype = None,
-        fill_val: float | int | None = None,
-        attrs: dict[str, Any] | None = None,
+        fill_val: Optional[Union[float, int]] = None,
+        attrs: Optional[dict[str, Any]] = None,
     ) -> None:
         """
         Parameters
@@ -126,7 +127,7 @@ class Array(LGDOCollection):
         "Set capacity to be minimum needed to support Array size"
         self.reserve_capacity(np.prod(self.shape))
 
-    def resize(self, new_size: int | Collection[int], trim=False) -> None:
+    def resize(self, new_size: Union[int, Collection[int]], trim: bool = False) -> None:
         """Set size of Array in rows. Only change capacity if it must be
         increased to accommodate new rows; in this case double capacity.
         If trim is True, capacity will be set to match size. If new_size
@@ -152,7 +153,7 @@ class Array(LGDOCollection):
         "Append value to end of array (with copy)"
         self.insert(len(self), value)
 
-    def insert(self, i: int, value: int | float) -> None:
+    def insert(self, i: int, value: Union[int, float]) -> None:
         "Insert value into row i (with copy)"
         if i > len(self):
             msg = f"index {i} is out of bounds for array with size {len(self)}"
@@ -171,7 +172,7 @@ class Array(LGDOCollection):
             msg = f"Could not insert value with shape {value.shape} into Array with shape {self.shape}"
             raise ValueError(msg)
 
-    def replace(self, i: int, value: int | float) -> None:
+    def replace(self, i: int, value: Union[int, float]) -> None:
         "Replace value at row i"
         if i >= len(self):
             msg = f"index {i} is out of bounds for array with size {len(self)}"
@@ -216,7 +217,7 @@ class Array(LGDOCollection):
 
     def view_as(
         self, library: str, with_units: bool = False
-    ) -> pd.DataFrame | np.NDArray | ak.Array:
+    ) -> Union[pd.DataFrame, np.NDArray, ak.Array]:
         """View the Array data as a third-party format data structure.
 
         This is a zero-copy operation. Supported third-party formats are:

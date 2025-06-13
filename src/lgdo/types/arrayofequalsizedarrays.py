@@ -5,8 +5,9 @@ corresponding utilities.
 
 from __future__ import annotations
 
+# ruff: noqa: UP007
 from collections.abc import Iterator
-from typing import Any
+from typing import Any, Optional, Union
 
 import awkward as ak
 import numpy as np
@@ -26,12 +27,12 @@ class ArrayOfEqualSizedArrays(Array):
 
     def __init__(
         self,
-        dims: tuple[int, ...] | None = None,
+        dims: Optional[tuple[int, ...]] = None,
         nda: np.ndarray = None,
         shape: tuple[int, ...] = (),
         dtype: np.dtype = None,
-        fill_val: int | float | None = None,
-        attrs: dict[str, Any] | None = None,
+        fill_val: Optional[Union[int, float]] = None,
+        attrs: Optional[dict[str, Any]] = None,
     ) -> None:
         """
         Parameters
@@ -139,7 +140,7 @@ class ArrayOfEqualSizedArrays(Array):
 
     def view_as(
         self, library: str, with_units: bool = False
-    ) -> pd.DataFrame | np.NDArray | ak.Array:
+    ) -> Union[pd.DataFrame, np.NDArray, ak.Array]:
         """View the array as a third-party format data structure.
 
         See Also

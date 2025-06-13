@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+# ruff: noqa: UP007
 from collections.abc import Sequence
+from typing import Optional, Union
 from warnings import warn
 
 import numpy as np
@@ -30,7 +32,9 @@ def get_element_type(obj: object) -> str:
     return utils.get_element_type(obj)
 
 
-def parse_datatype(datatype: str) -> tuple[str, tuple[int, ...], str | Sequence[str]]:
+def parse_datatype(
+    datatype: str,
+) -> tuple[str, tuple[int, ...], Union[str, Sequence[str]]]:
     warn(
         "'lgdo.lgdo_utils' has been renamed to 'lgdo.utils'. "
         "Please replace either 'import lgdo.lgdo_utils as utils' with 'import lgdo.utils as utils' "
@@ -42,7 +46,7 @@ def parse_datatype(datatype: str) -> tuple[str, tuple[int, ...], str | Sequence[
     return utils.parse_datatype(datatype)
 
 
-def expand_vars(expr: str, substitute: dict[str, str] | None = None) -> str:
+def expand_vars(expr: str, substitute: Optional[dict[str, str]] = None) -> str:
     warn(
         "'lgdo.lgdo_utils' has been renamed to 'lgdo.utils'. "
         "Please replace either 'import lgdo.lgdo_utils as utils' with 'import lgdo.utils as utils' "
@@ -56,10 +60,10 @@ def expand_vars(expr: str, substitute: dict[str, str] | None = None) -> str:
 
 def expand_path(
     path: str,
-    substitute: dict[str, str] | None = None,
+    substitute: Optional[dict[str, str]] = None,
     list: bool = False,
-    base_path: str | None = None,
-) -> str | list:
+    base_path: Optional[str] = None,
+) -> Union[str, list]:
     warn(
         "'lgdo.lgdo_utils' has been renamed to 'lgdo.utils'. "
         "Please replace either 'import lgdo.lgdo_utils as utils' with 'import lgdo.utils as utils' "

@@ -5,10 +5,11 @@ equal length and corresponding utilities.
 
 from __future__ import annotations
 
+# ruff: noqa: UP007
 import logging
 from collections.abc import Mapping, Sequence
 from types import ModuleType
-from typing import Any
+from typing import Any, Optional, Union
 from warnings import warn
 
 import awkward as ak
@@ -45,9 +46,11 @@ class Table(Struct, LGDOCollection):
 
     def __init__(
         self,
-        col_dict: Mapping[str, LGDOCollection] | pd.DataFrame | ak.Array | None = None,
-        size: int | None = None,
-        attrs: Mapping[str, Any] | None = None,
+        col_dict: Optional[
+            Mapping[str, LGDOCollection] | pd.DataFrame | ak.Array
+        ] = None,
+        size: Optional[int] = None,
+        attrs: Optional[Mapping[str, Any]] = None,
     ) -> None:
         r"""
         Parameters
@@ -102,7 +105,7 @@ class Table(Struct, LGDOCollection):
         """Provides ``__len__`` for this array-like class."""
         return self.size
 
-    def reserve_capacity(self, capacity: int | Sequence[int]) -> None:
+    def reserve_capacity(self, capacity: Union[int, Sequence[int]]) -> None:
         "Set size (number of rows) of internal memory buffer"
         if isinstance(capacity, int):
             for obj in self.values():
@@ -125,7 +128,7 @@ class Table(Struct, LGDOCollection):
             v.trim_capacity()
 
     def resize(
-        self, new_size: int | None = None, do_warn: bool = False, trim: bool = False
+        self, new_size: Optional[int] = None, do_warn: bool = False, trim: bool = False
     ) -> None:
         # if new_size = None, use the size from the first field
         for field, obj in self.items():
@@ -201,7 +204,7 @@ class Table(Struct, LGDOCollection):
     def join(
         self,
         other_table: Table,
-        cols: Sequence[str] | None = None,
+        cols: Optional[Sequence[str]] = None,
         do_warn: bool = True,
     ) -> None:
         """Add the columns of another table to this table.
@@ -235,7 +238,7 @@ class Table(Struct, LGDOCollection):
 
     def get_dataframe(
         self,
-        cols: Sequence[str] | None = None,
+        cols: Optional[Sequence[str]] = None,
         copy: bool = False,  # noqa: ARG002
         prefix: str = "",
     ) -> pd.DataFrame:
@@ -297,8 +300,8 @@ class Table(Struct, LGDOCollection):
     def eval(
         self,
         expr: str,
-        parameters: Mapping[str, str] | None = None,
-        modules: Mapping[str, ModuleType] | None = None,
+        parameters: Optional[Mapping[str, str]] = None,
+        modules: Optional[Mapping[str, ModuleType]] = None,
     ) -> LGDO:
         """Apply column operations to the table and return a new LGDO.
 
@@ -468,9 +471,9 @@ class Table(Struct, LGDOCollection):
         self,
         library: str,
         with_units: bool = False,
-        cols: Sequence[str] | None = None,
+        cols: Optional[Sequence[str]] = None,
         prefix: str = "",
-    ) -> pd.DataFrame | np.NDArray | ak.Array:
+    ) -> Union[pd.DataFrame, np.NDArray, ak.Array]:
         r"""View the Table data as a third-party format data structure.
 
         This is typically a zero-copy or nearly zero-copy operation.

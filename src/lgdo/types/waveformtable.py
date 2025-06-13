@@ -6,9 +6,10 @@ data.
 
 from __future__ import annotations
 
+# ruff: noqa: UP007
 import logging
 from collections.abc import Sequence
-from typing import Any
+from typing import Any, Optional, Union
 
 import awkward as ak
 import numpy as np
@@ -48,16 +49,18 @@ class WaveformTable(Table):
 
     def __init__(
         self,
-        size: int | None = None,
-        t0: float | Array | np.ndarray = 0,
-        t0_units: str | None = None,
-        dt: float | Array | np.ndarray = 1,
-        dt_units: str | None = None,
-        values: ArrayOfEqualSizedArrays | VectorOfVectors | np.ndarray = None,
-        values_units: str | None = None,
-        wf_len: int | None = None,
+        size: Optional[int] = None,
+        t0: Union[float, Array, np.ndarray] = 0,
+        t0_units: Optional[str] = None,
+        dt: Union[float, Array, np.ndarray] = 1,
+        dt_units: Optional[str] = None,
+        values: Optional[
+            Union[ArrayOfEqualSizedArrays, VectorOfVectors, np.ndarray]
+        ] = None,
+        values_units: Optional[str] = None,
+        wf_len: Optional[int] = None,
         dtype: np.dtype = None,
-        attrs: dict[str, Any] | None = None,
+        attrs: Optional[dict[str, Any]] = None,
     ) -> None:
         r"""
         Parameters
@@ -191,7 +194,7 @@ class WaveformTable(Table):
         super().__init__(size=size, col_dict=col_dict, attrs=attrs)
 
     @property
-    def values(self) -> ArrayOfEqualSizedArrays | VectorOfVectors:
+    def values(self) -> Union[ArrayOfEqualSizedArrays, VectorOfVectors]:
         return self["values"]
 
     @property
@@ -269,9 +272,9 @@ class WaveformTable(Table):
         self,
         library: str,
         with_units: bool = False,
-        cols: Sequence[str] | None = None,
+        cols: Optional[Sequence[str]] = None,
         prefix: str = "",
-    ) -> pd.DataFrame | np.NDArray | ak.Array:
+    ) -> Union[pd.DataFrame, np.NDArray, ak.Array]:
         r"""View the waveform data as a third-party format data structure.
 
         See Also

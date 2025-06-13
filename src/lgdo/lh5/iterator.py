@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+# ruff: noqa: UP007
 import logging
 from collections.abc import Iterator, Mapping, Sequence
+from typing import Optional, Union
 from warnings import warn
 
 import numpy as np
@@ -13,7 +15,7 @@ from ..units import default_units_registry as ureg
 from .store import LH5Store
 from .utils import expand_path
 
-LGDO = Array | Scalar | Struct | VectorOfVectors
+LGDO = Union[Array, Scalar, Struct, VectorOfVectors]
 
 
 class LH5Iterator(Iterator[LGDO]):
@@ -63,18 +65,18 @@ class LH5Iterator(Iterator[LGDO]):
 
     def __init__(
         self,
-        lh5_files: str | Sequence[str],
-        groups: str | Sequence[str] | Sequence[Sequence[str]],
+        lh5_files: Union[str, Sequence[str]],
+        groups: Union[str, Sequence[str], Sequence[Sequence[str]]],
         base_path: str = "",
-        entry_list: Sequence[int] | Sequence[Sequence[int]] | None = None,
-        entry_mask: Sequence[bool] | Sequence[Sequence[bool]] | None = None,
+        entry_list: Optional[Sequence[int] | Sequence[Sequence[int]]] = None,
+        entry_mask: Optional[Sequence[bool] | Sequence[Sequence[bool]]] = None,
         i_start: int = 0,
-        n_entries: int | None = None,
-        field_mask: Mapping[str, bool] | Sequence[str] | None = None,
+        n_entries: Optional[int] = None,
+        field_mask: Optional[Mapping[str, bool] | Sequence[str]] = None,
         buffer_len: int = "100*MB",
         file_cache: int = 10,
         file_map: NDArray[int] = None,
-        friend: Iterator | None = None,
+        friend: Optional[Iterator] = None,
     ) -> None:
         """
         Parameters
@@ -327,7 +329,7 @@ class LH5Iterator(Iterator[LGDO]):
                 )
         return self.global_entry_list
 
-    def read(self, i_entry: int, n_entries: int | None = None) -> LGDO:
+    def read(self, i_entry: int, n_entries: Optional[int] = None) -> LGDO:
         "Read the nextlocal chunk of events, starting at entry."
         self.lh5_buffer.resize(0)
 
