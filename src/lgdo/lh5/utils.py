@@ -111,7 +111,7 @@ def get_h5_group(
         grp_attrs is not None
         and len(set(grp_attrs.items()) ^ set(group.attrs.items())) > 0
     ):
-        if not overwrite:
+        if not overwrite and len(group.attrs) != 0:
             msg = (
                 f"Provided {grp_attrs=} are different from "
                 f"existing ones {dict(group.attrs)=} but overwrite flag is not set"
