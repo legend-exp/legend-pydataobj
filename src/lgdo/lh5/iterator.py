@@ -17,48 +17,43 @@ LGDO = typing.Union[Array, Scalar, Struct, VectorOfVectors]
 
 
 class LH5Iterator(typing.Iterator):
-    """
-    A class for iterating through one or more LH5 files, one block of entries
-    at a time. This also accepts an entry list/mask to enable event selection,
-    and a field mask.
+    """Iterate over chunks of entries from LH5 files.
 
-    This can be used as an iterator:
+    The iterator reads ``buffer_len`` entries at a time from one or more
+    files.  The LGDO instance returned at each iteration is reused to avoid
+    reallocations, so copy the data if it should be preserved.
 
+    Examples
+    --------
+    Iterate through a table one chunk at a time::
 
-    >>> for lh5_obj in LH5Iterator(...):
-    >>>    # do the thing!
+        from lgdo.lh5 import LH5Iterator
 
-    This is intended for if you are reading a large quantity of data. This
-    will ensure that you traverse files efficiently to minimize caching time
-    and will limit your memory usage (particularly when reading in waveforms!).
-    The ``lh5_obj`` that is read by this class is reused in order to avoid
-    reallocation of memory; this means that if you want to hold on to data
-    between reads, you will have to copy it somewhere!
+        for table in LH5Iterator("data.lh5", "geds/raw/energy", buffer_len=100):
+            process(table)
 
-    When defining an LH5Iterator, you must give it a list of files and the
-    hdf5 groups containing the data tables you are reading. You may also
-    provide a field mask, and an entry list or mask, specifying which entries
-    to read from the files. You may also pair it with a friend iterator, which
-    contains a parallel group of files which will be simultaneously read.
-    In addition to accessing requested data via ``lh5_obj``, several
-    properties exist to tell you where that data came from:
+    ``LH5Iterator`` can also be used for random access::
 
-    - lh5_it.current_i_entry: get the index within the entry list of the
-      first entry that is currently read
-    - lh5_it.current_local_entries: get the entry numbers relative to the
-      file the data came from
-    - lh5_it.current_global_entries: get the entry number relative to the
-      full dataset
-    - lh5_it.current_files: get the file name corresponding to each entry
-    - lh5_it.current_groups: get the group name corresponding to each entry
+        it = LH5Iterator(files, groups)
+        table = it.read(i_entry)
 
-    This class can also be used for random access:
+    In case of multiple files or an entry selection, ``i_entry`` refers to the
+    global event index across all files.
 
-    >>> lh5_obj = lh5_it.read(i_entry)
+    When instantiating an iterator you must provide a list of files and the
+    HDF5 groups to read.  Optional parameters allow field masking, event
+    selection and pairing the iterator with a "friend" iterator that is read in
+    parallel.  Several properties are available to obtain the provenance of the
+    data currently loaded:
 
-    to read the block of entries starting at i_entry. In case of multiple files
-    or the use of an event selection, i_entry refers to a global event index
-    across files and does not count events that are excluded by the selection.
+    - ``current_i_entry`` -- index within the entry list of the first entry in
+      the buffer
+    - ``current_local_entries`` -- entry numbers relative to the file the data
+      came from
+    - ``current_global_entries`` -- entry number relative to the full dataset
+    - ``current_files`` -- file name corresponding to each entry in the buffer
+    - ``current_groups`` -- group name corresponding to each entry in the
+      buffer
     """
 
     def __init__(
@@ -505,7 +500,7 @@ class LH5Iterator(typing.Iterator):
         return self
 
     def __next__(self) -> tuple[LGDO, int, int]:
-        """Read next buffer_len entries and return lh5_table and iterator entry."""
+        """Read the next chunk of entries and return the buffer."""
         n_entries = self.n_entries
         if n_entries is not None:
             n_entries = min(
