@@ -3,6 +3,7 @@ from __future__ import annotations
 import fnmatch
 import logging
 from copy import copy
+from pathlib import Path
 
 import h5py
 
@@ -13,7 +14,7 @@ log = logging.getLogger(__name__)
 
 
 def ls(
-    lh5_file: str | h5py.Group,
+    lh5_file: str | Path | h5py.Group,
     lh5_group: str = "",
     recursive: bool = False,
 ) -> list[str]:
@@ -39,8 +40,8 @@ def ls(
 
     lh5_st = LH5Store()
     # To use recursively, make lh5_file a h5group instead of a string
-    if isinstance(lh5_file, str):
-        lh5_file = lh5_st.gimme_file(lh5_file, "r")
+    if isinstance(lh5_file, (str, Path)):
+        lh5_file = lh5_st.gimme_file(str(Path(lh5_file)), "r")
         if lh5_group.startswith("/"):
             lh5_group = lh5_group[1:]
 
@@ -75,7 +76,7 @@ def ls(
 
 
 def show(
-    lh5_file: str | h5py.Group,
+    lh5_file: str | Path | h5py.Group,
     lh5_group: str = "/",
     attrs: bool = False,
     indent: str = "",
@@ -121,8 +122,8 @@ def show(
         return
 
     # open file
-    if isinstance(lh5_file, str):
-        lh5_file = h5py.File(utils.expand_path(lh5_file), "r", locking=False)
+    if isinstance(lh5_file, (str, Path)):
+        lh5_file = h5py.File(utils.expand_path(Path(lh5_file)), "r", locking=False)
 
     # go to group
     if lh5_group != "/":

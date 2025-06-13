@@ -38,7 +38,10 @@ class LH5Store:
     """
 
     def __init__(
-        self, base_path: str = "", keep_open: bool = False, locking: bool = False
+        self,
+        base_path: str | Path = "",
+        keep_open: bool = False,
+        locking: bool = False,
     ) -> None:
         """
         Parameters
@@ -52,6 +55,7 @@ class LH5Store:
         locking
             whether to lock files when reading
         """
+        base_path = str(Path(base_path)) if base_path != "" else ""
         self.base_path = "" if base_path == "" else utils.expand_path(base_path)
         self.keep_open = keep_open
         self.locking = locking
@@ -59,7 +63,7 @@ class LH5Store:
 
     def gimme_file(
         self,
-        lh5_file: str | h5py.File,
+        lh5_file: str | Path | h5py.File,
         mode: str = "r",
         page_buffer: int = 0,
         **file_kwargs,
@@ -82,6 +86,8 @@ class LH5Store:
         """
         if isinstance(lh5_file, h5py.File):
             return lh5_file
+
+        lh5_file = str(Path(lh5_file))
 
         if mode == "r":
             lh5_file = utils.expand_path(lh5_file, base_path=self.base_path)
@@ -147,7 +153,7 @@ class LH5Store:
     def get_buffer(
         self,
         name: str,
-        lh5_file: str | h5py.File | Sequence[str | h5py.File],
+        lh5_file: str | Path | h5py.File | Sequence[str | Path | h5py.File],
         size: int | None = None,
         field_mask: Mapping[str, bool] | Sequence[str] | None = None,
     ) -> types.LGDO:
@@ -162,7 +168,7 @@ class LH5Store:
     def read(
         self,
         name: str,
-        lh5_file: str | h5py.File | Sequence[str | h5py.File],
+        lh5_file: str | Path | h5py.File | Sequence[str | Path | h5py.File],
         start_row: int = 0,
         n_rows: int = sys.maxsize,
         idx: ArrayLike = None,
@@ -180,7 +186,7 @@ class LH5Store:
         .lh5.core.read
         """
         # grab files from store
-        if isinstance(lh5_file, (str, h5py.File)):
+        if isinstance(lh5_file, (str, Path, h5py.File)):
             h5f = self.gimme_file(lh5_file, "r", **file_kwargs)
         else:
             h5f = [self.gimme_file(f, "r", **file_kwargs) for f in lh5_file]
@@ -201,7 +207,7 @@ class LH5Store:
         self,
         obj: types.LGDO,
         name: str,
-        lh5_file: str | h5py.File,
+        lh5_file: str | Path | h5py.File,
         group: str | h5py.Group = "/",
         start_row: int = 0,
         n_rows: int | None = None,
@@ -256,14 +262,14 @@ class LH5Store:
             **h5py_kwargs,
         )
 
-    def read_n_rows(self, name: str, lh5_file: str | h5py.File) -> int | None:
+    def read_n_rows(self, name: str, lh5_file: str | Path | h5py.File) -> int | None:
         """Look up the number of rows in an Array-like object called `name` in `lh5_file`.
 
         Return ``None`` if it is a :class:`.Scalar` or a :class:`.Struct`.
         """
         return utils.read_n_rows(name, self.gimme_file(lh5_file, "r"))
 
-    def read_size_in_bytes(self, name: str, lh5_file: str | h5py.File) -> int:
+    def read_size_in_bytes(self, name: str, lh5_file: str | Path | h5py.File) -> int:
         """Look up the size (in B) of the object in memory. Will recursively
         crawl through all objects in a Struct or Table
         """
