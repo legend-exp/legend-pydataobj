@@ -95,8 +95,8 @@ class ArrayOfEqualSizedArrays(Array):
     def __len__(self) -> int:
         return len(self.nda)
 
-    def __iter__(self) -> Iterator[np.array]:
-        return self.nda.__iter__()
+    def __iter__(self) -> Iterator[np.ndarray]:
+        return iter(self.nda)
 
     def __next__(self) -> np.ndarray:
         return self.nda.__next__()

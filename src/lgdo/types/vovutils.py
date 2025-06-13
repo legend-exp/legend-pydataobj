@@ -252,7 +252,7 @@ def explode_arrays(
     cumulative_length: Array,
     arrays: Sequence[NDArray],
     arrays_out: Sequence[NDArray] | None = None,
-) -> list:
+) -> list[np.ndarray]:
     """Explode a set of arrays using a `cumulative_length` array.
 
     Parameters

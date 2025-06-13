@@ -6,7 +6,7 @@ equal length and corresponding utilities.
 from __future__ import annotations
 
 import logging
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from types import ModuleType
 from typing import Any
 from warnings import warn
@@ -102,7 +102,7 @@ class Table(Struct, LGDOCollection):
         """Provides ``__len__`` for this array-like class."""
         return self.size
 
-    def reserve_capacity(self, capacity: int | list) -> None:
+    def reserve_capacity(self, capacity: int | Sequence[int]) -> None:
         "Set size (number of rows) of internal memory buffer"
         if isinstance(capacity, int):
             for obj in self.values():
@@ -115,11 +115,11 @@ class Table(Struct, LGDOCollection):
             for obj, cap in zip(self.values(), capacity):
                 obj.reserve_capacity(cap)
 
-    def get_capacity(self) -> int:
+    def get_capacity(self) -> list[int]:
         "Get list of capacities for each key"
         return [v.get_capacity() for v in self.values()]
 
-    def trim_capacity(self) -> int:
+    def trim_capacity(self) -> None:
         "Set capacity to be minimum needed to support Array size"
         for v in self.values():
             v.trim_capacity()
@@ -199,7 +199,10 @@ class Table(Struct, LGDOCollection):
         super().remove_field(name, delete)
 
     def join(
-        self, other_table: Table, cols: list[str] | None = None, do_warn: bool = True
+        self,
+        other_table: Table,
+        cols: Sequence[str] | None = None,
+        do_warn: bool = True,
     ) -> None:
         """Add the columns of another table to this table.
 
@@ -232,7 +235,7 @@ class Table(Struct, LGDOCollection):
 
     def get_dataframe(
         self,
-        cols: list[str] | None = None,
+        cols: Sequence[str] | None = None,
         copy: bool = False,  # noqa: ARG002
         prefix: str = "",
     ) -> pd.DataFrame:
@@ -465,7 +468,7 @@ class Table(Struct, LGDOCollection):
         self,
         library: str,
         with_units: bool = False,
-        cols: list[str] | None = None,
+        cols: Sequence[str] | None = None,
         prefix: str = "",
     ) -> pd.DataFrame | np.NDArray | ak.Array:
         r"""View the Table data as a third-party format data structure.

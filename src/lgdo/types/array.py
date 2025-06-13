@@ -190,7 +190,7 @@ class Array(LGDOCollection):
 
         return False
 
-    def __iter__(self) -> Iterator:
+    def __iter__(self) -> Iterator[np.generic]:
         yield from self.nda
 
     def __str__(self) -> str:

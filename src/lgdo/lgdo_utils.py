@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from warnings import warn
 
 import numpy as np
@@ -29,7 +30,7 @@ def get_element_type(obj: object) -> str:
     return utils.get_element_type(obj)
 
 
-def parse_datatype(datatype: str) -> tuple[str, tuple[int, ...], str | list[str]]:
+def parse_datatype(datatype: str) -> tuple[str, tuple[int, ...], str | Sequence[str]]:
     warn(
         "'lgdo.lgdo_utils' has been renamed to 'lgdo.utils'. "
         "Please replace either 'import lgdo.lgdo_utils as utils' with 'import lgdo.utils as utils' "

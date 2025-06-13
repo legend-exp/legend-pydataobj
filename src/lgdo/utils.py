@@ -5,7 +5,6 @@ from __future__ import annotations
 import logging
 import os
 from collections.abc import Iterator, MutableMapping
-from typing import Any
 
 import numpy as np
 
@@ -105,23 +104,23 @@ class NumbaDefaults(MutableMapping):
         self.cache: bool = getenv_bool("LGDO_CACHE", default=True)
         self.boundscheck: bool = getenv_bool("LGDO_BOUNDSCHECK", default=False)
 
-    def __getitem__(self, item: str) -> Any:
+    def __getitem__(self, item: str) -> bool:
         return self.__dict__[item]
 
-    def __setitem__(self, item: str, val: Any) -> None:
+    def __setitem__(self, item: str, val: bool) -> None:
         self.__dict__[item] = val
 
     def __delitem__(self, item: str) -> None:
         del self.__dict__[item]
 
-    def __iter__(self) -> Iterator:
-        return self.__dict__.__iter__()
+    def __iter__(self) -> Iterator[str]:
+        return iter(self.__dict__)
 
     def __len__(self) -> int:
         return len(self.__dict__)
 
-    def __call__(self, **kwargs) -> dict:
-        mapping = self.__dict__.copy()
+    def __call__(self, **kwargs) -> dict[str, bool]:
+        mapping: dict[str, bool] = self.__dict__.copy()
         mapping.update(**kwargs)
         return mapping
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-import typing
+from collections.abc import Iterator, Mapping, Sequence
 from warnings import warn
 
 import numpy as np
@@ -13,10 +13,10 @@ from ..units import default_units_registry as ureg
 from .store import LH5Store
 from .utils import expand_path
 
-LGDO = typing.Union[Array, Scalar, Struct, VectorOfVectors]
+LGDO = Array | Scalar | Struct | VectorOfVectors
 
 
-class LH5Iterator(typing.Iterator):
+class LH5Iterator(Iterator[LGDO]):
     """
     A class for iterating through one or more LH5 files, one block of entries
     at a time. This also accepts an entry list/mask to enable event selection,
@@ -63,18 +63,18 @@ class LH5Iterator(typing.Iterator):
 
     def __init__(
         self,
-        lh5_files: str | list[str],
-        groups: str | list[str] | list[list[str]],
+        lh5_files: str | Sequence[str],
+        groups: str | Sequence[str] | Sequence[Sequence[str]],
         base_path: str = "",
-        entry_list: list[int] | list[list[int]] | None = None,
-        entry_mask: list[bool] | list[list[bool]] | None = None,
+        entry_list: Sequence[int] | Sequence[Sequence[int]] | None = None,
+        entry_mask: Sequence[bool] | Sequence[Sequence[bool]] | None = None,
         i_start: int = 0,
         n_entries: int | None = None,
-        field_mask: dict[str, bool] | list[str] | tuple[str] | None = None,
+        field_mask: Mapping[str, bool] | Sequence[str] | None = None,
         buffer_len: int = "100*MB",
         file_cache: int = 10,
         file_map: NDArray[int] = None,
-        friend: typing.Iterator | None = None,
+        friend: Iterator | None = None,
     ) -> None:
         """
         Parameters
@@ -229,7 +229,7 @@ class LH5Iterator(typing.Iterator):
 
         # Attach the friend
         if friend is not None:
-            if not isinstance(friend, typing.Iterator):
+            if not isinstance(friend, Iterator):
                 msg = "Friend must be an Iterator"
                 raise ValueError(msg)
 
@@ -498,7 +498,7 @@ class LH5Iterator(typing.Iterator):
             else 0
         )
 
-    def __iter__(self) -> typing.Iterator:
+    def __iter__(self) -> Iterator[LGDO]:
         """Loop through entries in blocks of size buffer_len."""
         self.current_i_entry = 0
         self.next_i_entry = self.i_start
