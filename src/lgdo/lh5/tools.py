@@ -121,12 +121,15 @@ def show(
         return
 
     # open file
+    close_file = False
     if isinstance(lh5_file, str):
-        lh5_file = h5py.File(utils.expand_path(lh5_file), "r", locking=False)
+        h5f = h5py.File(utils.expand_path(lh5_file), "r", locking=False)
+        close_file = True
+    else:
+        h5f = lh5_file
 
     # go to group
-    if lh5_group != "/":
-        lh5_file = lh5_file[lh5_group]
+    lh5_file = h5f[lh5_group] if lh5_group != "/" else h5f
 
     if header:
         print(f"\033[1m{lh5_group}\033[0m")  # noqa: T201
@@ -217,3 +220,6 @@ def show(
             break
 
         key = k_new
+
+    if close_file:
+        h5f.close()
