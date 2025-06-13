@@ -1,5 +1,6 @@
 """Implements utilities for LEGEND Data Objects."""
 
+# ruff: noqa: UP007
 from __future__ import annotations
 
 import glob
@@ -8,7 +9,7 @@ import os
 import string
 from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional, Union
 
 import h5py
 
@@ -21,9 +22,9 @@ log = logging.getLogger(__name__)
 
 def get_buffer(
     name: str,
-    lh5_file: str | h5py.File | Sequence[str | h5py.File],
-    size: int | None = None,
-    field_mask: Mapping[str, bool] | Sequence[str] | None = None,
+    lh5_file: Union[str, h5py.File, Sequence[Union[str, h5py.File]]],
+    size: Optional[int] = None,
+    field_mask: Union[Mapping[str, bool], Sequence[str], None] = None,
 ) -> types.LGDO:
     """Returns an LGDO appropriate for use as a pre-allocated buffer.
 
@@ -39,7 +40,7 @@ def get_buffer(
     return obj
 
 
-def read_n_rows(name: str, h5f: str | h5py.File) -> int | None:
+def read_n_rows(name: str, h5f: Union[str, h5py.File]) -> Optional[int]:
     """Look up the number of rows in an Array-like LGDO object on disk.
 
     Return ``None`` if `name` is a :class:`.Scalar` or a :class:`.Struct`.
@@ -56,7 +57,7 @@ def read_n_rows(name: str, h5f: str | h5py.File) -> int | None:
     return _serializers.read.utils.read_n_rows(h5o, h5f.name, name)
 
 
-def read_size_in_bytes(name: str, h5f: str | h5py.File) -> int | None:
+def read_size_in_bytes(name: str, h5f: Union[str, h5py.File]) -> Optional[int]:
     """Look up the size (in B) in an LGDO object in memory. Will crawl
     recursively through members of a Struct or Table
     """
@@ -73,9 +74,9 @@ def read_size_in_bytes(name: str, h5f: str | h5py.File) -> int | None:
 
 
 def get_h5_group(
-    group: str | h5py.Group,
+    group: Union[str, h5py.Group],
     base_group: h5py.Group,
-    grp_attrs: Mapping[str, Any] | None = None,
+    grp_attrs: Optional[Mapping[str, Any]] = None,
     overwrite: bool = False,
 ) -> h5py.Group:
     """
@@ -132,7 +133,7 @@ def get_h5_group(
     return group
 
 
-def expand_vars(expr: str, substitute: dict[str, str] | None = None) -> str:
+def expand_vars(expr: str, substitute: Optional[dict[str, str]] = None) -> str:
     """Expand (environment) variables.
 
     Note
@@ -159,10 +160,10 @@ def expand_vars(expr: str, substitute: dict[str, str] | None = None) -> str:
 
 def expand_path(
     path: str,
-    substitute: dict[str, str] | None = None,
+    substitute: Optional[dict[str, str]] = None,
     list: bool = False,
-    base_path: str | None = None,
-) -> str | list:
+    base_path: Optional[str] = None,
+) -> Union[str, list]:
     """Expand (environment) variables and wildcards to return absolute paths.
 
     Parameters

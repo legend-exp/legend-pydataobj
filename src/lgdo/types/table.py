@@ -3,6 +3,7 @@ Implements a LEGEND Data Object representing a special struct of arrays of
 equal length and corresponding utilities.
 """
 
+# ruff: noqa: UP007
 from __future__ import annotations
 
 # ruff: noqa: UP007
@@ -47,7 +48,7 @@ class Table(Struct, LGDOCollection):
     def __init__(
         self,
         col_dict: Optional[
-            Mapping[str, LGDOCollection] | pd.DataFrame | ak.Array
+            Union[Mapping[str, LGDOCollection], pd.DataFrame, ak.Array]
         ] = None,
         size: Optional[int] = None,
         attrs: Optional[Mapping[str, Any]] = None,

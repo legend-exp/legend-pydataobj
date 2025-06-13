@@ -1,9 +1,10 @@
 """Implements a LEGEND Data Object representing a scalar and corresponding utilities."""
 
+# ruff: noqa: UP007
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, Optional, Union
 
 import numpy as np
 
@@ -20,7 +21,9 @@ class Scalar(LGDO):
     # TODO: do scalars need proper numpy dtypes?
 
     def __init__(
-        self, value: int | float | str, attrs: dict[str, Any] | None = None
+        self,
+        value: Union[int, float, str],
+        attrs: Optional[dict[str, Any]] = None,
     ) -> None:
         """
         Parameters

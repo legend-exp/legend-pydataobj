@@ -1,1 +1,1 @@
-from __future__ import annotations
+"""Helpers for writing LGDO types."""

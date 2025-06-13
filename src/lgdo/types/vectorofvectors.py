@@ -3,11 +3,12 @@ Implements a LEGEND Data Object representing a variable-length array of
 variable-length arrays and corresponding utilities.
 """
 
+# ruff: noqa: UP007
 from __future__ import annotations
 
 import logging
 from collections.abc import Iterator, Mapping, Sequence
-from typing import Any
+from typing import Any, Optional, Union
 
 import awkward as ak
 import awkward_pandas as akpd
@@ -57,13 +58,13 @@ class VectorOfVectors(LGDOCollection):
 
     def __init__(
         self,
-        data: ArrayLike | None = None,
-        flattened_data: ArrayLike | None = None,
-        cumulative_length: ArrayLike | VectorOfVectors | None = None,
-        shape_guess: Sequence[int, ...] | None = None,
-        dtype: DTypeLike | None = None,
-        fill_val: int | float | None = None,
-        attrs: Mapping[str, Any] | None = None,
+        data: Optional[ArrayLike] = None,
+        flattened_data: Optional[ArrayLike] = None,
+        cumulative_length: Optional[Union[ArrayLike, VectorOfVectors]] = None,
+        shape_guess: Optional[Sequence[int]] = None,
+        dtype: Optional[DTypeLike] = None,
+        fill_val: Optional[Union[int, float]] = None,
+        attrs: Optional[Mapping[str, Any]] = None,
     ) -> None:
         """
         Parameters
@@ -452,7 +453,7 @@ class VectorOfVectors(LGDOCollection):
             raise NotImplementedError
 
     def _set_vector_unsafe(
-        self, i: int, vec: NDArray, lens: ArrayLike | None = None
+        self, i: int, vec: NDArray, lens: Optional[ArrayLike] = None
     ) -> None:
         r"""Insert vector `vec` at position `i`.
 
@@ -555,8 +556,8 @@ class VectorOfVectors(LGDOCollection):
 
     def to_aoesa(
         self,
-        max_len: int | None = None,
-        fill_val: bool | int | float = np.nan,
+        max_len: Optional[int] = None,
+        fill_val: Union[bool, int, float] = np.nan,
         preserve_dtype: bool = False,
     ) -> aoesa.ArrayOfEqualSizedArrays:
         """Convert to :class:`ArrayOfEqualSizedArrays`.
@@ -603,9 +604,9 @@ class VectorOfVectors(LGDOCollection):
         self,
         library: str,
         with_units: bool = False,
-        fill_val: bool | int | float = np.nan,
+        fill_val: Union[bool, int, float] = np.nan,
         preserve_dtype: bool = False,
-    ) -> pd.DataFrame | np.NDArray | ak.Array:
+    ) -> Union[pd.DataFrame, np.NDArray, ak.Array]:
         r"""View the vector data as a third-party format data structure.
 
         This is typically a zero-copy or nearly zero-copy operation.

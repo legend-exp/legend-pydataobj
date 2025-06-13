@@ -1,8 +1,10 @@
 """This module implements some helpers for setting up logging."""
 
+# ruff: noqa: UP007
 from __future__ import annotations
 
 import logging
+from typing import Optional
 
 import colorlog
 
@@ -14,7 +16,7 @@ FATAL = logging.FATAL
 CRITICAL = logging.CRITICAL
 
 
-def setup(level: int = logging.INFO, logger: logging.Logger | None = None) -> None:
+def setup(level: int = logging.INFO, logger: Optional[logging.Logger] = None) -> None:
     """Setup a colorful logging output.
 
     If `logger` is None, sets up only the ``lgdo`` logger.

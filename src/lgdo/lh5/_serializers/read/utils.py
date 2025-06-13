@@ -1,8 +1,10 @@
+# ruff: noqa: UP007
 from __future__ import annotations
 
 import logging
 from collections import defaultdict
 from collections.abc import Collection, Mapping, Sequence
+from typing import Union
 
 import h5py
 import numpy as np
@@ -24,7 +26,9 @@ def check_obj_buf_attrs(attrs, new_attrs, fname, oname):
         raise LH5DecodeError(msg, fname, oname)
 
 
-def build_field_mask(field_mask: Mapping[str, bool] | Collection[str]) -> defaultdict:
+def build_field_mask(
+    field_mask: Union[Mapping[str, bool], Collection[str]],
+) -> defaultdict:
     # check field_mask and make it a default dict
     if field_mask is None:
         return defaultdict(lambda: True)

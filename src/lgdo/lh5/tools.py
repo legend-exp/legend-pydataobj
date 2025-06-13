@@ -1,8 +1,10 @@
+# ruff: noqa: UP007
 from __future__ import annotations
 
 import fnmatch
 import logging
 from copy import copy
+from typing import Optional, Union
 
 import h5py
 
@@ -13,7 +15,7 @@ log = logging.getLogger(__name__)
 
 
 def ls(
-    lh5_file: str | h5py.Group,
+    lh5_file: Union[str, h5py.Group],
     lh5_group: str = "",
     recursive: bool = False,
 ) -> list[str]:
@@ -75,12 +77,12 @@ def ls(
 
 
 def show(
-    lh5_file: str | h5py.Group,
+    lh5_file: Union[str, h5py.Group],
     lh5_group: str = "/",
     attrs: bool = False,
     indent: str = "",
     header: bool = True,
-    depth: int | None = None,
+    depth: Optional[int] = None,
     detail: bool = False,
 ) -> None:
     """Print a tree of LH5 file contents with LGDO datatype.

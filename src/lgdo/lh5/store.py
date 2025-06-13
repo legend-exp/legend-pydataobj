@@ -3,6 +3,7 @@ This module implements routines from reading and writing LEGEND Data Objects in
 HDF5 files.
 """
 
+# ruff: noqa: UP007
 from __future__ import annotations
 
 import logging
@@ -11,7 +12,7 @@ from collections import OrderedDict
 from collections.abc import Mapping, Sequence
 from inspect import signature
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional, Union
 
 import h5py
 from numpy.typing import ArrayLike
@@ -59,7 +60,7 @@ class LH5Store:
 
     def gimme_file(
         self,
-        lh5_file: str | h5py.File,
+        lh5_file: Union[str, h5py.File],
         mode: str = "r",
         page_buffer: int = 0,
         **file_kwargs,
@@ -130,9 +131,9 @@ class LH5Store:
 
     def gimme_group(
         self,
-        group: str | h5py.Group,
+        group: Union[str, h5py.Group],
         base_group: h5py.Group,
-        grp_attrs: dict[str, Any] | None = None,
+        grp_attrs: Optional[dict[str, Any]] = None,
         overwrite: bool = False,
     ) -> h5py.Group:
         """
@@ -147,9 +148,9 @@ class LH5Store:
     def get_buffer(
         self,
         name: str,
-        lh5_file: str | h5py.File | Sequence[str | h5py.File],
-        size: int | None = None,
-        field_mask: Mapping[str, bool] | Sequence[str] | None = None,
+        lh5_file: Union[str, h5py.File, Sequence[Union[str, h5py.File]]],
+        size: Optional[int] = None,
+        field_mask: Union[Mapping[str, bool], Sequence[str], None] = None,
     ) -> types.LGDO:
         """Returns an LH5 object appropriate for use as a pre-allocated buffer
         in a read loop. Sets size to `size` if object has a size.
@@ -162,12 +163,12 @@ class LH5Store:
     def read(
         self,
         name: str,
-        lh5_file: str | h5py.File | Sequence[str | h5py.File],
+        lh5_file: Union[str, h5py.File, Sequence[Union[str, h5py.File]]],
         start_row: int = 0,
         n_rows: int = sys.maxsize,
         idx: ArrayLike = None,
         use_h5idx: bool = False,
-        field_mask: Mapping[str, bool] | Sequence[str] | None = None,
+        field_mask: Union[Mapping[str, bool], Sequence[str], None] = None,
         obj_buf: types.LGDO = None,
         obj_buf_start: int = 0,
         decompress: bool = True,
@@ -201,10 +202,10 @@ class LH5Store:
         self,
         obj: types.LGDO,
         name: str,
-        lh5_file: str | h5py.File,
-        group: str | h5py.Group = "/",
+        lh5_file: Union[str, h5py.File],
+        group: Union[str, h5py.Group] = "/",
         start_row: int = 0,
-        n_rows: int | None = None,
+        n_rows: Optional[int] = None,
         wo_mode: str = "append",
         write_start: int = 0,
         page_buffer: int = 0,
@@ -256,14 +257,14 @@ class LH5Store:
             **h5py_kwargs,
         )
 
-    def read_n_rows(self, name: str, lh5_file: str | h5py.File) -> int | None:
+    def read_n_rows(self, name: str, lh5_file: Union[str, h5py.File]) -> Optional[int]:
         """Look up the number of rows in an Array-like object called `name` in `lh5_file`.
 
         Return ``None`` if it is a :class:`.Scalar` or a :class:`.Struct`.
         """
         return utils.read_n_rows(name, self.gimme_file(lh5_file, "r"))
 
-    def read_size_in_bytes(self, name: str, lh5_file: str | h5py.File) -> int:
+    def read_size_in_bytes(self, name: str, lh5_file: Union[str, h5py.File]) -> int:
         """Look up the size (in B) of the object in memory. Will recursively
         crawl through all objects in a Struct or Table
         """

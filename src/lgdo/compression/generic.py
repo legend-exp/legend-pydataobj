@@ -1,6 +1,8 @@
+# ruff: noqa: UP007
 from __future__ import annotations
 
 import logging
+from typing import Optional, Union
 
 from .. import types as lgdo
 from . import radware, varlen
@@ -10,9 +12,9 @@ log = logging.getLogger(__name__)
 
 
 def encode(
-    obj: lgdo.VectorOfVectors | lgdo.ArrayOfEqualsizedArrays,
-    codec: WaveformCodec | str = None,
-) -> lgdo.VectorOfEncodedVectors | lgdo.ArrayOfEncodedEqualSizedArrays:
+    obj: Union[lgdo.VectorOfVectors, lgdo.ArrayOfEqualsizedArrays],
+    codec: Optional[Union[WaveformCodec, str]] = None,
+) -> Union[lgdo.VectorOfEncodedVectors, lgdo.ArrayOfEncodedEqualSizedArrays]:
     """Encode LGDOs with `codec`.
 
     Defines behaviors for each implemented waveform encoding algorithm.
@@ -40,9 +42,9 @@ def encode(
 
 
 def decode(
-    obj: lgdo.VectorOfEncodedVectors | lgdo.ArrayOfEncodedEqualSizedArrays,
-    out_buf: lgdo.ArrayOfEqualSizedArrays = None,
-) -> lgdo.VectorOfVectors | lgdo.ArrayOfEqualsizedArrays:
+    obj: Union[lgdo.VectorOfEncodedVectors, lgdo.ArrayOfEncodedEqualSizedArrays],
+    out_buf: Optional[lgdo.ArrayOfEqualSizedArrays] = None,
+) -> Union[lgdo.VectorOfVectors, lgdo.ArrayOfEqualsizedArrays]:
     """Decode encoded LGDOs.
 
     Defines decoding behaviors for each implemented waveform encoding
@@ -78,7 +80,7 @@ def decode(
     raise ValueError(msg)
 
 
-def _is_codec(ident: WaveformCodec | str, codec) -> bool:
+def _is_codec(ident: Union[WaveformCodec, str], codec) -> bool:
     if isinstance(ident, WaveformCodec):
         return isinstance(ident, codec)
 

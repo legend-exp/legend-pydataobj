@@ -1,3 +1,4 @@
+# ruff: noqa: UP007
 from __future__ import annotations
 
 import bisect
@@ -6,7 +7,7 @@ import sys
 from collections.abc import Mapping, Sequence
 from contextlib import suppress
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional, Union
 
 import h5py
 import numpy as np
@@ -19,17 +20,17 @@ from .utils import read_n_rows
 
 def read(
     name: str,
-    lh5_file: str | h5py.File | Sequence[str | h5py.File],
+    lh5_file: Union[str, h5py.File, Sequence[Union[str, h5py.File]]],
     start_row: int = 0,
     n_rows: int = sys.maxsize,
     idx: ArrayLike = None,
     use_h5idx: bool = False,
-    field_mask: Mapping[str, bool] | Sequence[str] | None = None,
+    field_mask: Union[Mapping[str, bool], Sequence[str], None] = None,
     obj_buf: types.LGDO = None,
     obj_buf_start: int = 0,
     decompress: bool = True,
     locking: bool = False,
-) -> types.LGDO | tuple[types.LGDO, int]:
+) -> Union[types.LGDO, tuple[types.LGDO, int]]:
     """Read LH5 object data from a file.
 
     Note
@@ -195,10 +196,10 @@ def read(
 def write(
     obj: types.LGDO,
     name: str,
-    lh5_file: str | h5py.File,
-    group: str | h5py.Group = "/",
+    lh5_file: Union[str, h5py.File],
+    group: Union[str, h5py.Group] = "/",
     start_row: int = 0,
-    n_rows: int | None = None,
+    n_rows: Optional[int] = None,
     wo_mode: str = "append",
     write_start: int = 0,
     page_buffer: int = 0,
@@ -318,7 +319,7 @@ def write(
 
 def read_as(
     name: str,
-    lh5_file: str | h5py.File | Sequence[str | h5py.File],
+    lh5_file: Union[str, h5py.File, Sequence[Union[str, h5py.File]]],
     library: str,
     **kwargs,
 ) -> Any:

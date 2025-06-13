@@ -1,7 +1,9 @@
+# ruff: noqa: UP007
 from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from typing import Optional, Union
 
 import numba
 import numpy as np
@@ -41,14 +43,14 @@ class RadwareSigcompress(WaveformCodec):
 
 
 def encode(
-    sig_in: NDArray | lgdo.VectorOfVectors | lgdo.ArrayOfEqualSizedArrays,
-    sig_out: NDArray[ubyte] = None,
+    sig_in: Union[NDArray, lgdo.VectorOfVectors, lgdo.ArrayOfEqualSizedArrays],
+    sig_out: Optional[NDArray[ubyte]] = None,
     shift: int32 = 0,
-) -> (
-    (NDArray[ubyte], NDArray[uint32])
-    | lgdo.VectorOfEncodedVectors
-    | lgdo.ArrayOfEncodedEqualSizedArrays
-):
+) -> Union[
+    tuple[NDArray[ubyte], NDArray[uint32]],
+    lgdo.VectorOfEncodedVectors,
+    lgdo.ArrayOfEncodedEqualSizedArrays,
+]:
     """Compress digital signal(s) with `radware-sigcompress`.
 
     Wraps :func:`._radware_sigcompress_encode` and adds support for encoding
@@ -174,12 +176,16 @@ def encode(
 
 
 def decode(
-    sig_in: NDArray[ubyte]
-    | lgdo.VectorOfEncodedVectors
-    | lgdo.ArrayOfEncodedEqualSizedArrays,
-    sig_out: NDArray | lgdo.ArrayOfEqualSizedArrays = None,
+    sig_in: Union[
+        NDArray[ubyte],
+        lgdo.VectorOfEncodedVectors,
+        lgdo.ArrayOfEncodedEqualSizedArrays,
+    ],
+    sig_out: Optional[Union[NDArray, lgdo.ArrayOfEqualSizedArrays]] = None,
     shift: int32 = 0,
-) -> (NDArray, NDArray[uint32]) | lgdo.VectorOfVectors | lgdo.ArrayOfEqualSizedArrays:
+) -> Union[
+    tuple[NDArray, NDArray[uint32]], lgdo.VectorOfVectors, lgdo.ArrayOfEqualSizedArrays
+]:
     """Decompress digital signal(s) with `radware-sigcompress`.
 
     Wraps :func:`._radware_sigcompress_decode` and adds support for decoding
