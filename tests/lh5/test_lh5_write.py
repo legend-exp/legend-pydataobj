@@ -612,3 +612,31 @@ def test_write_append_struct(tmptestdir):
     result = lh5.read("struct", outfile)
     assert list(result.keys()) == ["arr2"]
     assert len(result.arr2) == len(st2.arr2)
+
+
+def test_write_structs_not_groups(tmptestdir):
+    outfile = str(tmptestdir / "test-write-structs-not-groups2.lh5")
+
+    scalar = types.Scalar("made with legend-pydataobj!")
+    array = types.Array([1, 2, 3])
+    array2 = types.Array([4, 5, 6])
+    lh5.write(scalar, name="message", lh5_file=outfile, wo_mode="overwrite_file")
+    lh5.write(array, name="numbers", group="closet", lh5_file=outfile)
+    lh5.write(array2, name="numbers2", group="closet", lh5_file=outfile)
+    result = lh5.read("/", outfile)
+    assert isinstance(result, types.Struct)
+    assert result.attrs["datatype"] == "struct{closet,message}"
+
+    outfile = str(tmptestdir / "test-write-structs-not-groups.lh5")
+    tb = types.Table({"a": types.Array([1, 2, 3])})
+    lh5.write(tb, "test/table", outfile)
+    print(lh5.show(outfile))
+    tb2 = types.Table({"a": types.Array([4, 5, 6])})
+    lh5.write(tb2, "test/table2", outfile)
+    print(lh5.show(outfile))
+
+    result = lh5.read("test", outfile)
+    assert isinstance(result, types.Struct)
+    assert result.attrs["datatype"] == "struct{table,table2}"
+    assert result.table.a == tb.a
+    assert result.table2.a == tb2.a

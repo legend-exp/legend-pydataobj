@@ -90,19 +90,22 @@ def _h5_write_lgdo(
         # initialize the object to be written
         obj = types.Struct({curr_name.replace("/", ""): obj})
 
-        # iterate up the group hierarchy until we reach the root or a group with more than one child
-        while group.name != "/":
-            if len(group) > 1:
-                break
-            curr_name = group.name
-            group = group.parent
-            if group.name != "/":
-                obj = types.Struct({curr_name[len(group.name) + 1 :]: obj})
-            else:
-                obj = types.Struct({curr_name[1:]: obj})
-
-        # if the group has more than one child, we need to append else we can overwrite
-        wo_mode = "ac" if len(group) > 1 else "o"
+        # if base group already has a child we just append
+        if len(group) >= 1:
+            wo_mode = "ac"
+        else:
+            # iterate up the group hierarchy until we reach the root or a group with more than one child
+            while group.name != "/":
+                if len(group) > 1:
+                    break
+                curr_name = group.name
+                group = group.parent
+                if group.name != "/":
+                    obj = types.Struct({curr_name[len(group.name) + 1 :]: obj})
+                else:
+                    obj = types.Struct({curr_name[1:]: obj})
+            # if the group has more than one child, we need to append else we can overwrite
+            wo_mode = "ac" if len(group) > 1 else "o"
 
         # set the new name
         if group.name == "/":
