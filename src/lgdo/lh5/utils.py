@@ -132,7 +132,7 @@ def get_h5_group(
     return group
 
 
-def expand_vars(expr: str, substitute: dict[str, str] | None = None) -> str:
+def expand_vars(expr: str, substitute: Mapping[str, str] | None = None) -> str:
     """Expand (environment) variables.
 
     Note
@@ -159,10 +159,10 @@ def expand_vars(expr: str, substitute: dict[str, str] | None = None) -> str:
 
 def expand_path(
     path: str,
-    substitute: dict[str, str] | None = None,
+    substitute: Mapping[str, str] | None = None,
     list: bool = False,
     base_path: str | None = None,
-) -> str | list:
+) -> str | Sequence[str]:
     """Expand (environment) variables and wildcards to return absolute paths.
 
     Parameters
