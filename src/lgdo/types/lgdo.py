@@ -1,7 +1,8 @@
+# ruff: noqa: UP007
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Optional, Union
 
 import awkward as ak
 import numpy as np
@@ -18,7 +19,7 @@ class LGDO(ABC):
         return obj
 
     @abstractmethod
-    def __init__(self, attrs: dict[str, Any] | None = None) -> None:
+    def __init__(self, attrs: Optional[dict[str, Any]] = None) -> None:
         self.attrs = {} if attrs is None else dict(attrs)
 
         if "datatype" in self.attrs:
@@ -42,7 +43,7 @@ class LGDO(ABC):
     @abstractmethod
     def view_as(
         self, library: str, with_units: bool = False
-    ) -> pd.DataFrame | np.NDArray | ak.Array:
+    ) -> Union[pd.DataFrame, np.NDArray, ak.Array]:
         r"""View the LGDO data object as a third-party format data structure.
 
         This is typically a zero-copy or nearly zero-copy operation unless
@@ -100,7 +101,7 @@ class LGDOCollection(LGDO):
     """
 
     @abstractmethod
-    def __init__(self, attrs: dict[str, Any] | None = None) -> None:
+    def __init__(self, attrs: Optional[dict[str, Any]] = None) -> None:
         super().__init__(attrs)
 
     @abstractmethod

@@ -1,7 +1,8 @@
+# ruff: noqa: UP007
 from __future__ import annotations
 
 from collections.abc import Iterator
-from typing import Any
+from typing import Any, Optional, Union
 
 import awkward as ak
 import awkward_pandas as akpd
@@ -31,9 +32,9 @@ class VectorOfEncodedVectors(LGDOCollection):
 
     def __init__(
         self,
-        encoded_data: VectorOfVectors = None,
-        decoded_size: Array = None,
-        attrs: dict[str, Any] | None = None,
+        encoded_data: Optional[VectorOfVectors] = None,
+        decoded_size: Optional[Array] = None,
+        attrs: Optional[dict[str, Any]] = None,
     ) -> None:
         """
         Parameters
@@ -225,7 +226,7 @@ class VectorOfEncodedVectors(LGDOCollection):
 
     def view_as(
         self, library: str, with_units: bool = False
-    ) -> pd.DataFrame | np.NDArray | ak.Array:
+    ) -> Union[pd.DataFrame, np.NDArray, ak.Array]:
         """View the encoded data as a third-party format data structure.
 
         This is a zero-copy or nearly zero-copy operation.
@@ -293,9 +294,9 @@ class ArrayOfEncodedEqualSizedArrays(LGDOCollection):
 
     def __init__(
         self,
-        encoded_data: VectorOfVectors = None,
-        decoded_size: Scalar | int = None,
-        attrs: dict[str, Any] | None = None,
+        encoded_data: Optional[VectorOfVectors] = None,
+        decoded_size: Optional[Union[Scalar, int]] = None,
+        attrs: Optional[dict[str, Any]] = None,
     ) -> None:
         """
         Parameters
@@ -449,7 +450,7 @@ class ArrayOfEncodedEqualSizedArrays(LGDOCollection):
 
     def view_as(
         self, library: str, with_units: bool = False
-    ) -> pd.DataFrame | np.NDArray | ak.Array:
+    ) -> Union[pd.DataFrame, np.NDArray, ak.Array]:
         """View the encoded data as a third-party format data structure.
 
         This is nearly a zero-copy operation.

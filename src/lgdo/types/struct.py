@@ -3,13 +3,14 @@ Implements a LEGEND Data Object representing a struct and corresponding
 utilities.
 """
 
+# ruff: noqa: UP007
 from __future__ import annotations
 
 import copy
 import logging
 import re
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, Optional, Union
 
 import numpy as np
 
@@ -27,8 +28,8 @@ class Struct(LGDO, dict):
 
     def __init__(
         self,
-        obj_dict: Mapping[str, LGDO] | None = None,
-        attrs: Mapping[str, Any] | None = None,
+        obj_dict: Optional[Mapping[str, LGDO]] = None,
+        attrs: Optional[Mapping[str, Any]] = None,
     ) -> None:
         """
         Parameters
@@ -89,7 +90,7 @@ class Struct(LGDO, dict):
     def update_datatype(self) -> None:
         self.attrs["datatype"] = self.form_datatype()
 
-    def add_field(self, name: str | int, obj: LGDO) -> None:
+    def add_field(self, name: Union[str, int], obj: LGDO) -> None:
         """Add a field to the table."""
         super().__setitem__(name, obj)
         self.update_datatype()
@@ -106,7 +107,7 @@ class Struct(LGDO, dict):
 
         raise AttributeError(name)
 
-    def remove_field(self, name: str | int, delete: bool = False) -> None:
+    def remove_field(self, name: Union[str, int], delete: bool = False) -> None:
         """Remove a field from the table.
 
         Parameters

@@ -1,8 +1,9 @@
+# ruff: noqa: UP007
 from __future__ import annotations
 
 import logging
 from collections.abc import Iterable, Mapping, Sequence
-from typing import Any
+from typing import Any, Optional, Union
 
 import hist
 import numpy as np
@@ -21,12 +22,12 @@ class Histogram(Struct):
     class Axis(Struct):
         def __init__(
             self,
-            edges: NDArray | Array | None,
-            first: float | None,
-            last: float | None,
-            step: float | None,
+            edges: Union[NDArray, Array, None],
+            first: Optional[float],
+            last: Optional[float],
+            step: Optional[float],
             closedleft: bool = True,
-            binedge_attrs: dict[str, Any] | None = None,
+            binedge_attrs: Optional[dict[str, Any]] = None,
         ) -> None:
             """
             A special struct to group axis parameters for use in a :class:`Histogram`.
@@ -88,8 +89,8 @@ class Histogram(Struct):
         @classmethod
         def from_edges(
             cls,
-            edges: NDArray | Iterable[float],
-            binedge_attrs: dict[str, Any] | None = None,
+            edges: Union[NDArray, Iterable[float]],
+            binedge_attrs: Optional[dict[str, Any]] = None,
         ) -> Histogram.Axis:
             """Create a new axis with variable binning described by ``edges``."""
             edges = np.array(edges)
@@ -98,8 +99,8 @@ class Histogram(Struct):
         @classmethod
         def from_range_edges(
             cls,
-            edges: NDArray | Iterable[float],
-            binedge_attrs: dict[str, Any] | None = None,
+            edges: Union[NDArray, Iterable[float]],
+            binedge_attrs: Optional[dict[str, Any]] = None,
         ) -> Histogram.Axis:
             """Create a new axis from the binning described by ``edges``, but try to convert it to
             a evenly-spaced range object first.
@@ -193,14 +194,17 @@ class Histogram(Struct):
 
     def __init__(
         self,
-        weights: hist.Hist | NDArray | Array,
-        binning: None
-        | Iterable[Histogram.Axis]
-        | Iterable[NDArray]
-        | Iterable[tuple[float, float, float]] = None,
+        weights: Union[hist.Hist, NDArray, Array],
+        binning: Optional[
+            Union[
+                Iterable[Histogram.Axis],
+                Iterable[NDArray],
+                Iterable[tuple[float, float, float]],
+            ]
+        ] = None,
         isdensity: bool = False,
-        attrs: dict[str, Any] | None = None,
-        binedge_attrs: dict[str, Any] | None = None,
+        attrs: Optional[dict[str, Any]] = None,
+        binedge_attrs: Optional[dict[str, Any]] = None,
         flow: bool = True,
     ) -> None:
         """A special struct to contain histogrammed data.
@@ -431,7 +435,7 @@ class Histogram(Struct):
         msg = "histogram fields cannot be mutated"
         raise AttributeError(msg)
 
-    def add_field(self, name: str | int, obj: LGDO) -> None:  # noqa: ARG002
+    def add_field(self, name: Union[str, int], obj: LGDO) -> None:  # noqa: ARG002
         """
         .. error ::
 
@@ -440,7 +444,7 @@ class Histogram(Struct):
         msg = "histogram fields cannot be mutated"
         raise TypeError(msg)
 
-    def remove_field(self, name: str | int, delete: bool = False) -> None:  # noqa: ARG002
+    def remove_field(self, name: Union[str, int], delete: bool = False) -> None:  # noqa: ARG002
         """
         .. error ::
 
@@ -464,7 +468,7 @@ class Histogram(Struct):
     def view_as(
         self,
         library: str,
-    ) -> tuple[NDArray] | hist.Hist:
+    ) -> Union[tuple[NDArray], hist.Hist]:
         r"""View the histogram data as a third-party format data structure.
 
         This is typically a zero-copy or nearly zero-copy operation.

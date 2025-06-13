@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+# ruff: noqa: UP007
 import fnmatch
 import logging
+from collections.abc import Sequence
+from typing import Optional
 
 from lgdo.lh5 import LH5Iterator
 
@@ -11,7 +14,9 @@ log = logging.getLogger(__name__)
 
 
 def _get_obj_list(
-    lh5_files: list, include_list: list | None = None, exclude_list: list | None = None
+    lh5_files: Sequence[str],
+    include_list: Optional[Sequence[str]] = None,
+    exclude_list: Optional[Sequence[str]] = None,
 ) -> list[str]:
     """Extract a list of lh5 objects to concatenate.
 
@@ -140,12 +145,12 @@ def _remove_nested_fields(lgdos: dict, obj_list: list):
 
 
 def lh5concat(
-    lh5_files: list,
+    lh5_files: Sequence[str],
     output: str,
     overwrite: bool = False,
     *,
-    include_list: list | None = None,
-    exclude_list: list | None = None,
+    include_list: Optional[Sequence[str]] = None,
+    exclude_list: Optional[Sequence[str]] = None,
 ) -> None:
     """Concatenate LGDO Arrays, VectorOfVectors and Tables in LH5 files.
 

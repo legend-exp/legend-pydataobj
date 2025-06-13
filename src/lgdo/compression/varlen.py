@@ -1,9 +1,11 @@
 """Variable-length code compression algorithms."""
 
+# ruff: noqa: UP007
 from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from typing import Optional, Union
 
 import numba
 import numpy as np
@@ -29,13 +31,13 @@ class ULEB128ZigZagDiff(WaveformCodec):
 
 
 def encode(
-    sig_in: NDArray | lgdo.VectorOfVectors | lgdo.ArrayOfEqualSizedArrays,
-    sig_out: NDArray[ubyte] = None,
-) -> (
-    (NDArray[ubyte], NDArray[uint32])
-    | lgdo.VectorOfEncodedVectors
-    | lgdo.ArrayOfEncodedEqualSizedArrays
-):
+    sig_in: Union[NDArray, lgdo.VectorOfVectors, lgdo.ArrayOfEqualSizedArrays],
+    sig_out: Optional[NDArray[ubyte]] = None,
+) -> Union[
+    tuple[NDArray[ubyte], NDArray[uint32]],
+    lgdo.VectorOfEncodedVectors,
+    lgdo.ArrayOfEncodedEqualSizedArrays,
+]:
     """Compress digital signal(s) with a variable-length encoding of its derivative.
 
     Wraps :func:`uleb128_zigzag_diff_array_encode` and adds support for encoding
@@ -146,11 +148,15 @@ def encode(
 
 
 def decode(
-    sig_in: (NDArray[ubyte], NDArray[uint32])
-    | lgdo.VectorOfEncodedVectors
-    | lgdo.ArrayOfEncodedEqualSizedArrays,
-    sig_out: NDArray | lgdo.ArrayOfEqualSizedArrays = None,
-) -> (NDArray, NDArray[uint32]) | lgdo.VectorOfVectors | lgdo.ArrayOfEqualSizedArrays:
+    sig_in: Union[
+        tuple[NDArray[ubyte], NDArray[uint32]],
+        lgdo.VectorOfEncodedVectors,
+        lgdo.ArrayOfEncodedEqualSizedArrays,
+    ],
+    sig_out: Optional[Union[NDArray, lgdo.ArrayOfEqualSizedArrays]] = None,
+) -> Union[
+    tuple[NDArray, NDArray[uint32]], lgdo.VectorOfVectors, lgdo.ArrayOfEqualSizedArrays
+]:
     """Deompress digital signal(s) with a variable-length encoding of its derivative.
 
     Wraps :func:`uleb128_zigzag_diff_array_decode` and adds support for decoding
@@ -267,7 +273,7 @@ def decode(
     ["uint64(int64)", "uint32(int32)", "uint16(int16)"],
     **nb_kwargs(nopython=True),
 )
-def zigzag_encode(x: int | NDArray[int]) -> int | NDArray[int]:
+def zigzag_encode(x: Union[int, NDArray[int]]) -> Union[int, NDArray[int]]:
     """ZigZag-encode [#WikiZZ]_ signed integer numbers."""
     return (x >> 31) ^ (x << 1)
 
@@ -276,7 +282,7 @@ def zigzag_encode(x: int | NDArray[int]) -> int | NDArray[int]:
     ["int64(uint64)", "int32(uint32)", "int16(uint16)"],
     **nb_kwargs(nopython=True),
 )
-def zigzag_decode(x: int | NDArray[int]) -> int | NDArray[int]:
+def zigzag_decode(x: Union[int, NDArray[int]]) -> Union[int, NDArray[int]]:
     """ZigZag-decode [#WikiZZ]_ signed integer numbers."""
     return (x >> 1) ^ -(x & 1)
 

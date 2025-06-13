@@ -3,12 +3,14 @@ Implements a LEGEND Data Object representing a special struct of arrays of
 equal length and corresponding utilities.
 """
 
+# ruff: noqa: UP007
 from __future__ import annotations
 
+# ruff: noqa: UP007
 import logging
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from types import ModuleType
-from typing import Any
+from typing import Any, Optional, Union
 from warnings import warn
 
 import awkward as ak
@@ -45,9 +47,11 @@ class Table(Struct, LGDOCollection):
 
     def __init__(
         self,
-        col_dict: Mapping[str, LGDOCollection] | pd.DataFrame | ak.Array | None = None,
-        size: int | None = None,
-        attrs: Mapping[str, Any] | None = None,
+        col_dict: Optional[
+            Union[Mapping[str, LGDOCollection], pd.DataFrame, ak.Array]
+        ] = None,
+        size: Optional[int] = None,
+        attrs: Optional[Mapping[str, Any]] = None,
     ) -> None:
         r"""
         Parameters
@@ -102,7 +106,7 @@ class Table(Struct, LGDOCollection):
         """Provides ``__len__`` for this array-like class."""
         return self.size
 
-    def reserve_capacity(self, capacity: int | list) -> None:
+    def reserve_capacity(self, capacity: Union[int, Sequence[int]]) -> None:
         "Set size (number of rows) of internal memory buffer"
         if isinstance(capacity, int):
             for obj in self.values():
@@ -115,17 +119,17 @@ class Table(Struct, LGDOCollection):
             for obj, cap in zip(self.values(), capacity):
                 obj.reserve_capacity(cap)
 
-    def get_capacity(self) -> int:
+    def get_capacity(self) -> list[int]:
         "Get list of capacities for each key"
         return [v.get_capacity() for v in self.values()]
 
-    def trim_capacity(self) -> int:
+    def trim_capacity(self) -> None:
         "Set capacity to be minimum needed to support Array size"
         for v in self.values():
             v.trim_capacity()
 
     def resize(
-        self, new_size: int | None = None, do_warn: bool = False, trim: bool = False
+        self, new_size: Optional[int] = None, do_warn: bool = False, trim: bool = False
     ) -> None:
         # if new_size = None, use the size from the first field
         for field, obj in self.items():
@@ -199,7 +203,10 @@ class Table(Struct, LGDOCollection):
         super().remove_field(name, delete)
 
     def join(
-        self, other_table: Table, cols: list[str] | None = None, do_warn: bool = True
+        self,
+        other_table: Table,
+        cols: Optional[Sequence[str]] = None,
+        do_warn: bool = True,
     ) -> None:
         """Add the columns of another table to this table.
 
@@ -232,7 +239,7 @@ class Table(Struct, LGDOCollection):
 
     def get_dataframe(
         self,
-        cols: list[str] | None = None,
+        cols: Optional[Sequence[str]] = None,
         copy: bool = False,  # noqa: ARG002
         prefix: str = "",
     ) -> pd.DataFrame:
@@ -294,8 +301,8 @@ class Table(Struct, LGDOCollection):
     def eval(
         self,
         expr: str,
-        parameters: Mapping[str, str] | None = None,
-        modules: Mapping[str, ModuleType] | None = None,
+        parameters: Optional[Mapping[str, str]] = None,
+        modules: Optional[Mapping[str, ModuleType]] = None,
     ) -> LGDO:
         """Apply column operations to the table and return a new LGDO.
 
@@ -465,9 +472,9 @@ class Table(Struct, LGDOCollection):
         self,
         library: str,
         with_units: bool = False,
-        cols: list[str] | None = None,
+        cols: Optional[Sequence[str]] = None,
         prefix: str = "",
-    ) -> pd.DataFrame | np.NDArray | ak.Array:
+    ) -> Union[pd.DataFrame, np.NDArray, ak.Array]:
         r"""View the Table data as a third-party format data structure.
 
         This is typically a zero-copy or nearly zero-copy operation.
