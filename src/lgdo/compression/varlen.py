@@ -74,14 +74,14 @@ def encode(
     if isinstance(sig_in, np.ndarray):
         s = sig_in.shape
         if len(sig_in) == 0:
-            return np.empty(s[:-1] + (0,), dtype=ubyte), np.empty(0, dtype=uint32)
+            return np.empty((*s[:-1], 0), dtype=ubyte), np.empty(0, dtype=uint32)
 
         if sig_out is None:
             # the encoded signal is an array of bytes
             # pre-allocate ubyte (uint8) array with a generous (but safe) size
             max_b = int(np.ceil(np.iinfo(sig_in.dtype).bits / 16) * 5)
             # expand last dimension
-            sig_out = np.empty(s[:-1] + (s[-1] * max_b,), dtype=ubyte)
+            sig_out = np.empty((*s[:-1], s[-1] * max_b), dtype=ubyte)
 
         if sig_out.dtype != ubyte:
             msg = "sig_out must be of type ubyte"

@@ -57,7 +57,7 @@ def _h5_read_ndarray(
             (start_row,) + (0,) * (h5d.rank - 1),
             (1,) * h5d.rank,
             None,
-            (n_rows_to_read,) + fspace.shape[1:],
+            (n_rows_to_read, *fspace.shape[1:]),
         )
     elif use_h5idx:
         # Note that h5s will automatically merge adjacent elements into a range
@@ -67,7 +67,7 @@ def _h5_read_ndarray(
                 (i,) + (0,) * (h5d.rank - 1),
                 (1,) * h5d.rank,
                 None,
-                (1,) + fspace.shape[1:],
+                (1, *fspace.shape[1:]),
                 h5py.h5s.SELECT_OR,
             )
 
@@ -84,7 +84,7 @@ def _h5_read_ndarray(
                 (obj_buf_start,) + (0,) * (h5d.rank - 1),
                 (1,) * h5d.rank,
                 None,
-                (n_rows_to_read,) + fspace.shape[1:],
+                (n_rows_to_read, *fspace.shape[1:]),
             )
             h5d.read(mspace, fspace, obj_buf.nda)
         else:
@@ -93,10 +93,10 @@ def _h5_read_ndarray(
             obj_buf.nda[dest_sel, ...] = tmp[idx, ...]
         nda = obj_buf.nda
     elif n_rows == 0:
-        tmp_shape = (0,) + h5d.shape[1:]
+        tmp_shape = (0, *h5d.shape[1:])
         nda = np.empty(tmp_shape, h5d.dtype)
     else:
-        mspace = h5py.h5s.create_simple((n_rows_to_read,) + fspace.shape[1:])
+        mspace = h5py.h5s.create_simple((n_rows_to_read, *fspace.shape[1:]))
         nda = np.empty(mspace.shape, h5d.dtype)
         if idx is None or use_h5idx:
             h5d.read(mspace, fspace, nda)
