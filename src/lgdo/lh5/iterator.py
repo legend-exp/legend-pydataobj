@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import typing
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from warnings import warn
 
 import numpy as np
@@ -62,11 +62,11 @@ class LH5Iterator(typing.Iterator):
         lh5_files: str | Sequence[str],
         groups: str | Sequence[str] | Sequence[Sequence[str]],
         base_path: str = "",
-        entry_list: Sequence[int] | Sequence[Sequence[int]] | None = None,
-        entry_mask: Sequence[bool] | Sequence[Sequence[bool]] | None = None,
+        entry_list: Collection[int] | Collection[Collection[int]] | None = None,
+        entry_mask: Collection[bool] | Collection[Collection[bool]] | None = None,
         i_start: int = 0,
         n_entries: int | None = None,
-        field_mask: Mapping[str, bool] | Sequence[str] | None = None,
+        field_mask: Mapping[str, bool] | Collection[str] | None = None,
         buffer_len: int = "100*MB",
         file_cache: int = 10,
         file_map: NDArray[int] = None,

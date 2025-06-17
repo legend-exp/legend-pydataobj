@@ -6,7 +6,7 @@ import glob
 import logging
 import os
 import string
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -23,7 +23,7 @@ def get_buffer(
     name: str,
     lh5_file: str | h5py.File | Sequence[str | h5py.File],
     size: int | None = None,
-    field_mask: Mapping[str, bool] | Sequence[str] | None = None,
+    field_mask: Mapping[str, bool] | Collection[str] | None = None,
 ) -> types.LGDO:
     """Returns an LGDO appropriate for use as a pre-allocated buffer.
 

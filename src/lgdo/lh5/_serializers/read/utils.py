@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from collections import defaultdict
-from collections.abc import Collection, Mapping, Sequence
+from collections.abc import Collection, Mapping
 
 import h5py
 import numpy as np
@@ -43,7 +43,7 @@ def build_field_mask(field_mask: Mapping[str, bool] | Collection[str]) -> defaul
 
 def eval_field_mask(
     field_mask: Mapping[str, bool] | None,
-    all_fields: Sequence[str],
+    all_fields: Collection[str],
 ) -> list[tuple[str, Mapping[str, bool] | None]]:
     """Get list of fields that need to be loaded along with a sub-field-mask
     in case we have a nested Table"""

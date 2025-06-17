@@ -7,7 +7,7 @@ data.
 from __future__ import annotations
 
 import logging
-from collections.abc import Sequence
+from collections.abc import Collection
 from typing import Any
 
 import awkward as ak
@@ -269,7 +269,7 @@ class WaveformTable(Table):
         self,
         library: str,
         with_units: bool = False,
-        cols: Sequence[str] | None = None,
+        cols: Collection[str] | None = None,
         prefix: str = "",
     ) -> pd.DataFrame | np.NDArray | ak.Array:
         r"""View the waveform data as a third-party format data structure.
