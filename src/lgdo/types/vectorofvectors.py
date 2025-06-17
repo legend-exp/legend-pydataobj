@@ -284,6 +284,9 @@ class VectorOfVectors(LGDOCollection):
 
         return False
 
+    def __hash__(self):
+        return hash(self.name)
+
     def __getitem__(self, i: int) -> NDArray:
         """Return a view of the vector at index `i` along the first axis."""
         if self.ndim == 2:
