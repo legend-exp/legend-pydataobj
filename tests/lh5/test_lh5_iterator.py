@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import shutil
+
 import numpy as np
 import pytest
 
@@ -251,3 +253,21 @@ def test_range(lgnd_file):
         assert all(lh5_it.current_global_entries == np.arange(entry, entry + exp_len))
         assert all(lh5_it.current_files == [lgnd_file] * exp_len)
         assert all(lh5_it.current_groups == ["/geds/raw"] * exp_len)
+
+
+def test_iterator_wo_mode_write(tmp_path, lh5_file):
+    dst = tmp_path / "rw.lh5"
+    shutil.copy(lh5_file, dst)
+    it = lh5.LH5Iterator(
+        dst.as_posix(), "/data/struct_full/array", h5py_open_mode="append"
+    )
+    store = it.lh5_st
+    store.write(
+        lgdo.Array(nda=np.array([0], dtype=int)),
+        "dummy",
+        dst.as_posix(),
+        group="/data",
+        wo_mode="append",
+    )
+    assert len(store.read("/data/dummy", dst.as_posix())) == 1
+    assert len(it.read(0)) > 0

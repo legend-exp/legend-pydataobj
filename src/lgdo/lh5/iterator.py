@@ -60,6 +60,7 @@ class LH5Iterator(typing.Iterator):
         self,
         lh5_files: str | list[str],
         groups: str | list[str] | list[list[str]],
+        *,
         base_path: str = "",
         entry_list: list[int] | list[list[int]] | None = None,
         entry_mask: list[bool] | list[list[bool]] | None = None,
@@ -70,6 +71,7 @@ class LH5Iterator(typing.Iterator):
         file_cache: int = 10,
         file_map: NDArray[int] = None,
         friend: typing.Iterator | None = None,
+        h5py_open_mode: str = "r",
     ) -> None:
         """
         Parameters
@@ -110,8 +112,20 @@ class LH5Iterator(typing.Iterator):
             The friend should have the same length and entry list. A single
             LH5 table containing columns from both iterators will be returned.
             Note that buffer_len will be set to the minimum of the two.
+        h5py_open_mode
+            file open mode used when acquiring file handles. ``r`` (default)
+            opens files read-only while ``a`` allow opening files for
+            write-appending as well.
         """
         self.lh5_st = LH5Store(base_path=base_path, keep_open=file_cache)
+
+        if h5py_open_mode == "read":
+            h5py_open_mode = "r"
+        if h5py_open_mode == "append":
+            h5py_open_mode = "a"
+        if h5py_open_mode not in ["r", "a"]:
+            msg = f"unknown h5py_open_mode '{h5py_open_mode}'"
+            raise ValueError(msg)
 
         # List of files, with wildcards and env vars expanded
         if isinstance(lh5_files, str):
@@ -146,6 +160,10 @@ class LH5Iterator(typing.Iterator):
             for f_exp in expand_path(f, list=True, base_path=base_path):
                 self.lh5_files += [f_exp] * len(g)
                 self.groups += list(g)
+
+        # open files in the requested mode so they are writable if needed
+        for f in set(self.lh5_files):
+            self.lh5_st.gimme_file(f, mode=h5py_open_mode)
 
         if entry_list is not None and entry_mask is not None:
             msg = "entry_list and entry_mask arguments are mutually exclusive"
