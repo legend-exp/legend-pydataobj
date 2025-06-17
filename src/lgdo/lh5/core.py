@@ -19,7 +19,7 @@ from .utils import read_n_rows
 
 def read(
     name: str,
-    lh5_file: str | h5py.File | Sequence[str | h5py.File],
+    lh5_file: str | Path | h5py.File | Sequence[str | Path | h5py.File],
     start_row: int = 0,
     n_rows: int = sys.maxsize,
     idx: ArrayLike = None,
@@ -112,8 +112,8 @@ def read(
     """
     if isinstance(lh5_file, h5py.File):
         lh5_obj = lh5_file[name]
-    elif isinstance(lh5_file, str):
-        lh5_file = h5py.File(lh5_file, mode="r", locking=locking)
+    elif isinstance(lh5_file, (str, Path)):
+        lh5_file = h5py.File(str(Path(lh5_file)), mode="r", locking=locking)
         try:
             lh5_obj = lh5_file[name]
         except KeyError as ke:
@@ -195,7 +195,7 @@ def read(
 def write(
     obj: types.LGDO,
     name: str,
-    lh5_file: str | h5py.File,
+    lh5_file: str | Path | h5py.File,
     group: str | h5py.Group = "/",
     start_row: int = 0,
     n_rows: int | None = None,
@@ -318,7 +318,7 @@ def write(
 
 def read_as(
     name: str,
-    lh5_file: str | h5py.File | Sequence[str | h5py.File],
+    lh5_file: str | Path | h5py.File | Sequence[str | Path | h5py.File],
     library: str,
     **kwargs,
 ) -> Any:
