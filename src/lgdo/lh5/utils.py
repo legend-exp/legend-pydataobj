@@ -6,7 +6,7 @@ import glob
 import logging
 import os
 import string
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -23,7 +23,7 @@ def get_buffer(
     name: str,
     lh5_file: str | h5py.File | Sequence[str | h5py.File],
     size: int | None = None,
-    field_mask: Mapping[str, bool] | Sequence[str] | None = None,
+    field_mask: Mapping[str, bool] | Collection[str] | None = None,
 ) -> types.LGDO:
     """Returns an LGDO appropriate for use as a pre-allocated buffer.
 
@@ -132,7 +132,7 @@ def get_h5_group(
     return group
 
 
-def expand_vars(expr: str, substitute: dict[str, str] | None = None) -> str:
+def expand_vars(expr: str, substitute: Mapping[str, str] | None = None) -> str:
     """Expand (environment) variables.
 
     Note
@@ -159,10 +159,10 @@ def expand_vars(expr: str, substitute: dict[str, str] | None = None) -> str:
 
 def expand_path(
     path: str,
-    substitute: dict[str, str] | None = None,
+    substitute: Mapping[str, str] | None = None,
     list: bool = False,
     base_path: str | None = None,
-) -> str | list:
+) -> str | Sequence[str]:
     """Expand (environment) variables and wildcards to return absolute paths.
 
     Parameters

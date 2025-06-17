@@ -8,7 +8,7 @@ from __future__ import annotations
 import logging
 import sys
 from collections import OrderedDict
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from inspect import signature
 from pathlib import Path
 from typing import Any
@@ -149,7 +149,7 @@ class LH5Store:
         name: str,
         lh5_file: str | h5py.File | Sequence[str | h5py.File],
         size: int | None = None,
-        field_mask: Mapping[str, bool] | Sequence[str] | None = None,
+        field_mask: Mapping[str, bool] | Collection[str] | None = None,
     ) -> types.LGDO:
         """Returns an LH5 object appropriate for use as a pre-allocated buffer
         in a read loop. Sets size to `size` if object has a size.
@@ -167,7 +167,7 @@ class LH5Store:
         n_rows: int = sys.maxsize,
         idx: ArrayLike = None,
         use_h5idx: bool = False,
-        field_mask: Mapping[str, bool] | Sequence[str] | None = None,
+        field_mask: Mapping[str, bool] | Collection[str] | None = None,
         obj_buf: types.LGDO = None,
         obj_buf_start: int = 0,
         decompress: bool = True,

@@ -6,7 +6,7 @@ equal length and corresponding utilities.
 from __future__ import annotations
 
 import logging
-from collections.abc import Mapping
+from collections.abc import Collection, Mapping
 from types import ModuleType
 from typing import Any
 from warnings import warn
@@ -199,7 +199,10 @@ class Table(Struct, LGDOCollection):
         super().remove_field(name, delete)
 
     def join(
-        self, other_table: Table, cols: list[str] | None = None, do_warn: bool = True
+        self,
+        other_table: Table,
+        cols: Collection[str] | None = None,
+        do_warn: bool = True,
     ) -> None:
         """Add the columns of another table to this table.
 
@@ -232,7 +235,7 @@ class Table(Struct, LGDOCollection):
 
     def get_dataframe(
         self,
-        cols: list[str] | None = None,
+        cols: Collection[str] | None = None,
         copy: bool = False,  # noqa: ARG002
         prefix: str = "",
     ) -> pd.DataFrame:
@@ -465,7 +468,7 @@ class Table(Struct, LGDOCollection):
         self,
         library: str,
         with_units: bool = False,
-        cols: list[str] | None = None,
+        cols: Collection[str] | None = None,
         prefix: str = "",
     ) -> pd.DataFrame | np.NDArray | ak.Array:
         r"""View the Table data as a third-party format data structure.

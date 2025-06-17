@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import fnmatch
 import logging
+from collections.abc import Collection
 
 from lgdo.lh5 import LH5Iterator
 
@@ -11,7 +12,9 @@ log = logging.getLogger(__name__)
 
 
 def _get_obj_list(
-    lh5_files: list, include_list: list | None = None, exclude_list: list | None = None
+    lh5_files: Collection[str],
+    include_list: Collection[str] | None = None,
+    exclude_list: Collection[str] | None = None,
 ) -> list[str]:
     """Extract a list of lh5 objects to concatenate.
 
@@ -25,7 +28,7 @@ def _get_obj_list(
         patterns for tables to exclude.
 
     """
-    file0 = lh5_files[0]
+    file0 = next(iter(lh5_files))
     obj_list_full = set(lh5.ls(file0, recursive=True))
 
     # let's remove objects with nested LGDOs inside
@@ -140,12 +143,12 @@ def _remove_nested_fields(lgdos: dict, obj_list: list):
 
 
 def lh5concat(
-    lh5_files: list,
+    lh5_files: Collection[str],
     output: str,
     overwrite: bool = False,
     *,
-    include_list: list | None = None,
-    exclude_list: list | None = None,
+    include_list: Collection[str] | None = None,
+    exclude_list: Collection[str] | None = None,
 ) -> None:
     """Concatenate LGDO Arrays, VectorOfVectors and Tables in LH5 files.
 
@@ -170,10 +173,13 @@ def lh5concat(
         lh5_files, include_list=include_list, exclude_list=exclude_list
     )
 
-    msg = f"objects matching include patterns {include_list} in {lh5_files[0]}: {obj_list}"
+    first_file = next(iter(lh5_files))
+    msg = (
+        f"objects matching include patterns {include_list} in {first_file}: {obj_list}"
+    )
     log.info(msg)
 
-    lgdos, lgdo_structs = _get_lgdos(lh5_files[0], obj_list)
+    lgdos, lgdo_structs = _get_lgdos(first_file, obj_list)
     first_done = False
     store = lh5.LH5Store()
 

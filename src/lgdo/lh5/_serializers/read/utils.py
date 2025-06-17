@@ -42,16 +42,18 @@ def build_field_mask(field_mask: Mapping[str, bool] | Collection[str]) -> defaul
 
 
 def eval_field_mask(
-    field_mask: defaultdict, all_fields: list[str]
-) -> list[tuple(str, defaultdict)]:
+    field_mask: Mapping[str, bool] | None,
+    all_fields: Collection[str],
+) -> list[tuple[str, Mapping[str, bool] | None]]:
     """Get list of fields that need to be loaded along with a sub-field-mask
     in case we have a nested Table"""
 
     if field_mask is None:
-        return all_fields
+        return [(field, None) for field in all_fields]
 
-    this_field_mask = defaultdict(field_mask.default_factory)
-    sub_field_masks = {}
+    default = getattr(field_mask, "default_factory", lambda: False)
+    this_field_mask = defaultdict(default)
+    sub_field_masks: dict[str, Mapping[str, bool] | None] = {}
 
     for key, val in field_mask.items():
         field = key.strip("/")
@@ -62,9 +64,7 @@ def eval_field_mask(
             sub_field = field[pos + 1 :]
             field = field[:pos]
             this_field_mask[field] = True
-            sub_mask = sub_field_masks.setdefault(
-                field, defaultdict(field_mask.default_factory)
-            )
+            sub_mask = sub_field_masks.setdefault(field, defaultdict(default))
             sub_mask[sub_field] = val
 
     return [
