@@ -52,140 +52,129 @@ def _h5_write_lgdo(
     # In hdf5, 'a' is really "modify" -- in addition to appending, you can
     # change any object in the file. So we use file:append for
     # write_object:overwrite.
+    opened_here = False
     if not isinstance(lh5_file, h5py.File):
         mode = "w" if wo_mode == "of" or not Path(lh5_file).exists() else "a"
-        lh5_file = h5py.File(lh5_file, mode=mode, **file_kwargs)
 
-    log.debug(
-        f"writing {obj!r}[{start_row}:{n_rows}] as "
-        f"{lh5_file.filename}:{group}/{name}[{write_start}:], "
-        f"mode = {wo_mode}, h5py_kwargs = {h5py_kwargs}"
-    )
+        try:
+            fh = h5py.File(lh5_file, mode=mode, **file_kwargs)
+        except OSError as oe:
+            raise LH5EncodeError(str(oe), lh5_file, None) from oe
 
-    group = utils.get_h5_group(group, lh5_file)
-
-    # name already in file
-    if name in group or (
-        ("datatype" in group.attrs or group == "/")
-        and (len(name) <= 2 or "/" not in name[1:-1])
-    ):
-        pass
-    # group is in file but not struct or need to create nesting
+        opened_here = True
     else:
-        # check if name is nested
-        # if name is nested, iterate up from parent
-        # otherwise we just need to iterate the group
-        if len(name) > 2 and "/" in name[1:-1]:
-            group = utils.get_h5_group(
-                name[:-1].rsplit("/", 1)[0],
-                group,
-            )
-            curr_name = (
-                name.rsplit("/", 1)[1]
-                if name[-1] != "/"
-                else name[:-1].rsplit("/", 1)[1]
-            )
-        else:
-            curr_name = name
-        # initialize the object to be written
-        obj = types.Struct({curr_name.replace("/", ""): obj})
+        fh = lh5_file
 
-        # if base group already has a child we just append
-        if len(group) >= 1:
-            wo_mode = "ac"
-        else:
-            # iterate up the group hierarchy until we reach the root or a group with more than one child
-            while group.name != "/":
-                if len(group) > 1:
-                    break
-                curr_name = group.name
-                group = group.parent
-                if group.name != "/":
-                    obj = types.Struct({curr_name[len(group.name) + 1 :]: obj})
-                else:
-                    obj = types.Struct({curr_name[1:]: obj})
-            # if the group has more than one child, we need to append else we can overwrite
-            wo_mode = "ac" if len(group) > 1 else "o"
+    try:
+        log.debug(
+            f"writing {obj!r}[{start_row}:{n_rows}] as "
+            f"{fh.filename}:{group}/{name}[{write_start}:], "
+            f"mode = {wo_mode}, h5py_kwargs = {h5py_kwargs}"
+        )
 
-        # set the new name
-        if group.name == "/":
-            name = "/"
-        elif group.parent.name == "/":
-            name = group.name[1:]
-        else:
-            name = group.name[len(group.parent.name) + 1 :]
-        # get the new group
-        group = utils.get_h5_group(group.parent if group.name != "/" else "/", lh5_file)
+        group = utils.get_h5_group(group, fh)
 
-    if wo_mode == "w" and name in group:
-        msg = f"can't overwrite '{name}' in wo_mode 'write_safe'"
-        raise LH5EncodeError(msg, lh5_file, group, name)
-
-    # struct, table, waveform table or histogram.
-    if isinstance(obj, types.Struct):
-        if (
-            isinstance(obj, types.Histogram)
-            and wo_mode not in ["w", "o", "of"]
-            and name in group
+        # name already in file
+        if name in group or (
+            ("datatype" in group.attrs or group == "/")
+            and (len(name) <= 2 or "/" not in name[1:-1])
         ):
-            msg = f"can't append-write to histogram in wo_mode '{wo_mode}'"
-            raise LH5EncodeError(msg, lh5_file, group, name)
-        if isinstance(obj, types.Histogram) and write_start != 0:
-            msg = f"can't write histogram in wo_mode '{wo_mode}' with write_start != 0"
-            raise LH5EncodeError(msg, lh5_file, group, name)
-
-        return _h5_write_struct(
-            obj,
-            name,
-            lh5_file,
-            group=group,
-            start_row=start_row,
-            n_rows=n_rows,  # if isinstance(obj, types.Table | types.Histogram) else None,
-            wo_mode=wo_mode,
-            write_start=write_start,
-            **h5py_kwargs,
-        )
-
-    # scalars
-    if isinstance(obj, types.Scalar):
-        return _h5_write_scalar(obj, name, lh5_file, group, wo_mode)
-
-    # vector of encoded vectors
-    if isinstance(
-        obj, (types.VectorOfEncodedVectors, types.ArrayOfEncodedEqualSizedArrays)
-    ):
-        group = utils.get_h5_group(
-            name, group, grp_attrs=obj.attrs, overwrite=(wo_mode == "o")
-        )
-
-        # ask not to further compress flattened_data, it is already compressed!
-        obj.encoded_data.flattened_data.attrs["compression"] = None
-
-        _h5_write_vector_of_vectors(
-            obj.encoded_data,
-            "encoded_data",
-            lh5_file,
-            group=group,
-            start_row=start_row,
-            n_rows=n_rows,
-            wo_mode=wo_mode,
-            write_start=write_start,
-            **h5py_kwargs,
-        )
-
-        if isinstance(obj.decoded_size, types.Scalar):
-            _h5_write_scalar(
-                obj.decoded_size,
-                "decoded_size",
-                lh5_file,
-                group=group,
-                wo_mode=wo_mode,
-            )
+            pass
+        # group is in file but not struct or need to create nesting
         else:
-            _h5_write_array(
-                obj.decoded_size,
-                "decoded_size",
-                lh5_file,
+            # check if name is nested
+            # if name is nested, iterate up from parent
+            # otherwise we just need to iterate the group
+            if len(name) > 2 and "/" in name[1:-1]:
+                group = utils.get_h5_group(
+                    name[:-1].rsplit("/", 1)[0],
+                    group,
+                )
+                curr_name = (
+                    name.rsplit("/", 1)[1]
+                    if name[-1] != "/"
+                    else name[:-1].rsplit("/", 1)[1]
+                )
+            else:
+                curr_name = name
+            # initialize the object to be written
+            obj = types.Struct({curr_name.replace("/", ""): obj})
+
+            # if base group already has a child we just append
+            if len(group) >= 1:
+                wo_mode = "ac"
+            else:
+                # iterate up the group hierarchy until we reach the root or a group with more than one child
+                while group.name != "/":
+                    if len(group) > 1:
+                        break
+                    curr_name = group.name
+                    group = group.parent
+                    if group.name != "/":
+                        obj = types.Struct({curr_name[len(group.name) + 1 :]: obj})
+                    else:
+                        obj = types.Struct({curr_name[1:]: obj})
+                # if the group has more than one child, we need to append else we can overwrite
+                wo_mode = "ac" if len(group) > 1 else "o"
+
+            # set the new name
+            if group.name == "/":
+                name = "/"
+            elif group.parent.name == "/":
+                name = group.name[1:]
+            else:
+                name = group.name[len(group.parent.name) + 1 :]
+            # get the new group
+            group = utils.get_h5_group(group.parent if group.name != "/" else "/", fh)
+
+        if wo_mode == "w" and name in group:
+            msg = f"can't overwrite '{name}' in wo_mode 'write_safe'"
+            raise LH5EncodeError(msg, fh, group, name)
+
+        # struct, table, waveform table or histogram.
+        if isinstance(obj, types.Struct):
+            if (
+                isinstance(obj, types.Histogram)
+                and wo_mode not in ["w", "o", "of"]
+                and name in group
+            ):
+                msg = f"can't append-write to histogram in wo_mode '{wo_mode}'"
+                raise LH5EncodeError(msg, fh, group, name)
+            if isinstance(obj, types.Histogram) and write_start != 0:
+                msg = f"can't write histogram in wo_mode '{wo_mode}' with write_start != 0"
+                raise LH5EncodeError(msg, fh, group, name)
+
+            return _h5_write_struct(
+                obj,
+                name,
+                fh,
+                group=group,
+                start_row=start_row,
+                n_rows=n_rows,  # if isinstance(obj, types.Table | types.Histogram) else None,
+                wo_mode=wo_mode,
+                write_start=write_start,
+                **h5py_kwargs,
+            )
+
+        # scalars
+        if isinstance(obj, types.Scalar):
+            return _h5_write_scalar(obj, name, fh, group, wo_mode)
+
+        # vector of encoded vectors
+        if isinstance(
+            obj, (types.VectorOfEncodedVectors, types.ArrayOfEncodedEqualSizedArrays)
+        ):
+            group = utils.get_h5_group(
+                name, group, grp_attrs=obj.attrs, overwrite=(wo_mode == "o")
+            )
+
+            # ask not to further compress flattened_data, it is already compressed!
+            obj.encoded_data.flattened_data.attrs["compression"] = None
+
+            _h5_write_vector_of_vectors(
+                obj.encoded_data,
+                "encoded_data",
+                fh,
                 group=group,
                 start_row=start_row,
                 n_rows=n_rows,
@@ -194,38 +183,62 @@ def _h5_write_lgdo(
                 **h5py_kwargs,
             )
 
-        return None
+            if isinstance(obj.decoded_size, types.Scalar):
+                _h5_write_scalar(
+                    obj.decoded_size,
+                    "decoded_size",
+                    fh,
+                    group=group,
+                    wo_mode=wo_mode,
+                )
+            else:
+                _h5_write_array(
+                    obj.decoded_size,
+                    "decoded_size",
+                    fh,
+                    group=group,
+                    start_row=start_row,
+                    n_rows=n_rows,
+                    wo_mode=wo_mode,
+                    write_start=write_start,
+                    **h5py_kwargs,
+                )
 
-    # vector of vectors
-    if isinstance(obj, types.VectorOfVectors):
-        return _h5_write_vector_of_vectors(
-            obj,
-            name,
-            lh5_file,
-            group=group,
-            start_row=start_row,
-            n_rows=n_rows,
-            wo_mode=wo_mode,
-            write_start=write_start,
-            **h5py_kwargs,
-        )
+            return None
 
-    # if we get this far, must be one of the Array types
-    if isinstance(obj, types.Array):
-        return _h5_write_array(
-            obj,
-            name,
-            lh5_file,
-            group=group,
-            start_row=start_row,
-            n_rows=n_rows,
-            wo_mode=wo_mode,
-            write_start=write_start,
-            **h5py_kwargs,
-        )
+        # vector of vectors
+        if isinstance(obj, types.VectorOfVectors):
+            return _h5_write_vector_of_vectors(
+                obj,
+                name,
+                fh,
+                group=group,
+                start_row=start_row,
+                n_rows=n_rows,
+                wo_mode=wo_mode,
+                write_start=write_start,
+                **h5py_kwargs,
+            )
 
-    msg = f"do not know how to write '{name}' of type '{type(obj).__name__}'"
-    raise LH5EncodeError(msg, lh5_file, group, name)
+        # if we get this far, must be one of the Array types
+        if isinstance(obj, types.Array):
+            return _h5_write_array(
+                obj,
+                name,
+                fh,
+                group=group,
+                start_row=start_row,
+                n_rows=n_rows,
+                wo_mode=wo_mode,
+                write_start=write_start,
+                **h5py_kwargs,
+            )
+
+        msg = f"do not know how to write '{name}' of type '{type(obj).__name__}'"
+        raise LH5EncodeError(msg, fh, group, name)
+    finally:
+        if opened_here:
+            fh.close()
 
 
 def _h5_write_struct(
