@@ -118,7 +118,7 @@ def read(
         try:
             lh5_file = h5py.File(str(Path(lh5_file)), mode="r", locking=locking)
         except (OSError, FileExistsError) as oe:
-            raise LH5DecodeError(str(oe), lh5_file, None) from oe
+            raise LH5DecodeError(oe, lh5_file) from oe
 
         close_after = True
         try:

@@ -12,6 +12,19 @@ from lgdo import lh5, types
 from lgdo.lh5.exceptions import LH5DecodeError, LH5EncodeError
 
 
+def test_tools(tmptestdir):
+    thefile = tmptestdir / "already-open-file-tools.lh5"
+    lh5.write(types.Struct({}), "/empty", thefile)
+
+    for mode in ("r", "r+", "w", "a"):
+        f = h5py.File(thefile, mode)
+        with pytest.raises(LH5DecodeError):
+            lh5.ls(thefile)
+        with pytest.raises(LH5DecodeError):
+            lh5.show(thefile)
+        f.close()
+
+
 def test_interact_with_already_open_files(tmptestdir):
     thefile = tmptestdir / "already-open-file.lh5"
     lh5.write(types.Struct({}), "/empty", thefile)

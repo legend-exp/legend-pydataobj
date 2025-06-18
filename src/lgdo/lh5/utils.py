@@ -45,7 +45,10 @@ def read_n_rows(name: str, h5f: str | Path | h5py.File) -> int | None:
     Return ``None`` if `name` is a :class:`.Scalar` or a :class:`.Struct`.
     """
     if not isinstance(h5f, h5py.File):
-        h5f = h5py.File(h5f, "r", locking=False)
+        try:
+            h5f = h5py.File(h5f, "r", locking=False)
+        except (OSError, FileExistsError) as oe:
+            raise LH5DecodeError(oe, h5f, None) from oe
 
     try:
         h5o = h5f[name].id
@@ -61,7 +64,10 @@ def read_size_in_bytes(name: str, h5f: str | Path | h5py.File) -> int | None:
     recursively through members of a Struct or Table
     """
     if not isinstance(h5f, h5py.File):
-        h5f = h5py.File(h5f, "r", locking=False)
+        try:
+            h5f = h5py.File(h5f, "r", locking=False)
+        except (OSError, FileExistsError) as oe:
+            raise LH5DecodeError(oe, h5f) from oe
 
     try:
         h5o = h5f[name].id

@@ -19,6 +19,7 @@ from numpy.typing import ArrayLike
 from .. import types
 from . import _serializers, utils
 from .core import read
+from .exceptions import LH5DecodeError
 
 log = logging.getLogger(__name__)
 
@@ -125,7 +126,10 @@ class LH5Store:
                     "fs_page_size": page_buffer,
                 }
             )
-        h5f = h5py.File(full_path, mode, **file_kwargs)
+        try:
+            h5f = h5py.File(full_path, mode, **file_kwargs)
+        except (OSError, FileExistsError) as oe:
+            raise LH5DecodeError(oe, full_path) from oe
 
         if self.keep_open:
             if isinstance(self.keep_open, int) and len(self.files) >= self.keep_open:

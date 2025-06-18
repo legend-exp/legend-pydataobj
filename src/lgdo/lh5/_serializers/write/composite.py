@@ -59,7 +59,7 @@ def _h5_write_lgdo(
         try:
             fh = h5py.File(lh5_file, mode=mode, **file_kwargs)
         except OSError as oe:
-            raise LH5EncodeError(str(oe), lh5_file, None) from oe
+            raise LH5EncodeError(oe, lh5_file) from oe
 
         opened_here = True
     else:

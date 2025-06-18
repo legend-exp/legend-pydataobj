@@ -8,6 +8,7 @@ from pathlib import Path
 import h5py
 
 from . import utils
+from .exceptions import LH5DecodeError
 from .store import LH5Store
 
 log = logging.getLogger(__name__)
@@ -123,7 +124,10 @@ def show(
 
     # open file
     if isinstance(lh5_file, (str, Path)):
-        lh5_file = h5py.File(utils.expand_path(Path(lh5_file)), "r", locking=False)
+        try:
+            lh5_file = h5py.File(utils.expand_path(Path(lh5_file)), "r", locking=False)
+        except (OSError, FileExistsError) as oe:
+            raise LH5DecodeError(oe, lh5_file) from oe
 
     # go to group
     if lh5_group != "/":
