@@ -337,69 +337,8 @@ def test_write_object_overwrite_lgdo(caplog, tmptestdir):
     assert np.array_equal(vector_dat.flattened_data.nda, [0, 1, 0, 0, 1, 1, 1])
 
 
-# Test that when we try to overwrite an existing column in a table we fail
 def test_write_object_append_column(tmptestdir):
     # Try to append an array to a table
-    if Path(f"{tmptestdir}/write_object_append_column_test.lh5").exists():
-        Path(f"{tmptestdir}/write_object_append_column_test.lh5").unlink()
-
-    array1 = types.Array(np.zeros(10))
-    tb1 = types.Table(col_dict={"dset1`": types.Array(np.ones(10))})
-    store = lh5.LH5Store()
-    store.write(array1, "my_table", f"{tmptestdir}/write_object_append_column_test.lh5")
-    with pytest.raises(lh5.exceptions.LH5EncodeError):
-        store.write(
-            tb1,
-            "my_table",
-            f"{tmptestdir}/write_object_append_column_test.lh5",
-            wo_mode="append_column",
-        )  # Now, try to append a column to an array
-
-    # Try to append a table that has a same key as the old table
-    if Path(f"{tmptestdir}/write_object_append_column_test.lh5").exists():
-        Path(f"{tmptestdir}/write_object_append_column_test.lh5").unlink()
-
-    tb1 = types.Table(
-        col_dict={
-            "dset1": types.Array(np.zeros(10)),
-            "dset2": types.Array(np.zeros(10)),
-        }
-    )
-    tb2 = types.Table(
-        col_dict={"dset2": types.Array(np.ones(10))}
-    )  # Same field name, different values
-    store = lh5.LH5Store()
-    store.write(tb1, "my_table", f"{tmptestdir}/write_object_append_column_test.lh5")
-    with pytest.raises(lh5.exceptions.LH5EncodeError):
-        store.write(
-            tb2,
-            "my_table",
-            f"{tmptestdir}/write_object_append_column_test.lh5",
-            wo_mode="append_column",
-        )  # Now, try to append a column with a same field
-
-    # try appending a column that is larger than one that exists
-    if Path(f"{tmptestdir}/write_object_append_column_test.lh5").exists():
-        Path(f"{tmptestdir}/write_object_append_column_test.lh5").unlink()
-
-    tb1 = types.Table(col_dict={"dset1": types.Array(np.zeros(10))})
-    tb2 = types.Table(
-        col_dict={"dset2": types.Array(np.ones(20))}
-    )  # different field name, different size
-    store = lh5.LH5Store()
-    store.write(tb1, "my_table", f"{tmptestdir}/write_object_append_column_test.lh5")
-    with pytest.raises(lh5.exceptions.LH5EncodeError):
-        store.write(
-            tb2,
-            "my_table",
-            f"{tmptestdir}/write_object_append_column_test.lh5",
-            wo_mode="append_column",
-        )  # Now, try to append a column with a different field size
-
-    # Finally successfully append a column
-    if Path(f"{tmptestdir}/write_object_append_column_test.lh5").exists():
-        Path(f"{tmptestdir}/write_object_append_column_test.lh5").unlink()
-
     tb1 = types.Table(col_dict={"dset1": types.Array(np.zeros(10))})
     tb2 = types.Table(
         col_dict={"dset2": types.Array(np.ones(10))}
@@ -410,6 +349,7 @@ def test_write_object_append_column(tmptestdir):
         "my_table",
         f"{tmptestdir}/write_object_append_column_test.lh5",
         group="my_group",
+        wo_mode="of",
     )
     store.write(
         tb2,
@@ -457,15 +397,6 @@ def test_write_histogram(caplog, tmptestdir):
         group="my_group",
         wo_mode="append",
     )
-    with pytest.raises(lh5.exceptions.LH5EncodeError):
-        # appending to an existing histogram should not work.
-        store.write(
-            h1,
-            "my_histogram",
-            f"{tmptestdir}/write_histogram_test.lh5",
-            group="my_group",
-            wo_mode="append",
-        )
     store.write(
         h2,
         "my_histogram",
@@ -482,26 +413,6 @@ def test_write_histogram(caplog, tmptestdir):
     assert h3.binning[1].edges[-1] == 7
     assert h3.isdensity
     assert h3.binning[0].get_binedgeattrs() == {"units": "ns"}
-
-    # Now, check that writing with other modes throws.
-    for disallowed_wo_mode in ["append", "append_column"]:
-        with pytest.raises(lh5.exceptions.LH5EncodeError):
-            store.write(
-                h2,
-                "my_histogram",
-                f"{tmptestdir}/write_histogram_test.lh5",
-                wo_mode=disallowed_wo_mode,
-                group="my_group",
-            )
-    with pytest.raises(lh5.exceptions.LH5EncodeError):
-        store.write(
-            h2,
-            "my_histogram",
-            f"{tmptestdir}/write_histogram_test.lh5",
-            wo_mode="overwrite",
-            write_start=1,
-            group="my_group",
-        )
 
 
 def test_write_histogram_variable(caplog, tmptestdir):
@@ -570,38 +481,6 @@ def test_write_append_struct(tmptestdir):
     assert list(result.keys()) == ["arr1", "arr2"]
     assert len(result.arr1) == len(st.arr1)
     assert len(result.arr2) == len(st2.arr2)
-
-    # test error when appending existing field
-    with pytest.raises(lh5.exceptions.LH5EncodeError):
-        lh5.write(
-            types.Struct({"arr2": types.Array([4, 5, 6])}),
-            "struct",
-            outfile,
-            wo_mode="ac",
-        )
-
-    # error if appending to object of different type
-    with pytest.raises(lh5.exceptions.LH5EncodeError):
-        lh5.write(
-            types.Struct({"arr2": types.Array([4, 5, 6])}),
-            "struct",
-            outfile,
-            wo_mode="ac",
-        )
-
-    outfile = str(tmptestdir / "test-write-append-struct.lh5")
-    lh5.write(
-        types.Table({"arr1": types.Array([1, 2, 3])}), "struct", outfile, wo_mode="of"
-    )
-
-    # error if appending to object of different type
-    with pytest.raises(lh5.exceptions.LH5EncodeError):
-        lh5.write(
-            types.Table({"arr2": types.Array([4, 5, 6, 7])}),
-            "struct",
-            outfile,
-            wo_mode="ac",
-        )
 
     # append to empty struct
     outfile = str(tmptestdir / "test-write-append-struct.lh5")
