@@ -359,9 +359,10 @@ class Table(Struct, LGDOCollection):
             :func:`numexpr.evaluate`` as `local_dict` argument or to
             :func:`eval` as `locals` argument.
         modules
-            a dictionary of additional modules used by the expression. If this is not `None`
-            then :func:`eval`is used and the expression can depend on any modules from this dictionary in
-            addition to awkward and numpy. These are passed to :func:`eval` as `globals` argument.
+            a dictionary of additional modules used by the expression. If this
+            is not `None` then :func:`eval`is used and the expression can
+            depend on any modules from this dictionary in addition to awkward
+            and numpy. These are passed to :func:`eval` as `globals` argument.
 
         Examples
         --------
@@ -432,7 +433,10 @@ class Table(Struct, LGDOCollection):
                 return _make_lgdo(out_data)
 
             except Exception:
-                msg = f"Warning {expr} could not be evaluated with numexpr probably due to some not allowed characters, trying with eval()."
+                msg = (
+                    f"Warning {expr} could not be evaluated with numexpr probably "
+                    "due to some not allowed characters, trying with eval()."
+                )
                 log.debug(msg)
 
         # resort to good ol' eval()

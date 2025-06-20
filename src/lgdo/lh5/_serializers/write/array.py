@@ -40,7 +40,7 @@ def _h5_write_array(
         # this is needed in order to have a resizable (in the first
         # axis) data set, i.e. rows can be appended later
         # NOTE: this automatically turns chunking on!
-        maxshape = (None,) + nda.shape[1:]
+        maxshape = (None, *nda.shape[1:])
         h5py_kwargs.setdefault("maxshape", maxshape)
 
         if wo_mode == "o" and name in group:

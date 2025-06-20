@@ -92,6 +92,9 @@ class VectorOfEncodedVectors(LGDOCollection):
 
         return False
 
+    def __hash__(self):
+        return hash(self.name)
+
     def reserve_capacity(self, *capacity: int) -> None:
         self.encoded_data.reserve_capacity(*capacity)
         self.decoded_size.reserve_capacity(capacity[0])
@@ -344,6 +347,9 @@ class ArrayOfEncodedEqualSizedArrays(LGDOCollection):
             )
 
         return False
+
+    def __hash__(self):
+        return hash(self.name)
 
     def reserve_capacity(self, *capacity: int) -> None:
         self.encoded_data.reserve_capacity(capacity)

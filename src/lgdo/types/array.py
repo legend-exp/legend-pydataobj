@@ -109,14 +109,14 @@ class Array(LGDOCollection):
 
     @property
     def shape(self):
-        return (len(self),) + self._nda.shape[1:]
+        return (len(self), *self._nda.shape[1:])
 
     def reserve_capacity(self, capacity: int) -> None:
         "Set size (number of rows) of internal memory buffer"
         if capacity < len(self):
             msg = "Cannot reduce capacity below Array length"
             raise ValueError(msg)
-        self._nda.resize((capacity,) + self._nda.shape[1:], refcheck=False)
+        self._nda.resize((capacity, *self._nda.shape[1:]), refcheck=False)
 
     def get_capacity(self) -> int:
         "Get capacity (i.e. max size before memory must be re-allocated)"
@@ -191,6 +191,9 @@ class Array(LGDOCollection):
             return self.attrs == other.attrs and np.array_equal(self.nda, other.nda)
 
         return False
+
+    def __hash__(self):
+        return hash(self.name)
 
     def __iter__(self) -> Iterator:
         yield from self.nda
