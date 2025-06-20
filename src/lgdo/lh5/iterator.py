@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Collection, Mapping
+from collections.abc import Collection, Iterator, Mapping
 from warnings import warn
 
 import numpy as np
@@ -14,7 +14,7 @@ from .store import LH5Store
 from .utils import expand_path
 
 
-class LH5Iterator(typing.Iterator):
+class LH5Iterator(Iterator):
     """Iterate over chunks of entries from LH5 files.
 
     The iterator reads ``buffer_len`` entries at a time from one or more
