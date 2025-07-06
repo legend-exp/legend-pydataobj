@@ -149,17 +149,27 @@ def show(
 
     # loop over keys
     while True:
-        val = lh5_file[key]
-        # we want to print the LGDO datatype
-        dtype = val.attrs.get("datatype", default="no datatype")
-        if dtype == "no datatype" and isinstance(val, h5py.Group):
-            dtype = "HDF5 group"
+        is_link = False
+        link_type = lh5_file.get(key, getlink=True)
+        if isinstance(link_type, (h5py.SoftLink, h5py.ExternalLink)):
+            desc = f"-> {link_type.path}"
+            is_link = True
 
-        _attrs = ""
-        if attrs:
-            attrs_d = dict(val.attrs)
-            attrs_d.pop("datatype", "")
-            _attrs = "── " + str(attrs_d) if attrs_d else ""
+        else:
+            val = lh5_file[key]
+
+            # we want to print the LGDO datatype
+            dtype = val.attrs.get("datatype", default="no datatype")
+            if dtype == "no datatype" and isinstance(val, h5py.Group):
+                dtype = "HDF5 group"
+
+            _attrs = ""
+            if attrs:
+                attrs_d = dict(val.attrs)
+                attrs_d.pop("datatype", "")
+                _attrs = "── " + str(attrs_d) if attrs_d else ""
+
+            desc = f"· {dtype} {_attrs}"
 
         # is this the last key?
         killme = False
@@ -171,9 +181,10 @@ def show(
         else:
             char = "├──"
 
-        print(f"{indent}{char} \033[1m{key}\033[0m · {dtype} {_attrs}")  # noqa: T201
+        print(f"{indent}{char} \033[1m{key}\033[0m {desc}")  # noqa: T201
 
-        if detail and isinstance(val, h5py.Dataset):
+        if not is_link and detail and isinstance(val, h5py.Dataset):
+            val = lh5_file[key]
             char = "|       "
             if killme:
                 char = "        "
@@ -207,9 +218,9 @@ def show(
             print(toprint)  # noqa: T201
 
         # if it's a group, call this function recursively
-        if isinstance(val, h5py.Group):
+        if not is_link and isinstance(val, h5py.Group):
             show(
-                val,
+                lh5_file[key],
                 indent=indent + ("    " if killme else "│   "),
                 header=False,
                 attrs=attrs,
