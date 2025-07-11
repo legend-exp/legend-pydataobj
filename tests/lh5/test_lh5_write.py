@@ -519,3 +519,16 @@ def test_write_structs_not_groups(tmptestdir):
     assert result.attrs["datatype"] == "struct{table,table2}"
     assert result.table.a == tb.a
     assert result.table2.a == tb2.a
+
+    # test adding new object
+    outfile = tmptestdir / "test-write-struct-to-root.lh5"
+    with h5py.File(outfile, "w") as f:
+        grp = f.create_group("group")
+        grp.create_dataset("data", data=np.arange(100))
+
+    lh5.write(
+        types.Table({"a": types.Array([1, 2, 3])}),
+        "/tcm",
+        outfile,
+        wo_mode="write_safe",
+    )
