@@ -337,6 +337,26 @@ def test_insert(testvov):
     )
     assert ak.is_valid(testvov.view_as("ak"))
 
+    testvov.insert(0, [np.zeros(1), np.ones(3)])
+    assert testvov == VectorOfVectors(
+        [
+            [0],
+            [1, 1, 1],
+            [1, 2],
+            [3, 4, 5],
+            [0, 0, 0],
+            [2],
+            [4, 8, 9, 7],
+            [5, 3, 1],
+        ]
+    )
+    assert ak.is_valid(testvov.view_as("ak"))
+
+    v = VectorOfVectors(shape_guess=(3, 5), dtype="int32", fill_val=0)
+    v.insert(2, [1, 2, 3])
+    assert np.array_equal(v.cumulative_length, [5, 10, 13, 18])
+    assert np.array_equal(v[2], [1, 2, 3])
+
     v = VectorOfVectors(shape_guess=(3, 5), dtype="int32", fill_val=0)
     v.insert(2, [1, 2, 3])
     assert np.array_equal(v.cumulative_length, [5, 10, 13, 18])
