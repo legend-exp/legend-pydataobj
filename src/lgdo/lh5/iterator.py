@@ -513,12 +513,25 @@ class LH5Iterator(Iterator):
 
             remaining_fields = mask
 
-        self.lh5_buffer = self.lh5_st.get_buffer(
-            self.groups[0],
-            self.lh5_files[0],
-            size=0,
-            field_mask=self.field_mask,
+        # Create a new buffer and move any elements from the old into the new
+        def copy_data(old_buffer, new_buffer):
+            if isinstance(new_buffer, Table):
+                for k, v in new_buffer.items():
+                    if k in old_buffer:
+                        new_buffer[k] = copy_data(v, old_buffer[k])
+                return new_buffer
+            return old_buffer
+
+        self.lh5_buffer = copy_data(
+            self.lh5_buffer,
+            self.lh5_st.get_buffer(
+                self.groups[0],
+                self.lh5_files[0],
+                size=len(self.lh5_buffer),
+                field_mask=self.field_mask,
+            ),
         )
+
         for fr, pre, suf in zip(self.friend, self.friend_prefix, self.friend_suffix):
             self.lh5_buffer.join(
                 fr.lh5_buffer,
