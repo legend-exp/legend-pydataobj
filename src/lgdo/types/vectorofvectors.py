@@ -646,10 +646,6 @@ class VectorOfVectors(LGDOCollection):
         attach_units = with_units and "units" in self.attrs
 
         if library == "ak":
-            if attach_units:
-                msg = "Pint does not support Awkward yet, you must view the data with_units=False"
-                raise ValueError(msg)
-
             # see https://github.com/scikit-hep/awkward/discussions/2848
 
             # cannot avoid making a copy here. we should add the leading 0 to
@@ -689,7 +685,12 @@ class VectorOfVectors(LGDOCollection):
                 offsets=ak.index.Index(offsets),
                 content=content,
             )
-            return ak.Array(layout)
+            ak_arr = ak.Array(layout)
+
+            if attach_units:
+                ak_arr = ak.with_parameter(ak_arr, "units", self.attrs["units"])
+
+            return ak_arr
 
         if library == "np":
             if preserve_dtype:

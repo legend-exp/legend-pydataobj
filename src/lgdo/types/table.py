@@ -534,14 +534,12 @@ class Table(Struct, LGDOCollection):
             raise TypeError(msg)
 
         if library == "ak":
-            if with_units:
-                msg = "Pint does not support Awkward yet, you must view the data with_units=False"
-                raise ValueError(msg)
-
-            # NOTE: passing the Table directly (which inherits from a dict)
-            # makes it somehow really slow. Not sure why, but this could be due
-            # to extra LGDO fields (like "attrs")
-            return ak.Array({col: self[col].view_as("ak") for col in cols})
+            # NOTE: passing the Table directly (which inherits from a dict) makes it
+            # somehow really slow. ak.Array can unroll dicts just fine, but then uses
+            # ak.from_iter to convert the arrays, instead of a zero-copy operation.
+            return ak.Array(
+                {col: self[col].view_as("ak", with_units=with_units) for col in cols}
+            )
 
         msg = f"{library!r} is not a supported third-party format."
         raise TypeError(msg)

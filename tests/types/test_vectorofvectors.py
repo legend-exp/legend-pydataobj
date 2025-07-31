@@ -447,9 +447,10 @@ def test_iter(testvov):
 def test_view_as(testvov):
     v2d = testvov.v2d
 
-    v2d.attrs["units"] = "s"
-    with pytest.raises(ValueError):
-        v2d.view_as("ak", with_units=True)
+    v2d.flattened_data.attrs["units"] = "s"
+    ak_arr = v2d.view_as("ak", with_units=True)
+    assert isinstance(ak_arr, ak.Array)
+    assert ak.parameters(ak_arr) == {"units": "s"}
 
     ak_arr = v2d.view_as("ak", with_units=False)
 
