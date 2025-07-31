@@ -552,3 +552,12 @@ def test_bytestrings():
     ak_arr = v.view_as("ak", with_units=False)
     assert isinstance(ak_arr, ak.Array)
     assert ak_arr[0][0][0] == b"V00000A"
+
+    v = VectorOfVectors(
+        flattened_data=np.array([], dtype="S7"),
+        cumulative_length=np.array([0, 0, 0], dtype="uint32"),
+    )
+
+    # test bytestring with ak Array
+    ak_arr = v.view_as("ak", with_units=False)
+    assert len(ak_arr[0]) == 0
