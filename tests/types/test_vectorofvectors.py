@@ -555,9 +555,9 @@ def test_bytestrings():
 
     v = VectorOfVectors(
         flattened_data=np.array([], dtype="S7"),
-        cumulative_length=np.array([0,0,0], dtype="uint32"),
+        cumulative_length=np.array([0, 0, 0], dtype="uint32"),
     )
 
     # test bytestring with ak Array
     ak_arr = v.view_as("ak", with_units=False)
-    assert len(ak_arr[0])==0
+    assert len(ak_arr[0]) == 0
