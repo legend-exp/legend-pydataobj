@@ -598,7 +598,9 @@ class VectorOfVectors(LGDOCollection):
 
             _to_aoesa(self.flattened_data.nda, self.cumulative_length.nda, nda)
 
-            return aoesa.ArrayOfEqualSizedArrays(nda=nda, attrs=self.getattrs())
+            return aoesa.ArrayOfEqualSizedArrays(
+                nda=nda, attrs=self.flattened_data.getattrs() | self.getattrs()
+            )
 
         raise NotImplementedError
 
@@ -643,7 +645,9 @@ class VectorOfVectors(LGDOCollection):
         --------
         .LGDO.view_as
         """
-        attach_units = with_units and "units" in self.attrs
+        attach_units = with_units and (
+            "units" in self.attrs or "units" in self.flattened_data.attrs
+        )
 
         if library == "ak":
             # see https://github.com/scikit-hep/awkward/discussions/2848
@@ -688,7 +692,11 @@ class VectorOfVectors(LGDOCollection):
             ak_arr = ak.Array(layout)
 
             if attach_units:
-                ak_arr = ak.with_parameter(ak_arr, "units", self.attrs["units"])
+                units = self.flattened_data.attrs.get(
+                    "units", self.attrs.get("units", None)
+                )
+                assert units is not None
+                ak_arr = ak.with_parameter(ak_arr, "units", units)
 
             return ak_arr
 

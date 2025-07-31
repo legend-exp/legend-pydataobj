@@ -241,6 +241,14 @@ def test_voev_view_as():
     )
     assert ak.all(ak_arr.decoded_size == [6, 6, 6, 6, 6])
 
+    ak_arr = voev.view_as("ak", with_units=True)
+    assert ak.parameters(ak_arr.encoded_data) == {"units": "s"}
+
+    voev.encoded_data.attrs["units"] = voev.attrs["units"]
+    del voev.attrs["units"]
+    ak_arr = voev.view_as("ak", with_units=True)
+    assert ak.parameters(ak_arr.encoded_data) == {"units": "s"}
+
     df = voev.view_as("pd", with_units=False)
     assert isinstance(df, pd.DataFrame)
     assert isinstance(df.encoded_data.ak, akpd.accessor.AwkwardAccessor)
@@ -276,6 +284,14 @@ def test_aoeesa_view_as():
         ]
     )
     assert ak.all(ak_arr.decoded_size == [99, 99, 99, 99, 99])
+
+    ak_arr = voev.view_as("ak", with_units=True)
+    assert ak.parameters(ak_arr.encoded_data) == {"units": "s"}
+
+    voev.encoded_data.attrs["units"] = voev.attrs["units"]
+    del voev.attrs["units"]
+    ak_arr = voev.view_as("ak", with_units=True)
+    assert ak.parameters(ak_arr.encoded_data) == {"units": "s"}
 
     df = voev.view_as("pd", with_units=False)
     assert isinstance(df, pd.DataFrame)
