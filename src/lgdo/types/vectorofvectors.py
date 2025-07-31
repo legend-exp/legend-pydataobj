@@ -668,6 +668,10 @@ class VectorOfVectors(LGDOCollection):
             # need to handle strings separately
             elif np.issubdtype(self.flattened_data.nda.dtype, np.bytes_):
                 byte_arrays = []
+                if len(self.flattened_data.nda) == 0:
+                    # if the flattened data is empty, we need to create an empty
+                    # array of bytes
+                    byte_arrays.append(np.array([], dtype=np.uint8))
                 for s in self.flattened_data.nda:
                     # Convert each string to array of bytes
                     byte_array = np.frombuffer(s, dtype=np.uint8)
