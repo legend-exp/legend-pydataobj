@@ -252,12 +252,8 @@ class VectorOfEncodedVectors(LGDOCollection):
         attach_units = with_units and "units" in self.attrs
 
         if library == "ak":
-            if attach_units:
-                msg = "Pint does not support Awkward yet, you must view the data with_units=False"
-                raise ValueError(msg)
-
             records_list = {
-                "encoded_data": self.encoded_data.view_as("ak"),
+                "encoded_data": self.encoded_data.view_as("ak", with_units=with_units),
                 "decoded_size": np.array(self.decoded_size),
             }
             return ak.Array(records_list)
@@ -483,12 +479,8 @@ class ArrayOfEncodedEqualSizedArrays(LGDOCollection):
         attach_units = with_units and "units" in self.attrs
 
         if library == "ak":
-            if attach_units:
-                msg = "Pint does not support Awkward yet, you must view the data with_units=False"
-                raise ValueError(msg)
-
             records_list = {
-                "encoded_data": self.encoded_data.view_as("ak"),
+                "encoded_data": self.encoded_data.view_as("ak", with_units=with_units),
                 "decoded_size": np.full(
                     len(self.encoded_data.cumulative_length), self.decoded_size.value
                 ),
