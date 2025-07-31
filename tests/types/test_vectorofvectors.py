@@ -445,35 +445,37 @@ def test_iter(testvov):
 
 
 def test_view_as(testvov):
-    v2d = testvov.v2d
+    v2ds = [copy.deepcopy(testvov.v2d), copy.deepcopy(testvov.v2d)]
+    v2ds[0].attrs["units"] = "s"
+    v2ds[1].flattened_data.attrs["units"] = "s"
 
-    v2d.flattened_data.attrs["units"] = "s"
-    ak_arr = v2d.view_as("ak", with_units=True)
-    assert isinstance(ak_arr, ak.Array)
-    assert ak.parameters(ak_arr) == {"units": "s"}
+    for v2d in v2ds:
+        ak_arr = v2d.view_as("ak", with_units=True)
+        assert isinstance(ak_arr, ak.Array)
+        assert ak.parameters(ak_arr) == {"units": "s"}
 
-    ak_arr = v2d.view_as("ak", with_units=False)
+        ak_arr = v2d.view_as("ak", with_units=False)
 
-    assert isinstance(ak_arr, ak.Array)
-    assert ak.is_valid(ak_arr)
-    assert len(ak_arr) == len(v2d)
-    assert ak.all(ak_arr == [[1, 2], [3, 4, 5], [2], [4, 8, 9, 7], [5, 3, 1]])
+        assert isinstance(ak_arr, ak.Array)
+        assert ak.is_valid(ak_arr)
+        assert len(ak_arr) == len(v2d)
+        assert ak.all(ak_arr == [[1, 2], [3, 4, 5], [2], [4, 8, 9, 7], [5, 3, 1]])
 
-    np_arr = v2d.view_as("np", with_units=True)
-    assert isinstance(np_arr, pint.Quantity)
-    assert np_arr.u == "second"
-    assert isinstance(np_arr.m, np.ndarray)
+        np_arr = v2d.view_as("np", with_units=True)
+        assert isinstance(np_arr, pint.Quantity)
+        assert np_arr.u == "second"
+        assert isinstance(np_arr.m, np.ndarray)
 
-    np_arr = v2d.view_as("np", with_units=False)
-    assert isinstance(np_arr, np.ndarray)
-    assert np.issubdtype(np_arr.dtype, np.floating)
+        np_arr = v2d.view_as("np", with_units=False)
+        assert isinstance(np_arr, np.ndarray)
+        assert np.issubdtype(np_arr.dtype, np.floating)
 
-    np_arr = v2d.view_as("np", with_units=False, fill_val=0, preserve_dtype=True)
-    assert np.issubdtype(np_arr.dtype, np.integer)
+        np_arr = v2d.view_as("np", with_units=False, fill_val=0, preserve_dtype=True)
+        assert np.issubdtype(np_arr.dtype, np.integer)
 
-    np_arr = v2d.view_as("pd", with_units=False)
-    assert isinstance(np_arr, pd.Series)
-    assert isinstance(np_arr.ak, akpd.accessor.AwkwardAccessor)
+        np_arr = v2d.view_as("pd", with_units=False)
+        assert isinstance(np_arr, pd.Series)
+        assert isinstance(np_arr.ak, akpd.accessor.AwkwardAccessor)
 
     v3d = testvov.v3d
 
