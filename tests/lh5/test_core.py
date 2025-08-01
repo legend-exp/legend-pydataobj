@@ -99,6 +99,7 @@ def test_read_multiple_files(lh5_file):
     assert len(lh5_obj) == 4
     assert (lh5_obj.nda == np.array([3, 2, 4, 3])).all()
 
+
 def test_read_hdf5plugin_compression(lgnd_file_new_format):
     lh5_obj = lh5.read("/raw/B00000D/baseline", lh5_file)
     assert isinstance(lh5_obj, lgdo.Array)
