@@ -11,9 +11,13 @@ from lgdo import compression, lh5, types
 def lgnd_file(lgnd_test_data):
     return lgnd_test_data.get_path("lh5/LDQTA_r117_20200110T105115Z_cal_geds_raw.lh5")
 
+
 @pytest.fixture(scope="module")
 def lgnd_file_new_format(lgnd_test_data):
-    return lgnd_test_data.get_path("lh5/prod-ref-l200/generated/tier/raw/cal/p14/r005/l200-p14-r004-cal-20250606T010224Z-tier_raw.lh5")
+    return lgnd_test_data.get_path(
+        "lh5/prod-ref-l200/generated/tier/raw/cal/p14/r005/l200-p14-r004-cal-20250606T010224Z-tier_raw.lh5"
+    )
+
 
 @pytest.fixture(scope="module")
 def lh5_file(tmptestdir):
