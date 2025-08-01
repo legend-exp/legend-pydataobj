@@ -598,7 +598,9 @@ class VectorOfVectors(LGDOCollection):
 
             _to_aoesa(self.flattened_data.nda, self.cumulative_length.nda, nda)
 
-            return aoesa.ArrayOfEqualSizedArrays(nda=nda, attrs=self.getattrs())
+            return aoesa.ArrayOfEqualSizedArrays(
+                nda=nda, attrs=self.flattened_data.getattrs() | self.getattrs()
+            )
 
         raise NotImplementedError
 
@@ -643,13 +645,11 @@ class VectorOfVectors(LGDOCollection):
         --------
         .LGDO.view_as
         """
-        attach_units = with_units and "units" in self.attrs
+        attach_units = with_units and (
+            "units" in self.attrs or "units" in self.flattened_data.attrs
+        )
 
         if library == "ak":
-            if attach_units:
-                msg = "Pint does not support Awkward yet, you must view the data with_units=False"
-                raise ValueError(msg)
-
             # see https://github.com/scikit-hep/awkward/discussions/2848
 
             # cannot avoid making a copy here. we should add the leading 0 to
@@ -689,7 +689,16 @@ class VectorOfVectors(LGDOCollection):
                 offsets=ak.index.Index(offsets),
                 content=content,
             )
-            return ak.Array(layout)
+            ak_arr = ak.Array(layout)
+
+            if attach_units:
+                units = self.flattened_data.attrs.get(
+                    "units", self.attrs.get("units", None)
+                )
+                assert units is not None
+                ak_arr = ak.with_parameter(ak_arr, "units", units)
+
+            return ak_arr
 
         if library == "np":
             if preserve_dtype:
