@@ -101,6 +101,6 @@ def test_read_multiple_files(lh5_file):
 
 
 def test_read_hdf5plugin_compression(lgnd_file_new_format):
-    lh5_obj = lh5.read("/raw/B00000D/baseline", lh5_file)
+    lh5_obj = lh5.read("/raw/B00000D/baseline", lgnd_file_new_format)
     assert isinstance(lh5_obj, lgdo.Array)
     assert lh5_obj.nda[0] == 14620
