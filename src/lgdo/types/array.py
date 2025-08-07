@@ -239,7 +239,6 @@ class Array(LGDOCollection):
         --------
         .LGDO.view_as
         """
-        # TODO: does attaching units imply a copy?
         attach_units = with_units and "units" in self.attrs
 
         if library == "pd":
@@ -260,17 +259,17 @@ class Array(LGDOCollection):
 
         if library == "np":
             if attach_units:
+                # TODO: does attaching units imply a copy?
                 return self.nda * u(self.attrs["units"])
 
             return self.nda
 
         if library == "ak":
+            ak_arr = ak.Array(self.nda)  # NOTE: this is zero-copy!
             if attach_units:
-                msg = "Pint does not support Awkward yet, you must view the data with_units=False"
-                raise ValueError(msg)
+                ak_arr = ak.with_parameter(ak_arr, "units", self.attrs["units"])
 
-            # NOTE: this is zero-copy!
-            return ak.Array(self.nda)
+            return ak_arr
 
         msg = f"{library} is not a supported third-party format."
         raise ValueError(msg)
