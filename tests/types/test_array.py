@@ -89,8 +89,9 @@ def test_view():
     v = a.view_as("ak", with_units=False)
     assert isinstance(v, ak.Array)
 
-    with pytest.raises(ValueError):
-        a.view_as("ak", with_units=True)
+    v = a.view_as("ak", with_units=True)
+    assert isinstance(v, ak.Array)
+    assert ak.parameters(v) == {"units": "m"}
 
 
 def test_pickle():

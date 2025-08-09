@@ -223,8 +223,10 @@ def test_view_as():
     assert isinstance(ak_arr, ak.Array)
     assert list(ak_arr.fields) == ["a", "b", "c", "d"]
 
-    with pytest.raises(ValueError):
-        tbl.view_as("ak", with_units=True)
+    ak_arr = tbl.view_as("ak", with_units=True)
+    assert isinstance(ak_arr, ak.Array)
+    assert list(ak_arr.fields) == ["a", "b", "c", "d"]
+    assert ak.parameters(ak_arr.d.a) == {"units": "m"}
 
     with pytest.raises(TypeError):
         tbl.view_as("np")

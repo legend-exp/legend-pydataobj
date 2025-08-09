@@ -325,6 +325,7 @@ class Table(Struct, LGDOCollection):
         expr: str,
         parameters: Mapping[str, str] | None = None,
         modules: Mapping[str, ModuleType] | None = None,
+        with_units: bool = False,
     ) -> LGDO:
         """Apply column operations to the table and return a new LGDO.
 
@@ -363,6 +364,8 @@ class Table(Struct, LGDOCollection):
             is not `None` then :func:`eval`is used and the expression can
             depend on any modules from this dictionary in addition to awkward
             and numpy. These are passed to :func:`eval` as `globals` argument.
+        with_units
+            attach units to the columns as in :meth:`Table.eval`.
 
         Examples
         --------
@@ -395,10 +398,14 @@ class Table(Struct, LGDOCollection):
         for obj in c.co_names:
             if obj in flat_self:
                 if isinstance(flat_self[obj], VectorOfVectors):
-                    self_unwrap[obj] = flat_self[obj].view_as("ak", with_units=False)
+                    self_unwrap[obj] = flat_self[obj].view_as(
+                        "ak", with_units=with_units
+                    )
                     has_ak = True
                 else:
-                    self_unwrap[obj] = flat_self[obj].view_as("np", with_units=False)
+                    self_unwrap[obj] = flat_self[obj].view_as(
+                        "np", with_units=with_units
+                    )
 
         msg = f"evaluating {expr!r} with locals={(self_unwrap | parameters)} and {has_ak=}"
         log.debug(msg)
@@ -563,14 +570,12 @@ class Table(Struct, LGDOCollection):
             raise TypeError(msg)
 
         if library == "ak":
-            if with_units:
-                msg = "Pint does not support Awkward yet, you must view the data with_units=False"
-                raise ValueError(msg)
-
-            # NOTE: passing the Table directly (which inherits from a dict)
-            # makes it somehow really slow. Not sure why, but this could be due
-            # to extra LGDO fields (like "attrs")
-            return ak.Array({col: self[col].view_as("ak") for col in cols})
+            # NOTE: passing the Table directly (which inherits from a dict) makes it
+            # somehow really slow. ak.Array can unroll dicts just fine, but then uses
+            # ak.from_iter to convert the arrays, instead of a zero-copy operation.
+            return ak.Array(
+                {col: self[col].view_as("ak", with_units=with_units) for col in cols}
+            )
 
         msg = f"{library!r} is not a supported third-party format."
         raise TypeError(msg)
