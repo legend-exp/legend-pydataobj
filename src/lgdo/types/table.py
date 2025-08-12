@@ -342,7 +342,7 @@ class Table(Struct, LGDOCollection):
             attach units to the columns as in :meth:`LGDO.view_as`.
         library
             library to convert the columns to with :meth:`LGDO.view_as`,
-            supported libraries are``np``, ``ak`` or ``lgdo`` (pass in directly
+            supported libraries are ``np``, ``ak`` or ``lgdo`` (pass in directly
             the unconverted LGDO objects).
 
         Examples
