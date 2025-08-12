@@ -17,6 +17,8 @@ import numpy as np
 import pandas as pd
 from pandas.io.formats import format as fmt
 
+import lgdo
+
 from .array import Array
 from .arrayofequalsizedarrays import ArrayOfEqualSizedArrays
 from .lgdo import LGDO, LGDOCollection
@@ -297,6 +299,7 @@ class Table(Struct, LGDOCollection):
         parameters: Mapping[str, str] | None = None,
         modules: Mapping[str, ModuleType] | None = None,
         with_units: bool = False,
+        library: str | None = None,
     ) -> LGDO:
         """Apply column operations to the table and return a new LGDO.
 
@@ -336,7 +339,11 @@ class Table(Struct, LGDOCollection):
             depend on any modules from this dictionary in addition to awkward
             and numpy. These are passed to :func:`eval` as `globals` argument.
         with_units
-            attach units to the columns as in :meth:`Table.eval`.
+            attach units to the columns as in :meth:`LGDO.view_as`.
+        library
+            library to convert the columns to with :meth:`LGDO.view_as`,
+            supported libraries are``np``, ``ak`` or ``lgdo`` (pass in directly
+            the unconverted LGDO objects).
 
         Examples
         --------
@@ -365,20 +372,23 @@ class Table(Struct, LGDOCollection):
         # for later computation
         flat_self = self.flatten()
         self_unwrap = {}
-        has_ak = False
+        has_only_np = False
         for obj in c.co_names:
             if obj in flat_self:
-                if isinstance(flat_self[obj], VectorOfVectors):
-                    self_unwrap[obj] = flat_self[obj].view_as(
-                        "ak", with_units=with_units
-                    )
-                    has_ak = True
+                # use the user-selected library or use the np/ak default depending on the type.
+                col_library = library or "np"
+                if library is None and isinstance(flat_self[obj], VectorOfVectors):
+                    col_library = "ak"
+                has_only_np = has_only_np or col_library == "np"
+
+                if col_library == "lgdo":
+                    self_unwrap[obj] = flat_self[obj]
                 else:
                     self_unwrap[obj] = flat_self[obj].view_as(
-                        "np", with_units=with_units
+                        col_library, with_units=with_units
                     )
 
-        msg = f"evaluating {expr!r} with locals={(self_unwrap | parameters)} and {has_ak=}"
+        msg = f"evaluating {expr!r} with locals={(self_unwrap | parameters)} and {has_only_np=}"
         log.debug(msg)
 
         def _make_lgdo(data):
@@ -396,7 +406,7 @@ class Table(Struct, LGDOCollection):
             raise RuntimeError(msg)
 
         # use numexpr if we are only dealing with numpy data types (and no global dictionary)
-        if not has_ak and modules is None:
+        if has_only_np and modules is None:
             try:
                 out_data = ne.evaluate(
                     expr,
@@ -418,7 +428,7 @@ class Table(Struct, LGDOCollection):
                 log.debug(msg)
 
         # resort to good ol' eval()
-        globs = {"ak": ak, "np": np}
+        globs = {"ak": ak, "np": np, "lgdo": lgdo}
         if modules is not None:
             globs = globs | modules
 
