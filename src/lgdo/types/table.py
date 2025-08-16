@@ -147,9 +147,15 @@ class Table(Struct, LGDOCollection):
 
     def insert(self, i: int, vals: dict) -> None:
         "Insert vals into table at row i. Vals is a mapping from table key to val"
+        new_size = None
         for k, ar in self.items():
             ar.insert(i, vals[k])
-        self.size += 1
+            if new_size is None:
+                new_size = len(ar)
+            elif new_size != len(ar):
+                msg = "inserted vals must all have same length"
+                raise ValueError(msg)
+        self.size = new_size
 
     def add_field(
         self, name: str, obj: LGDOCollection, use_obj_size: bool = False
@@ -168,9 +174,12 @@ class Table(Struct, LGDOCollection):
         use_obj_size
             if ``True``, resize the table to match the length of `obj`.
         """
-        if not hasattr(obj, "__len__"):
-            msg = "cannot add field of type"
-            raise TypeError(msg, type(obj).__name__)
+        if not isinstance(obj, LGDO):
+            if isinstance(obj, Mapping):
+                obj = Table(obj, size=self.size)
+            else:
+                msg = "cannot add field of type"
+                raise TypeError(msg, type(obj).__name__)
 
         super().add_field(name, obj)
 
@@ -190,6 +199,10 @@ class Table(Struct, LGDOCollection):
             new_size = len(obj) if use_obj_size else self.size
             self.resize(new_size=new_size)
 
+    def replace(self, i: int, vals: Mapping | Table) -> None:
+        for k, ar in self.items():
+            ar.replace(i, vals[k])
+
     def add_column(
         self, name: str, obj: LGDOCollection, use_obj_size: bool = False
     ) -> None:
@@ -201,7 +214,13 @@ class Table(Struct, LGDOCollection):
         super().remove_field(name, delete)
 
     def join(
-        self, other_table: Table, cols: list[str] | None = None, do_warn: bool = True
+        self,
+        other_table: Table,
+        cols: list[str] | None = None,
+        keep_mine: bool = False,
+        prefix: str = "",
+        suffix: str = "",
+        do_warn: bool = True,
     ) -> None:
         """Add the columns of another table to this table.
 
@@ -219,6 +238,13 @@ class Table(Struct, LGDOCollection):
         cols
             a list of names of columns from `other_table` to be joined into
             this table.
+        keep_mine
+            if there is a column name conflict, keep this Tables col if
+            ``True``, or joined Table's column if ``False`` (default).
+        prefix
+            prepend to joined column names; can be used to avoid name conflicts.
+        suffix
+            append to joined column names; can be used to avoid name conflicts.
         do_warn
             set to ``False`` to turn off warnings associated with mismatched
             `loc` parameter or :meth:`add_column` warnings.
@@ -230,7 +256,10 @@ class Table(Struct, LGDOCollection):
         if cols is None:
             cols = other_table.keys()
         for name in cols:
-            self.add_column(name, other_table[name])
+            joined_name = f"{prefix}{name}{suffix}"
+            if joined_name in self and keep_mine:
+                continue
+            self.add_column(joined_name, other_table[name])
 
     def get_dataframe(
         self,
