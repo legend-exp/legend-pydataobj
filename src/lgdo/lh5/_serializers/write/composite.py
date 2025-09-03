@@ -131,19 +131,8 @@ def _h5_write_lgdo(
             msg = f"can't overwrite '{name}' in wo_mode 'write_safe'"
             raise LH5EncodeError(msg, fh, group, name)
 
-        # struct, table, waveform table or histogram.
+        # struct, table or waveform table.
         if isinstance(obj, types.Struct):
-            if (
-                isinstance(obj, types.Histogram)
-                and wo_mode not in ["w", "o", "of"]
-                and name in group
-            ):
-                msg = f"can't append-write to histogram in wo_mode '{wo_mode}'"
-                raise LH5EncodeError(msg, fh, group, name)
-            if isinstance(obj, types.Histogram) and write_start != 0:
-                msg = f"can't write histogram in wo_mode '{wo_mode}' with write_start != 0"
-                raise LH5EncodeError(msg, fh, group, name)
-
             return _h5_write_struct(
                 obj,
                 name,
@@ -153,6 +142,27 @@ def _h5_write_lgdo(
                 n_rows=n_rows,  # if isinstance(obj, types.Table | types.Histogram) else None,
                 wo_mode=wo_mode,
                 write_start=write_start,
+                **h5py_kwargs,
+            )
+
+        # histograms
+        if isinstance(obj, types.Histogram):
+            if wo_mode not in ["w", "o", "of"] and name in group:
+                msg = f"can't append-write to histogram in wo_mode '{wo_mode}'"
+                raise LH5EncodeError(msg, fh, group, name)
+            if write_start != 0:
+                msg = f"can't write histogram in wo_mode '{wo_mode}' with write_start != 0"
+                raise LH5EncodeError(msg, fh, group, name)
+
+            return _h5_write_histogram(
+                obj,
+                name,
+                fh,
+                group=group,
+                start_row=start_row,
+                n_rows=n_rows,
+                wo_mode=wo_mode,
+                write_start=0,
                 **h5py_kwargs,
             )
 
@@ -357,6 +367,54 @@ def _h5_write_struct(
 
         _h5_write_lgdo(
             obj_fld,
+            str(field),
+            lh5_file,
+            group=group,
+            start_row=start_row,
+            n_rows=n_rows,
+            wo_mode=wo_mode,
+            write_start=write_start,
+            **h5py_kwargs,
+        )
+
+
+def _h5_write_histogram(
+    obj,
+    name,
+    lh5_file,
+    group="/",
+    start_row=0,
+    n_rows=None,
+    wo_mode="append",
+    write_start=0,
+    **h5py_kwargs,
+):
+    # this works for structs and derived (tables)
+    assert isinstance(obj, types.Histogram)
+
+    attrs_overwrite = wo_mode == "o"
+
+    group = utils.get_h5_group(
+        name,
+        group,
+        grp_attrs=obj.attrs,
+        overwrite=attrs_overwrite,
+    )
+    keys = ("binning", "weights", "isdensity")
+    # If the mode is overwrite, then we need to peek into the file's
+    # table's existing fields. If we are writing a new table to the
+    # group that does not contain an old field, we should delete that
+    # old field from the file
+    if wo_mode == "o":
+        # Find the old keys in the group that are not present in the
+        # new table's keys, then delete them
+        for key in list(set(group.keys()) - set(obj._contents.keys())):
+            log.debug(f"{key} is not present in new table, deleting field")
+            del group[key]
+
+    for field in keys:
+        _h5_write_lgdo(
+            obj._contents[field],
             str(field),
             lh5_file,
             group=group,

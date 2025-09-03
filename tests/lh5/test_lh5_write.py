@@ -432,7 +432,7 @@ def test_write_histogram_variable(caplog, tmptestdir):
         isdensity=True,
         attrs={"testattr": "test"},
     )
-    h2["weights"].attrs["weightattr"] = "testweight"
+    h2.weights.attrs["weightattr"] = "testweight"
     h2.binning[0].attrs["binningattr"] = "testbinning"
 
     # Same field name, different values
@@ -466,7 +466,7 @@ def test_write_histogram_variable(caplog, tmptestdir):
 
     # ensure that reading back attrs not only on binedges works.
     assert h3.attrs["testattr"] == "test"
-    assert h3["weights"].attrs["weightattr"] == "testweight"
+    assert h3.weights.attrs["weightattr"] == "testweight"
     assert h3.binning[0].attrs["binningattr"] == "testbinning"
 
 

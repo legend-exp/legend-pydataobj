@@ -9,7 +9,6 @@ import pandas as pd
 import pytest
 
 from lgdo import Array, Histogram, Scalar, lh5
-from lgdo.lh5.exceptions import LH5DecodeError
 
 
 def test_init_hist_regular(caplog):
@@ -97,8 +96,8 @@ def test_init_np():
 
 def test_datatype_name():
     h = Histogram(np.array([1, 1]), (np.array([0, 1, 2]),))
-    assert h.datatype_name() == "struct"
-    assert h.form_datatype() == "struct{binning,isdensity,weights}"
+    assert h.datatype_name() == "histogram"
+    assert h.form_datatype() == "histogram<1>{real}"
 
 
 def test_axes():
@@ -266,7 +265,7 @@ def test_view_as_np():
 
 def test_not_like_table():
     h = Histogram(np.array([1, 1]), (np.array([0, 1, 2]),))
-    assert h.form_datatype() == "struct{binning,isdensity,weights}"
+    assert h.form_datatype() == "histogram<1>{real}"
     with pytest.raises(AttributeError):
         x = h.x  # noqa: F841
     with pytest.raises(AttributeError):
@@ -296,7 +295,7 @@ def test_read_histogram_testdata(lgnd_test_data):
 
 def test_read_histogram_multiple(lgnd_test_data):
     file = lgnd_test_data.get_path("lh5/lgdo-histograms.lh5")
-    with pytest.raises(LH5DecodeError):
+    with pytest.raises(TypeError):
         lh5.read("test_histogram_range", [file, file])
 
 
