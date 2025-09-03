@@ -17,7 +17,12 @@ _lgdo_datatype_map: dict[str, lgdo.LGDO] = OrderedDict(
         ),
         (
             lgdo.Histogram,
-            rf"^struct\{{(?:{'|'.join([','.join(p) for p in perm(['binning', 'weights', 'isdensity'])])})\}}$",
+            # the second datatype was wrong in old LH5 spec versions, but already was used with python tooling.
+            "^(?:"
+            + r"histogram<\d+>\{.+\}"
+            + "|"
+            + rf"struct\{{(?:{'|'.join([','.join(p) for p in perm(['binning', 'weights', 'isdensity'])])})\}}"
+            + ")$",
         ),
         (lgdo.Struct, r"^struct\{.*\}$"),
         (lgdo.Table, r"^table\{.*\}$"),

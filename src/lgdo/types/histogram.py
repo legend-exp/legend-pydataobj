@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
 
+from .. import utils
 from .array import Array
 from .lgdo import LGDO
 from .scalar import Scalar
@@ -17,7 +18,7 @@ from .struct import Struct
 log = logging.getLogger(__name__)
 
 
-class Histogram(Struct):
+class Histogram(LGDO):
     class Axis(Struct):
         def __init__(
             self,
@@ -203,7 +204,7 @@ class Histogram(Struct):
         binedge_attrs: dict[str, Any] | None = None,
         flow: bool = True,
     ) -> None:
-        """A special struct to contain histogrammed data.
+        """A special object to contain histogrammed data.
 
         Parameters
         ----------
@@ -305,22 +306,37 @@ class Histogram(Struct):
 
         b = Struct({f"axis_{i}": a for i, a in enumerate(b)})
 
-        super().__init__(
-            {"binning": b, "weights": w, "isdensity": Scalar(isdensity)},
-            attrs,
-        )
+        self._contents = {"binning": b, "weights": w, "isdensity": Scalar(isdensity)}
+
+        # note: This is ugly.
+        if (
+            attrs is not None
+            and "datatype" in attrs
+            and attrs["datatype"].startswith("struct{")
+        ):
+            attrs["datatype"] = self.form_datatype()
+
+        super().__init__(attrs)
+
+    def datatype_name(self) -> str:
+        return "histogram"
+
+    def form_datatype(self) -> str:
+        nd = str(len(self.binning))
+        et = utils.get_element_type(self.weights)
+        return self.datatype_name() + "<" + nd + ">{" + et + "}"
 
     @property
     def isdensity(self) -> bool:
-        return self["isdensity"].value
+        return self._contents["isdensity"].value
 
     @property
     def weights(self) -> Array:
-        return self["weights"]
+        return self._contents["weights"]
 
     @property
     def binning(self) -> tuple[Histogram.Axis, ...]:
-        bins = sorted(self["binning"].items())
+        bins = sorted(self._contents["binning"].items())
         assert all(isinstance(v, Histogram.Axis) for k, v in bins)
         return tuple(v for _, v in bins)
 

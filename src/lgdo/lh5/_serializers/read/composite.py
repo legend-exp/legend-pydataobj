@@ -375,7 +375,7 @@ def _h5_read_histogram(
     n_rows=sys.maxsize,
     idx=None,
     use_h5idx=False,
-    field_mask=None,
+    field_mask=None,  # noqa: ARG001
     obj_buf=None,
     obj_buf_start=0,
     decompress=True,
@@ -384,20 +384,26 @@ def _h5_read_histogram(
         msg = "reading a histogram into an existing object buffer is not supported"
         raise LH5DecodeError(msg, fname, oname)
 
-    struct, n_rows_read = _h5_read_struct(
-        h5g,
-        fname,
-        oname,
-        start_row=start_row,
-        n_rows=n_rows,
-        idx=idx,
-        use_h5idx=use_h5idx,
-        field_mask=field_mask,
-        decompress=decompress,
-    )
+    attrs = utils.read_attrs(h5g, fname, oname)
+
+    # loop over fields and read
+    obj_dict = {}
+    for field in ("binning", "weights", "isdensity"):
+        h5o = h5py.h5o.open(h5g, field.encode("utf-8"))
+        obj_dict[field], _ = _h5_read_lgdo(
+            h5o,
+            fname,
+            f"{oname}/{field}",
+            start_row=start_row,
+            n_rows=n_rows,
+            idx=idx,
+            use_h5idx=use_h5idx,
+            decompress=decompress,
+        )
+        h5o.close()
 
     binning = []
-    for _, a in struct.binning.items():
+    for _, a in obj_dict["binning"].items():
         be = a.binedges
         if isinstance(be, Struct):
             b = (None, be.first.value, be.last.value, be.step.value, a.closedleft.value)
@@ -412,9 +418,8 @@ def _h5_read_histogram(
         ax["binedges"].attrs = be.getattrs(datatype=True)
         binning.append(ax)
 
-    isdensity = struct.isdensity.value
-    weights = struct.weights
-    attrs = struct.getattrs(datatype=True)
+    isdensity = obj_dict["isdensity"].value
+    weights = obj_dict["weights"]
     histogram = Histogram(weights, binning, isdensity, attrs=attrs)
 
-    return histogram, n_rows_read
+    return histogram, 1
