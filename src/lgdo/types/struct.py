@@ -92,7 +92,7 @@ class Struct(LGDO, MutableMapping):
             new fields as needed
         obj
             object to add. Can be any LGDO object, or a mapping from names
-            to LGDO objects that will be converted to an LGDO Struct
+            to LGDO objects that will be converted to an LGDO `Struct`
         """
         name1, name2 = parser.match(name).groups()
         if name2:

@@ -171,9 +171,13 @@ class Table(Struct, LGDOCollection):
         Parameters
         ----------
         name
-            the name for the field in the table.
+            key to use for field. Key can be nested (e.g. `name1.name2` or
+            `name1/name2`); this will navigate through the tree, creating
+            new fields as needed
         obj
-            the object to be added to the table.
+            object to add. Can be any `LGDOCollection`, or a mapping from names
+            to `LGDOCollection`s that will be converted to an LGDO `Table`.
+            Size of `obj` should match size of this `Table`
         use_obj_size
             if ``True``, resize the table to match the length of `obj`.
         """
