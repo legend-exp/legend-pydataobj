@@ -81,8 +81,19 @@ class Struct(LGDO, MutableMapping):
     def update_datatype(self) -> None:
         self.attrs["datatype"] = self.form_datatype()
 
-    def add_field(self, name: str | int, obj: LGDO | Mapping) -> None:
-        """Add a field to the table."""
+    def add_field(self, name: str | int, obj: LGDO | Mapping[str, LGDO]) -> None:
+        """Add a field to the table or set an existing field.
+
+         Parameters
+        ----------
+        name
+            key to use for field. Key can be nested (e.g. `name1.name2` or
+            `name1/name2`); this will navigate through the tree, creating
+            new fields as needed
+        obj
+            object to add. Can be any LGDO object, or a mapping from names
+            to LGDO objects that will be converted to an LGDO Struct
+        """
         name1, name2 = parser.match(name).groups()
         if name2:
             if not name1:

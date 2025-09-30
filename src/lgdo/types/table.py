@@ -158,7 +158,10 @@ class Table(Struct, LGDOCollection):
         self.size = new_size
 
     def add_field(
-        self, name: str, obj: LGDOCollection, use_obj_size: bool = False
+        self,
+        name: str,
+        obj: LGDOCollection | Mapping[str, LGDOCollection],
+        use_obj_size: bool = False,
     ) -> None:
         """Add a field (column) to the table.
 
