@@ -158,7 +158,7 @@ class Array(LGDOCollection):
                 self.reserve_capacity(int(2 ** (np.ceil(np.log2(new_size)))))
 
     def append(self, value: Array | np.scalar | np.ndarray) -> None:
-        "Append value(s) to end of array (with copy), resizing array" 
+        "Append value(s) to end of array (with copy), resizing array"
         self.insert(len(self), value)
 
     def insert(self, i: int, value: Array | np.scalar | np.ndarray) -> None:
