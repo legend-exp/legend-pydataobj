@@ -120,9 +120,9 @@ class Table(Struct, LGDOCollection):
             for field, cap in capacity.items():
                 self[field].reserve_capacity(cap)
 
-    def get_capacity(self) -> dict[str,int]:
+    def get_capacity(self) -> dict[str, int]:
         "Return mapping from field name to capacity"
-        return {k:v.get_capacity() for k, v in self.items()}
+        return {k: v.get_capacity() for k, v in self.items()}
 
     def trim_capacity(self) -> int:
         "Set capacity for each column to be minimum needed to support size"
@@ -142,7 +142,7 @@ class Table(Struct, LGDOCollection):
             emit a warning if contents for any field must be resized. This
             is intended for use with ``new_size = None``
         trim
-            call :method:`trim_capacity` after resizing to conserve memory
+            call :meth:`trim_capacity` after resizing to conserve memory
         """
         # if new_size = None, use the size from the first field
         for field, obj in self.items():
@@ -162,7 +162,7 @@ class Table(Struct, LGDOCollection):
 
     def insert(self, i: int, vals: Table | Mapping[str, Any]) -> None:
         """Insert new row(s) into table
-        
+
         Parameters
         ----------
         i

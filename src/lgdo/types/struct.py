@@ -84,7 +84,7 @@ class Struct(LGDO, MutableMapping):
     def add_field(self, name: str | int, obj: LGDO | Mapping[str, LGDO]) -> None:
         """Add a field to the table or set an existing field.
 
-         Parameters
+        Parameters
         ----------
         name
             key to use for field. Key can be nested (e.g. ``name1.name2`` or
@@ -142,7 +142,7 @@ class Struct(LGDO, MutableMapping):
         nested Structs, only update at the lowest level of nesting; unlike for
         nested dicts, nested fields not included in other will not be removed.
 
-         Parameters
+        Parameters
         ----------
         other
             Struct/Mapping from fields to new values
