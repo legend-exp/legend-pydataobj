@@ -104,31 +104,46 @@ class Table(Struct, LGDOCollection):
         """Provides ``__len__`` for this array-like class."""
         return self.size
 
-    def reserve_capacity(self, capacity: int | list) -> None:
-        "Set size (number of rows) of internal memory buffer"
+    def reserve_capacity(self, capacity: int | Mapping[str | int]) -> None:
+        """Set size (number of rows) of internal memory buffer
+
+        Parameters
+        ----------
+        capacity
+            new capacities for fields in table. If `int`, set all capacities
+            to value; if `Mapping`, set capacity field-by-field.
+        """
         if isinstance(capacity, int):
             for obj in self.values():
                 obj.reserve_capacity(capacity)
         else:
-            if len(capacity) != len(self.keys()):
-                msg = "List of capacities must have same length as number of keys"
-                raise ValueError(msg)
+            for field, cap in capacity.items():
+                self[field].reserve_capacity(cap)
 
-            for obj, cap in zip(self.values(), capacity):
-                obj.reserve_capacity(cap)
-
-    def get_capacity(self) -> int:
-        "Get list of capacities for each key"
-        return [v.get_capacity() for v in self.values()]
+    def get_capacity(self) -> dict[str,int]:
+        "Return mapping from field name to capacity"
+        return {k:v.get_capacity() for k, v in self.items()}
 
     def trim_capacity(self) -> int:
-        "Set capacity to be minimum needed to support Array size"
+        "Set capacity for each column to be minimum needed to support size"
         for v in self.values():
             v.trim_capacity()
 
     def resize(
         self, new_size: int | None = None, do_warn: bool = False, trim: bool = False
     ) -> None:
+        """Resize all columns of the table
+
+        Parameters
+        ----------
+        new_size
+            new size of table. If ``None`` use size of first field found
+        do_warn
+            emit a warning if contents for any field must be resized. This
+            is intended for use with ``new_size = None``
+        trim
+            call :method:`trim_capacity` after resizing to conserve memory
+        """
         # if new_size = None, use the size from the first field
         for field, obj in self.items():
             if new_size is None:
@@ -145,8 +160,16 @@ class Table(Struct, LGDOCollection):
                     obj.resize(new_size, trim)
         self.size = new_size
 
-    def insert(self, i: int, vals: dict) -> None:
-        "Insert vals into table at row i. Vals is a mapping from table key to val"
+    def insert(self, i: int, vals: Table | Mapping[str, Any]) -> None:
+        """Insert new row(s) into table
+        
+        Parameters
+        ----------
+        i
+            row at which to insert values
+        vals
+            values to add. Require same keys as table
+        """
         new_size = None
         for k, ar in self.items():
             ar.insert(i, vals[k])
@@ -171,13 +194,13 @@ class Table(Struct, LGDOCollection):
         Parameters
         ----------
         name
-            key to use for field. Key can be nested (e.g. `name1.name2` or
-            `name1/name2`); this will navigate through the tree, creating
+            key to use for field. Key can be nested (e.g. ``name1.name2`` or
+            ``name1/name2``); this will navigate through the tree, creating
             new fields as needed
         obj
-            object to add. Can be any `LGDOCollection`, or a mapping from names
-            to `LGDOCollection`s that will be converted to an LGDO `Table`.
-            Size of `obj` should match size of this `Table`
+            object to add. Can be any :class:`.LGDOCollection`, or a mapping from names
+            to LGDOCollections that will be converted to an LGDO :class:`.Table`.
+            Size of ``obj`` should match size of this Table
         use_obj_size
             if ``True``, resize the table to match the length of `obj`.
         """

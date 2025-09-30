@@ -133,7 +133,16 @@ class Array(LGDOCollection):
         is an int, do not change size of inner dimensions.
 
         If new_size is a collection, internal memory will be re-allocated, so
-        this should be done only rarely!"""
+        this should be done only rarely!
+
+        Parameters
+        ----------
+        new_size
+            number of rows after resize. If provided as a collection, also
+            resize inner dimensions
+        trim
+            after resizing, change capacity to match size
+        """
 
         if isinstance(new_size, Collection):
             self._size = new_size[0]
@@ -148,12 +157,14 @@ class Array(LGDOCollection):
             if new_size > self.get_capacity():
                 self.reserve_capacity(int(2 ** (np.ceil(np.log2(new_size)))))
 
-    def append(self, value: np.ndarray) -> None:
-        "Append value to end of array (with copy)"
+    def append(self, value: Array | np.scalar | np.ndarray) -> None:
+        "Append value(s) to end of array (with copy), resizing array" 
         self.insert(len(self), value)
 
-    def insert(self, i: int, value: Array | np.ndarray) -> None:
-        "Insert value into row i (with copy)"
+    def insert(self, i: int, value: Array | np.scalar | np.ndarray) -> None:
+        """Insert value(s) into row i (with copy). If collection of values are provided
+        insert all values. Array will be resized and subsequent values will be shifted.
+        """
         if i > len(self):
             msg = f"index {i} is out of bounds for array with size {len(self)}"
             raise IndexError(msg)
@@ -173,7 +184,7 @@ class Array(LGDOCollection):
             msg = f"Could not insert value with shape {value.shape} into Array with shape {self.shape}"
             raise ValueError(msg)
 
-    def replace(self, i: int, value: int | float) -> None:
+    def replace(self, i: int, value: np.scalar | np.ndarray) -> None:
         "Replace value at row i"
         if i >= len(self):
             msg = f"index {i} is out of bounds for array with size {len(self)}"

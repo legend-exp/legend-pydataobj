@@ -87,12 +87,12 @@ class Struct(LGDO, MutableMapping):
          Parameters
         ----------
         name
-            key to use for field. Key can be nested (e.g. `name1.name2` or
-            `name1/name2`); this will navigate through the tree, creating
+            key to use for field. Key can be nested (e.g. ``name1.name2`` or
+            ``name1/name2``); this will navigate through the tree, creating
             new fields as needed
         obj
             object to add. Can be any LGDO object, or a mapping from names
-            to LGDO objects that will be converted to an LGDO `Struct`
+            to LGDO objects that will be converted to an LGDO :class:`.Struct`
         """
         name1, name2 = parser.match(name).groups()
         if name2:
@@ -114,6 +114,9 @@ class Struct(LGDO, MutableMapping):
             self.update_datatype()
 
     def __getitem__(self, name: str) -> LGDO:
+        """Get value associated with field. Name can be nested (e.g. ``name1.name2``
+        or ``name1/name2``); this will search in nested Structs
+        """
         name1, name2 = parser.match(name).groups()
         obj = self.obj_dict[name1] if name1 else self
         return obj if not name2 else obj[name2]
@@ -125,14 +128,25 @@ class Struct(LGDO, MutableMapping):
         self.remove_field(name, delete=True)
 
     def __iter__(self) -> Iterator[str]:
+        "Iterator over top level fields"
         return iter(self.obj_dict)
 
     def __len__(self) -> int:
+        "Return number of fields"
         return len(self.obj_dict)
 
     def update(
-        self, other: Mapping[str, LGDO] | Iterable[str, LGDO] = (), /, **kwargs
+        self, other: Struct | Mapping[str, LGDO] | Iterable[str, LGDO] = (), /, **kwargs
     ) -> None:
+        """Add or set a field(s) to the table or set an existing field. For
+        nested Structs, only update at the lowest level of nesting; unlike for
+        nested dicts, nested fields not included in other will not be removed.
+
+         Parameters
+        ----------
+        other
+            Struct/Mapping from fields to new values
+        """
         for k, v in chain(
             other.items() if isinstance(other, Mapping) else other, kwargs.items()
         ):
