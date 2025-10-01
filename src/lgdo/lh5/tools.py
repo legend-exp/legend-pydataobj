@@ -3,17 +3,19 @@ from __future__ import annotations
 import fnmatch
 import logging
 from copy import copy
+from pathlib import Path
 
 import h5py
 
 from . import utils
+from .exceptions import LH5DecodeError
 from .store import LH5Store
 
 log = logging.getLogger(__name__)
 
 
 def ls(
-    lh5_file: str | h5py.Group,
+    lh5_file: str | Path | h5py.Group,
     lh5_group: str = "",
     recursive: bool = False,
 ) -> list[str]:
@@ -39,8 +41,8 @@ def ls(
 
     lh5_st = LH5Store()
     # To use recursively, make lh5_file a h5group instead of a string
-    if isinstance(lh5_file, str):
-        lh5_file = lh5_st.gimme_file(lh5_file, "r")
+    if isinstance(lh5_file, (str, Path)):
+        lh5_file = lh5_st.gimme_file(str(Path(lh5_file)), "r")
         if lh5_group.startswith("/"):
             lh5_group = lh5_group[1:]
 
@@ -75,7 +77,7 @@ def ls(
 
 
 def show(
-    lh5_file: str | h5py.Group,
+    lh5_file: str | Path | h5py.Group,
     lh5_group: str = "/",
     attrs: bool = False,
     indent: str = "",
@@ -121,8 +123,11 @@ def show(
         return
 
     # open file
-    if isinstance(lh5_file, str):
-        lh5_file = h5py.File(utils.expand_path(lh5_file), "r", locking=False)
+    if isinstance(lh5_file, (str, Path)):
+        try:
+            lh5_file = h5py.File(utils.expand_path(Path(lh5_file)), "r", locking=False)
+        except (OSError, FileExistsError) as oe:
+            raise LH5DecodeError(oe, lh5_file) from oe
 
     # go to group
     if lh5_group != "/":
@@ -144,17 +149,27 @@ def show(
 
     # loop over keys
     while True:
-        val = lh5_file[key]
-        # we want to print the LGDO datatype
-        dtype = val.attrs.get("datatype", default="no datatype")
-        if dtype == "no datatype" and isinstance(val, h5py.Group):
-            dtype = "HDF5 group"
+        is_link = False
+        link_type = lh5_file.get(key, getlink=True)
+        if isinstance(link_type, (h5py.SoftLink, h5py.ExternalLink)):
+            desc = f"-> {link_type.path}"
+            is_link = True
 
-        _attrs = ""
-        if attrs:
-            attrs_d = dict(val.attrs)
-            attrs_d.pop("datatype", "")
-            _attrs = "── " + str(attrs_d) if attrs_d else ""
+        else:
+            val = lh5_file[key]
+
+            # we want to print the LGDO datatype
+            dtype = val.attrs.get("datatype", default="no datatype")
+            if dtype == "no datatype" and isinstance(val, h5py.Group):
+                dtype = "HDF5 group"
+
+            _attrs = ""
+            if attrs:
+                attrs_d = dict(val.attrs)
+                attrs_d.pop("datatype", "")
+                _attrs = "── " + str(attrs_d) if attrs_d else ""
+
+            desc = f"· {dtype} {_attrs}"
 
         # is this the last key?
         killme = False
@@ -166,9 +181,10 @@ def show(
         else:
             char = "├──"
 
-        print(f"{indent}{char} \033[1m{key}\033[0m · {dtype} {_attrs}")  # noqa: T201
+        print(f"{indent}{char} \033[1m{key}\033[0m {desc}")  # noqa: T201
 
-        if detail and isinstance(val, h5py.Dataset):
+        if not is_link and detail and isinstance(val, h5py.Dataset):
+            val = lh5_file[key]
             char = "|       "
             if killme:
                 char = "        "
@@ -202,9 +218,9 @@ def show(
             print(toprint)  # noqa: T201
 
         # if it's a group, call this function recursively
-        if isinstance(val, h5py.Group):
+        if not is_link and isinstance(val, h5py.Group):
             show(
-                val,
+                lh5_file[key],
                 indent=indent + ("    " if killme else "│   "),
                 header=False,
                 attrs=attrs,

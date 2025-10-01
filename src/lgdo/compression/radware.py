@@ -95,13 +95,13 @@ def encode(
     if isinstance(sig_in, np.ndarray):
         s = sig_in.shape
         if len(sig_in) == 0:
-            return np.empty(s[:-1] + (0,), dtype=ubyte), np.empty(0, dtype=uint32)
+            return np.empty((*s[:-1], 0), dtype=ubyte), np.empty(0, dtype=uint32)
 
         if sig_out is None:
             # the encoded signal is an array of bytes
             # -> twice as long as a uint16
             # pre-allocate ubyte (uint8) array, expand last dimension
-            sig_out = np.empty(s[:-1] + (s[-1] * 2,), dtype=ubyte)
+            sig_out = np.empty((*s[:-1], s[-1] * 2), dtype=ubyte)
 
         if sig_out.dtype != ubyte:
             msg = "sig_out must be of type ubyte"
@@ -226,7 +226,7 @@ def decode(
             # allocate output array with lasd dim as large as the longest
             # uncompressed wf
             maxs = np.max(_get_hton_u16(sig_in[0], 0))
-            sig_out = np.empty(s[:-1] + (maxs,), dtype=int32)
+            sig_out = np.empty((*s[:-1], maxs), dtype=int32)
 
         # siglen has one dimension less (the last)
         siglen = np.empty(s[:-1], dtype=uint32)

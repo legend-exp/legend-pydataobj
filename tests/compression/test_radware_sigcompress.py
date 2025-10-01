@@ -75,7 +75,7 @@ def test_core_vs_original(wftable, lgnd_test_data):
     )
 
     # encode
-    enc_wfs = np.zeros(s[:-1] + (2 * s[-1],), dtype="ubyte")
+    enc_wfs = np.zeros((*s[:-1], 2 * s[-1]), dtype="ubyte")
     enclen = np.empty(s[0], dtype="uint32")
 
     _radware_sigcompress_encode(wfs, enc_wfs, shift, enclen, _mask)
@@ -109,14 +109,14 @@ def test_wrapper(wftable):
     s = wfs.shape
     shift = -32768
 
-    enc_wfs = np.zeros(s[:-1] + (2 * s[-1],), dtype="ubyte")
+    enc_wfs = np.zeros((*s[:-1], 2 * s[-1]), dtype="ubyte")
     enclen = np.empty(s[0], dtype="uint32")
     _shift = np.full(s[0], shift, dtype="int32")
 
     _radware_sigcompress_encode(wfs, enc_wfs, _shift, enclen, _mask)
 
     # test if the wrapper gives the same result
-    w_enc_wfs = np.zeros(s[:-1] + (2 * s[-1],), dtype="ubyte")
+    w_enc_wfs = np.zeros((*s[:-1], 2 * s[-1]), dtype="ubyte")
     w_enc_wfs, w_enclen = encode(wfs, sig_out=w_enc_wfs, shift=shift)
     assert isinstance(w_enc_wfs, np.ndarray)
     assert w_enc_wfs.dtype == np.ubyte

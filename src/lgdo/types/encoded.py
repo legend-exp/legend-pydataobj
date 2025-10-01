@@ -92,6 +92,9 @@ class VectorOfEncodedVectors(LGDOCollection):
 
         return False
 
+    def __hash__(self):
+        return hash(self.name)
+
     def reserve_capacity(self, *capacity: int) -> None:
         self.encoded_data.reserve_capacity(*capacity)
         self.decoded_size.reserve_capacity(capacity[0])
@@ -246,17 +249,19 @@ class VectorOfEncodedVectors(LGDOCollection):
         --------
         .LGDO.view_as
         """
-        attach_units = with_units and "units" in self.attrs
+        attach_units = with_units and (
+            "units" in self.attrs or "units" in self.encoded_data.attrs
+        )
 
         if library == "ak":
-            if attach_units:
-                msg = "Pint does not support Awkward yet, you must view the data with_units=False"
-                raise ValueError(msg)
-
             records_list = {
-                "encoded_data": self.encoded_data.view_as("ak"),
+                "encoded_data": self.encoded_data.view_as("ak", with_units=with_units),
                 "decoded_size": np.array(self.decoded_size),
             }
+            if "units" in self.attrs:
+                records_list["encoded_data"] = ak.with_parameter(
+                    records_list["encoded_data"], "units", self.attrs["units"]
+                )
             return ak.Array(records_list)
 
         if library == "np":
@@ -344,6 +349,9 @@ class ArrayOfEncodedEqualSizedArrays(LGDOCollection):
             )
 
         return False
+
+    def __hash__(self):
+        return hash(self.name)
 
     def reserve_capacity(self, *capacity: int) -> None:
         self.encoded_data.reserve_capacity(capacity)
@@ -474,19 +482,21 @@ class ArrayOfEncodedEqualSizedArrays(LGDOCollection):
         --------
         .LGDO.view_as
         """
-        attach_units = with_units and "units" in self.attrs
+        attach_units = with_units and (
+            "units" in self.attrs or "units" in self.encoded_data.attrs
+        )
 
         if library == "ak":
-            if attach_units:
-                msg = "Pint does not support Awkward yet, you must view the data with_units=False"
-                raise ValueError(msg)
-
             records_list = {
-                "encoded_data": self.encoded_data.view_as("ak"),
+                "encoded_data": self.encoded_data.view_as("ak", with_units=with_units),
                 "decoded_size": np.full(
                     len(self.encoded_data.cumulative_length), self.decoded_size.value
                 ),
             }
+            if "units" in self.attrs:
+                records_list["encoded_data"] = ak.with_parameter(
+                    records_list["encoded_data"], "units", self.attrs["units"]
+                )
             return ak.Array(records_list)
 
         if library == "np":

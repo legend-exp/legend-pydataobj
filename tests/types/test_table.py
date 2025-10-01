@@ -86,27 +86,27 @@ def test_resize_and_capacity():
     tbl = Table(col_dict=col_dict)
 
     assert len(tbl) == 4
-    assert tbl.get_capacity() == [4, 4]
+    assert tbl.get_capacity() == {"a": 4, "b": 4}
 
-    tbl.reserve_capacity([5, 7])
+    tbl.reserve_capacity({"a": 5, "b": 7})
     assert len(tbl) == 4
-    assert tbl.get_capacity() == [5, 7]
+    assert tbl.get_capacity() == {"a": 5, "b": 7}
 
     tbl.resize(6)
     assert len(tbl) == 6
-    assert tbl.get_capacity()[0] >= 6
-    assert tbl.get_capacity()[1] == 7
+    assert tbl.get_capacity()["a"] >= 6
+    assert tbl.get_capacity()["b"] == 7
 
     tbl.trim_capacity()
     assert len(tbl) == 6
-    assert tbl.get_capacity() == [6, 6]
+    assert tbl.get_capacity() == {"a": 6, "b": 6}
 
     with pytest.raises(ValueError):
         tbl.reserve_capacity(3)
 
     tbl.clear(trim=True)
     assert len(tbl) == 0
-    assert tbl.get_capacity() == [0, 0]
+    assert tbl.get_capacity() == {"a": 0, "b": 0}
 
 
 def test_append():
@@ -223,8 +223,10 @@ def test_view_as():
     assert isinstance(ak_arr, ak.Array)
     assert list(ak_arr.fields) == ["a", "b", "c", "d"]
 
-    with pytest.raises(ValueError):
-        tbl.view_as("ak", with_units=True)
+    ak_arr = tbl.view_as("ak", with_units=True)
+    assert isinstance(ak_arr, ak.Array)
+    assert list(ak_arr.fields) == ["a", "b", "c", "d"]
+    assert ak.parameters(ak_arr.d.a) == {"units": "m"}
 
     with pytest.raises(TypeError):
         tbl.view_as("np")

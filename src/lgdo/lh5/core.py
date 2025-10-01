@@ -5,6 +5,7 @@ import inspect
 import sys
 from collections.abc import Mapping, Sequence
 from contextlib import suppress
+from pathlib import Path
 from typing import Any
 
 import h5py
@@ -13,12 +14,13 @@ from numpy.typing import ArrayLike
 
 from .. import types
 from . import _serializers
+from .exceptions import LH5DecodeError
 from .utils import read_n_rows
 
 
 def read(
     name: str,
-    lh5_file: str | h5py.File | Sequence[str | h5py.File],
+    lh5_file: str | Path | h5py.File | Sequence[str | Path | h5py.File],
     start_row: int = 0,
     n_rows: int = sys.maxsize,
     idx: ArrayLike = None,
@@ -109,15 +111,20 @@ def read(
     object
         the read-out object
     """
+    close_after = False
     if isinstance(lh5_file, h5py.File):
         lh5_obj = lh5_file[name]
-    elif isinstance(lh5_file, str):
-        lh5_file = h5py.File(lh5_file, mode="r", locking=locking)
+    elif isinstance(lh5_file, (str, Path)):
+        try:
+            lh5_file = h5py.File(str(Path(lh5_file)), mode="r", locking=locking)
+        except (OSError, FileExistsError) as oe:
+            raise LH5DecodeError(oe, lh5_file) from oe
+
+        close_after = True
         try:
             lh5_obj = lh5_file[name]
         except KeyError as ke:
-            err = f"Object {name} not found in file {lh5_file.filename}"
-            raise KeyError(err) from ke
+            raise LH5DecodeError(str(ke), lh5_file, name) from ke
     else:
         if obj_buf is not None:
             obj_buf.resize(obj_buf_start)
@@ -172,29 +179,32 @@ def read(
     if isinstance(idx, np.ndarray) and idx.dtype == np.dtype("?"):
         idx = np.where(idx)[0]
 
-    obj, n_rows_read = _serializers._h5_read_lgdo(
-        lh5_obj.id,
-        lh5_obj.file.filename,
-        lh5_obj.name,
-        start_row=start_row,
-        n_rows=n_rows,
-        idx=idx,
-        use_h5idx=use_h5idx,
-        field_mask=field_mask,
-        obj_buf=obj_buf,
-        obj_buf_start=obj_buf_start,
-        decompress=decompress,
-    )
-    with suppress(AttributeError):
-        obj.resize(obj_buf_start + n_rows_read)
-
-    return obj
+    try:
+        obj, n_rows_read = _serializers._h5_read_lgdo(
+            lh5_obj.id,
+            lh5_obj.file.filename,
+            lh5_obj.name,
+            start_row=start_row,
+            n_rows=n_rows,
+            idx=idx,
+            use_h5idx=use_h5idx,
+            field_mask=field_mask,
+            obj_buf=obj_buf,
+            obj_buf_start=obj_buf_start,
+            decompress=decompress,
+        )
+        with suppress(AttributeError):
+            obj.resize(obj_buf_start + n_rows_read)
+        return obj
+    finally:
+        if close_after:
+            lh5_file.close()
 
 
 def write(
     obj: types.LGDO,
     name: str,
-    lh5_file: str | h5py.File,
+    lh5_file: str | Path | h5py.File,
     group: str | h5py.Group = "/",
     start_row: int = 0,
     n_rows: int | None = None,
@@ -290,7 +300,12 @@ def write(
         datasets. **Note: `compression` Ignored if compression is specified
         as an `obj` attribute.**
     """
-    if wo_mode in ("w", "write", "of", "overwrite_file"):
+
+    if (
+        isinstance(lh5_file, str)
+        and not Path(lh5_file).is_file()
+        and wo_mode in ("w", "write_safe", "of", "overwrite_file")
+    ):
         h5py_kwargs.update(
             {
                 "fs_strategy": "page",
@@ -312,7 +327,7 @@ def write(
 
 def read_as(
     name: str,
-    lh5_file: str | h5py.File | Sequence[str | h5py.File],
+    lh5_file: str | Path | h5py.File | Sequence[str | Path | h5py.File],
     library: str,
     **kwargs,
 ) -> Any:

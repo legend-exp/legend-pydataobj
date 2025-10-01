@@ -61,7 +61,7 @@ def lh5ls(args=None):
     args = parser.parse_args(args)
 
     if args.verbose:
-        lgdogging.setup(logging.DEBUG)
+        lgdogging.setup(logging.DEBUG, logging.getLogger("lgdo"))
     elif args.debug:
         lgdogging.setup(logging.DEBUG, logging.root)
     else:
@@ -164,7 +164,7 @@ Exclude the /data/table1/col1 Table column:
     args = parser.parse_args(args)
 
     if args.verbose:
-        lgdogging.setup(logging.INFO, log)
+        lgdogging.setup(logging.INFO, logging.getLogger("lgdo"))
     elif args.debug:
         lgdogging.setup(logging.DEBUG, logging.root)
     else:

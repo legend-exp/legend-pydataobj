@@ -63,6 +63,9 @@ class Scalar(LGDO):
 
         return False
 
+    def __hash__(self):
+        return hash(self.name)
+
     def __str__(self) -> str:
         attrs = self.getattrs()
         return f"{self.value!s} with attrs={attrs!r}"

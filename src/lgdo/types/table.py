@@ -17,6 +17,8 @@ import numpy as np
 import pandas as pd
 from pandas.io.formats import format as fmt
 
+import lgdo
+
 from .array import Array
 from .arrayofequalsizedarrays import ArrayOfEqualSizedArrays
 from .lgdo import LGDO, LGDOCollection
@@ -102,31 +104,46 @@ class Table(Struct, LGDOCollection):
         """Provides ``__len__`` for this array-like class."""
         return self.size
 
-    def reserve_capacity(self, capacity: int | list) -> None:
-        "Set size (number of rows) of internal memory buffer"
+    def reserve_capacity(self, capacity: int | Mapping[str | int]) -> None:
+        """Set size (number of rows) of internal memory buffer
+
+        Parameters
+        ----------
+        capacity
+            new capacities for fields in table. If `int`, set all capacities
+            to value; if `Mapping`, set capacity field-by-field.
+        """
         if isinstance(capacity, int):
             for obj in self.values():
                 obj.reserve_capacity(capacity)
         else:
-            if len(capacity) != len(self.keys()):
-                msg = "List of capacities must have same length as number of keys"
-                raise ValueError(msg)
+            for field, cap in capacity.items():
+                self[field].reserve_capacity(cap)
 
-            for obj, cap in zip(self.values(), capacity):
-                obj.reserve_capacity(cap)
-
-    def get_capacity(self) -> int:
-        "Get list of capacities for each key"
-        return [v.get_capacity() for v in self.values()]
+    def get_capacity(self) -> dict[str, int]:
+        "Return mapping from field name to capacity"
+        return {k: v.get_capacity() for k, v in self.items()}
 
     def trim_capacity(self) -> int:
-        "Set capacity to be minimum needed to support Array size"
+        "Set capacity for each column to be minimum needed to support size"
         for v in self.values():
             v.trim_capacity()
 
     def resize(
         self, new_size: int | None = None, do_warn: bool = False, trim: bool = False
     ) -> None:
+        """Resize all columns of the table
+
+        Parameters
+        ----------
+        new_size
+            new size of table. If ``None`` use size of first field found
+        do_warn
+            emit a warning if contents for any field must be resized. This
+            is intended for use with ``new_size = None``
+        trim
+            call :meth:`trim_capacity` after resizing to conserve memory
+        """
         # if new_size = None, use the size from the first field
         for field, obj in self.items():
             if new_size is None:
@@ -143,8 +160,16 @@ class Table(Struct, LGDOCollection):
                     obj.resize(new_size, trim)
         self.size = new_size
 
-    def insert(self, i: int, vals: dict) -> None:
-        "Insert vals into table at row i. Vals is a mapping from table key to val"
+    def insert(self, i: int, vals: Table | Mapping[str, Any]) -> None:
+        """Insert new row(s) into table
+
+        Parameters
+        ----------
+        i
+            row at which to insert values
+        vals
+            values to add. Require same keys as table
+        """
         new_size = None
         for k, ar in self.items():
             ar.insert(i, vals[k])
@@ -156,7 +181,10 @@ class Table(Struct, LGDOCollection):
         self.size = new_size
 
     def add_field(
-        self, name: str, obj: LGDOCollection, use_obj_size: bool = False
+        self,
+        name: str,
+        obj: LGDOCollection | Mapping[str, LGDOCollection],
+        use_obj_size: bool = False,
     ) -> None:
         """Add a field (column) to the table.
 
@@ -166,9 +194,13 @@ class Table(Struct, LGDOCollection):
         Parameters
         ----------
         name
-            the name for the field in the table.
+            key to use for field. Key can be nested (e.g. ``name1.name2`` or
+            ``name1/name2``); this will navigate through the tree, creating
+            new fields as needed
         obj
-            the object to be added to the table.
+            object to add. Can be any :class:`.LGDOCollection`, or a mapping from names
+            to LGDOCollections that will be converted to an LGDO :class:`.Table`.
+            Size of ``obj`` should match size of this Table
         use_obj_size
             if ``True``, resize the table to match the length of `obj`.
         """
@@ -325,6 +357,8 @@ class Table(Struct, LGDOCollection):
         expr: str,
         parameters: Mapping[str, str] | None = None,
         modules: Mapping[str, ModuleType] | None = None,
+        with_units: bool = False,
+        library: str | None = None,
     ) -> LGDO:
         """Apply column operations to the table and return a new LGDO.
 
@@ -359,9 +393,16 @@ class Table(Struct, LGDOCollection):
             :func:`numexpr.evaluate`` as `local_dict` argument or to
             :func:`eval` as `locals` argument.
         modules
-            a dictionary of additional modules used by the expression. If this is not `None`
-            then :func:`eval`is used and the expression can depend on any modules from this dictionary in
-            addition to awkward and numpy. These are passed to :func:`eval` as `globals` argument.
+            a dictionary of additional modules used by the expression. If this
+            is not `None` then :func:`eval`is used and the expression can
+            depend on any modules from this dictionary in addition to awkward
+            and numpy. These are passed to :func:`eval` as `globals` argument.
+        with_units
+            attach units to the columns as in :meth:`LGDO.view_as`.
+        library
+            library to convert the columns to with :meth:`LGDO.view_as`,
+            supported libraries are ``np``, ``ak`` or ``lgdo`` (pass in directly
+            the unconverted LGDO objects).
 
         Examples
         --------
@@ -390,16 +431,23 @@ class Table(Struct, LGDOCollection):
         # for later computation
         flat_self = self.flatten()
         self_unwrap = {}
-        has_ak = False
+        has_only_np = False
         for obj in c.co_names:
             if obj in flat_self:
-                if isinstance(flat_self[obj], VectorOfVectors):
-                    self_unwrap[obj] = flat_self[obj].view_as("ak", with_units=False)
-                    has_ak = True
-                else:
-                    self_unwrap[obj] = flat_self[obj].view_as("np", with_units=False)
+                # use the user-selected library or use the np/ak default depending on the type.
+                col_library = library or "np"
+                if library is None and isinstance(flat_self[obj], VectorOfVectors):
+                    col_library = "ak"
+                has_only_np = has_only_np or col_library == "np"
 
-        msg = f"evaluating {expr!r} with locals={(self_unwrap | parameters)} and {has_ak=}"
+                if col_library == "lgdo":
+                    self_unwrap[obj] = flat_self[obj]
+                else:
+                    self_unwrap[obj] = flat_self[obj].view_as(
+                        col_library, with_units=with_units
+                    )
+
+        msg = f"evaluating {expr!r} with locals={(self_unwrap | parameters)} and {has_only_np=}"
         log.debug(msg)
 
         def _make_lgdo(data):
@@ -417,7 +465,7 @@ class Table(Struct, LGDOCollection):
             raise RuntimeError(msg)
 
         # use numexpr if we are only dealing with numpy data types (and no global dictionary)
-        if not has_ak and modules is None:
+        if has_only_np and modules is None:
             try:
                 out_data = ne.evaluate(
                     expr,
@@ -432,11 +480,14 @@ class Table(Struct, LGDOCollection):
                 return _make_lgdo(out_data)
 
             except Exception:
-                msg = f"Warning {expr} could not be evaluated with numexpr probably due to some not allowed characters, trying with eval()."
+                msg = (
+                    f"Warning {expr} could not be evaluated with numexpr probably "
+                    "due to some not allowed characters, trying with eval()."
+                )
                 log.debug(msg)
 
         # resort to good ol' eval()
-        globs = {"ak": ak, "np": np}
+        globs = {"ak": ak, "np": np, "lgdo": lgdo}
         if modules is not None:
             globs = globs | modules
 
@@ -559,14 +610,12 @@ class Table(Struct, LGDOCollection):
             raise TypeError(msg)
 
         if library == "ak":
-            if with_units:
-                msg = "Pint does not support Awkward yet, you must view the data with_units=False"
-                raise ValueError(msg)
-
-            # NOTE: passing the Table directly (which inherits from a dict)
-            # makes it somehow really slow. Not sure why, but this could be due
-            # to extra LGDO fields (like "attrs")
-            return ak.Array({col: self[col].view_as("ak") for col in cols})
+            # NOTE: passing the Table directly (which inherits from a dict) makes it
+            # somehow really slow. ak.Array can unroll dicts just fine, but then uses
+            # ak.from_iter to convert the arrays, instead of a zero-copy operation.
+            return ak.Array(
+                {col: self[col].view_as("ak", with_units=with_units) for col in cols}
+            )
 
         msg = f"{library!r} is not a supported third-party format."
         raise TypeError(msg)

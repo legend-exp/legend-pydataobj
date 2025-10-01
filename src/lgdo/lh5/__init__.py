@@ -7,7 +7,6 @@ browsed easily in python like any `HDF5 <https://www.hdfgroup.org>`_ file using
 
 from __future__ import annotations
 
-from ._serializers.write.array import DEFAULT_HDF5_SETTINGS
 from .core import read, read_as, write
 from .iterator import LH5Iterator
 from .store import LH5Store
@@ -15,14 +14,15 @@ from .tools import ls, show
 from .utils import read_n_rows
 
 __all__ = [
-    "DEFAULT_HDF5_SETTINGS",
     "LH5Iterator",
     "LH5Store",
     "concat",
+    "default_hdf5_settings",
     "ls",
     "read",
     "read_as",
     "read_n_rows",
+    "reset_default_hdf5_settings",
     "show",
     "write",
 ]

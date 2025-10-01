@@ -1,7 +1,6 @@
-# ruff: noqa: ARG001
-
 from __future__ import annotations
 
+import shutil
 from copy import deepcopy
 
 import awkward as ak
@@ -573,3 +572,21 @@ def test_hist(more_lgnd_files):
         processes=2,
     )
     assert np.all(np.array(h_pd_str_mp) == h_exp)
+
+
+def test_iterator_wo_mode_write(tmp_path, lh5_file):
+    dst = tmp_path / "rw.lh5"
+    shutil.copy(lh5_file, dst)
+    it = lh5.LH5Iterator(
+        dst.as_posix(), "/data/struct_full/array", h5py_open_mode="append"
+    )
+    store = it.lh5_st
+    store.write(
+        lgdo.Array(nda=np.array([0], dtype=int)),
+        "dummy",
+        dst.as_posix(),
+        group="/data",
+        wo_mode="append",
+    )
+    assert len(store.read("/data/dummy", dst.as_posix())) == 1
+    assert len(it.read(0)) > 0

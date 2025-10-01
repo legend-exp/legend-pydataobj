@@ -21,7 +21,7 @@ log = logging.getLogger(__name__)
 
 def get_buffer(
     name: str,
-    lh5_file: str | h5py.File | Sequence[str | h5py.File],
+    lh5_file: str | Path | h5py.File | Sequence[str | Path | h5py.File],
     size: int | None = None,
     field_mask: Mapping[str, bool] | Sequence[str] | None = None,
 ) -> types.LGDO:
@@ -39,13 +39,16 @@ def get_buffer(
     return obj
 
 
-def read_n_rows(name: str, h5f: str | h5py.File) -> int | None:
+def read_n_rows(name: str, h5f: str | Path | h5py.File) -> int | None:
     """Look up the number of rows in an Array-like LGDO object on disk.
 
     Return ``None`` if `name` is a :class:`.Scalar` or a :class:`.Struct`.
     """
     if not isinstance(h5f, h5py.File):
-        h5f = h5py.File(h5f, "r", locking=False)
+        try:
+            h5f = h5py.File(h5f, "r", locking=False)
+        except (OSError, FileExistsError) as oe:
+            raise LH5DecodeError(oe, h5f, None) from oe
 
     try:
         h5o = h5f[name].id
@@ -56,12 +59,15 @@ def read_n_rows(name: str, h5f: str | h5py.File) -> int | None:
     return _serializers.read.utils.read_n_rows(h5o, h5f.name, name)
 
 
-def read_size_in_bytes(name: str, h5f: str | h5py.File) -> int | None:
+def read_size_in_bytes(name: str, h5f: str | Path | h5py.File) -> int | None:
     """Look up the size (in B) in an LGDO object in memory. Will crawl
     recursively through members of a Struct or Table
     """
     if not isinstance(h5f, h5py.File):
-        h5f = h5py.File(h5f, "r", locking=False)
+        try:
+            h5f = h5py.File(h5f, "r", locking=False)
+        except (OSError, FileExistsError) as oe:
+            raise LH5DecodeError(oe, h5f) from oe
 
     try:
         h5o = h5f[name].id
@@ -111,7 +117,7 @@ def get_h5_group(
         grp_attrs is not None
         and len(set(grp_attrs.items()) ^ set(group.attrs.items())) > 0
     ):
-        if not overwrite:
+        if not overwrite and len(group.attrs) != 0:
             msg = (
                 f"Provided {grp_attrs=} are different from "
                 f"existing ones {dict(group.attrs)=} but overwrite flag is not set"
@@ -158,10 +164,10 @@ def expand_vars(expr: str, substitute: dict[str, str] | None = None) -> str:
 
 
 def expand_path(
-    path: str,
+    path: str | Path,
     substitute: dict[str, str] | None = None,
     list: bool = False,
-    base_path: str | None = None,
+    base_path: str | Path | None = None,
 ) -> str | list:
     """Expand (environment) variables and wildcards to return absolute paths.
 
@@ -184,18 +190,26 @@ def expand_path(
         Unique absolute path, or list of all absolute paths
     """
     if base_path is not None and base_path != "":
-        base_path = Path(os.path.expandvars(base_path)).expanduser()
-        path = base_path / path
+        base_path = Path(expand_vars(str(base_path))).expanduser()
+        if not Path(path).expanduser().is_absolute():
+            path = base_path / path
 
     # first expand variables
-    _path = expand_vars(path, substitute)
+    _path = expand_vars(str(path), substitute)
 
     # then expand wildcards
     # pathlib glob works differently so use glob for now
     paths = sorted(glob.glob(str(Path(_path).expanduser())))  # noqa: PTH207
 
     if base_path is not None and base_path != "":
-        paths = [os.path.relpath(p, base_path) for p in paths]
+        rel_paths = []
+        for p in paths:
+            p_path = Path(p)
+            try:
+                rel_paths.append(str(p_path.relative_to(base_path)))
+            except ValueError:
+                rel_paths.append(str(p_path))
+        paths = rel_paths
 
     if not list:
         if len(paths) == 0:

@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 
 import h5py
+import hdf5plugin  # noqa: F401, used for compression plugins
 import numpy as np
 
 from ....types import Scalar

@@ -102,3 +102,12 @@ def test_eval_dependency():
         ).view_as("np"),
         [2, 4, 6, 8],
     )
+
+    # test library type selection.
+    assert obj.eval("type(a) == np.ndarray").value
+    assert obj.eval("type(a) == ak.highlevel.Array", library="ak").value
+    assert obj.eval("type(a) == lgdo.Array", library="lgdo").value
+
+    assert obj.eval("type(e) == ak.highlevel.Array").value
+    assert obj.eval("type(e) == np.ndarray", library="np").value
+    assert obj.eval("type(e) == lgdo.VectorOfVectors", library="lgdo").value

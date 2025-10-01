@@ -68,5 +68,6 @@ def test_view():
     with pytest.raises(ValueError):
         aoesa.view_as("pd", with_units=True)
 
-    with pytest.raises(ValueError):
-        aoesa.view_as("ak", with_units=True)
+    v = aoesa.view_as("ak", with_units=True)
+    assert isinstance(v, ak.Array)
+    assert ak.parameters(v) == {"units": "m"}

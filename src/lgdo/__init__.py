@@ -44,6 +44,10 @@ browsed easily in python like any `HDF5 <https://www.hdfgroup.org>`_ file using
 
 from __future__ import annotations
 
+# import this so users can transparently decode data compressed with hdf5plugin
+# filters
+import hdf5plugin  # noqa: F401
+
 from ._version import version as __version__
 from .lh5 import LH5Iterator, ls, read, read_as, read_n_rows, show, write
 from .types import (
