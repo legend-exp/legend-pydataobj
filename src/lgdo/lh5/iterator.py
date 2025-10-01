@@ -1,14 +1,22 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Collection, Iterator, Mapping
+from collections.abc import Callable, Collection, Iterator, Mapping
+from concurrent.futures import Executor, ProcessPoolExecutor
+from copy import deepcopy
+from dataclasses import dataclass
+from functools import partial
+from itertools import chain
+from typing import Any
 from warnings import warn
 
+import awkward as ak
 import numpy as np
 import pandas as pd
+from hist import Hist, axis
 from numpy.typing import NDArray
 
-from ..types import Table
+from ..types import LGDOCollection, Table
 from ..units import default_units_registry as ureg
 from .store import LH5Store
 from .utils import expand_path
@@ -196,7 +204,19 @@ class LH5Iterator(Iterator):
             self.lh5_files[0],
             size=0,
         )
-        self.available_fields = set(self.lh5_buffer)
+
+        def get_available_fields(tab):
+            ret = set()
+            if not isinstance(tab, Table):
+                return ret
+
+            for k, v in tab.items():
+                ret |= {k}
+                if isinstance(v, Table):
+                    ret |= {f"{k}/{field}" for field in get_available_fields(v)}
+            return ret
+
+        self.available_fields = get_available_fields(self.lh5_buffer)
 
         # set field mask and buffer length
         self.reset_field_mask(field_mask)
@@ -452,6 +472,7 @@ class LH5Iterator(Iterator):
         | Collection[Collection[str]]
         | Collection[Mapping[str, bool]]
         | None,
+        warn_missing=True,
     ):
         """Replaces the field mask of this iterator and any friends with mask.
 
@@ -540,7 +561,7 @@ class LH5Iterator(Iterator):
                 suffix=suf,
             )
 
-        if len(remaining_fields) > 0:
+        if warn_missing and len(remaining_fields) > 0:
             logging.warning(f"Fields {remaining_fields} in field mask were not found")
 
     @property
@@ -657,7 +678,7 @@ class LH5Iterator(Iterator):
                 return self.n_entries
         return self._get_file_cumentries(len(self.lh5_files) - 1)
 
-    def __iter__(self):
+    def __iter__(self) -> LH5Iterator:
         """Loop through entries in blocks of size buffer_len."""
         self.current_i_entry = 0
         self.next_i_entry = self.i_start
@@ -676,3 +697,352 @@ class LH5Iterator(Iterator):
             raise StopIteration
         self.next_i_entry = self.current_i_entry + len(buf)
         return buf
+
+    def __deepcopy__(self, memo):
+        """Deep copy everything except lh5_st"""
+        result = LH5Iterator.__new__(LH5Iterator)
+        memo[id(self)] = result
+        for k, v in self.__dict__.items():
+            if k == "lh5_st":
+                result.lh5_st = LH5Store(
+                    base_path=self.lh5_st.base_path, keep_open=self.lh5_st.keep_open
+                )
+            else:
+                setattr(result, k, deepcopy(v, memo))
+        return result
+
+    def __getstate__(self):
+        """Do not try to pickle lh5_st or lh5_buffer"""
+        return dict(
+            self.__dict__,
+            lh5_st={
+                "base_path": self.lh5_st.base_path,
+                "keep_open": self.lh5_st.keep_open,
+            },
+            lh5_buffer=None,
+        )
+
+    def __setstate__(self, d):
+        """Reinitialize lh5_st and lh5_buffer to avoid potential issues"""
+        self.__dict__ = d
+        self.lh5_st = LH5Store(**(d["lh5_st"]))
+        self.lh5_st.gimme_file(self.lh5_files[0])
+        self.lh5_buffer = self.lh5_st.get_buffer(
+            self.groups[0],
+            self.lh5_files[0],
+            size=self.buffer_len,
+            field_mask=self.field_mask,
+        )
+        for fr, pre, suf in zip(self.friend, self.friend_prefix, self.friend_suffix):
+            self.lh5_buffer.join(
+                fr.lh5_buffer,
+                keep_mine=True,
+                prefix=pre,
+                suffix=suf,
+            )
+
+    def _select_groups(self, i_beg, i_end):
+        """Reduce list of files and groups; used by _generate_workers"""
+        s = slice(i_beg, i_end)
+        self.lh5_files = self.lh5_files[s]
+        self.groups = self.groups[s]
+
+        if i_beg > 0:
+            np.subtract(
+                self.file_map,
+                self.file_map[i_beg - 1],
+                out=self.file_map,
+                where=self.file_map != np.iinfo("q").max,
+            )
+            np.subtract(
+                self.entry_map,
+                self.entry_map[i_beg - 1],
+                out=self.entry_map,
+                where=self.entry_map != np.iinfo("q").max,
+            )
+        self.file_map = self.file_map[s]
+        self.entry_map = self.entry_map[s]
+
+        if self.local_entry_list is not None:
+            self.local_entry_list = self.local_entry_list[s]
+        self.global_entry_list = None
+
+        for fr in self.friend:
+            fr._select_groups(i_beg, i_end)
+
+    def _generate_workers(self, n_workers: int):
+        """Create n_workers copy of this iterator, dividing the files and
+        groups between them. These are intended for parallel use"""
+        i_files = np.linspace(0, len(self.lh5_files), n_workers + 1).astype("int")
+        # if we have an entry list, get local entries for all files
+        if self.local_entry_list is not None:
+            for i in range(len(self.lh5_files)):
+                self.get_file_entries(i)
+
+        worker_its = []
+        for i_worker in range(n_workers):
+            it = deepcopy(self)
+            it._select_groups(i_files[i_worker], i_files[i_worker + 1])
+            worker_its += [it]
+
+        return worker_its
+
+    def map(
+        self,
+        fun: Callable[Table, LH5Iterator, Any],
+        processes: Executor | int = None,
+        chunks: int = None,
+        aggregate: Callable = None,
+        init: Any = None,
+        begin: Callable[LH5Iterator] = None,
+        terminate: Callable[LH5Iterator] = None,
+    ) -> Iterator[Any]:
+        """Map function over iterator blocks and return order-preserving list
+        of outputs. Can be multi-threaded provided there are no attempts
+        to modify existing objects. Results will be returned asynchronously for
+        each chunk.
+
+        Parameters
+        ----------
+        fun:
+            function with signature fun(lh5_obj: Table, it: LH5Iterator) -> Any
+            Outputs of function will be collected in list and returned
+        processes:
+            number of processes or multiprocessing processor pool
+        chunks:
+            number of chunks to divide iterator into if multiprocessing. By
+            default use one chunk per thread
+        aggregate:
+            function used to iterably combine outputs of ``fun`` for each block
+            of data. Should have two inputs; first input should be the type of
+            the aggregate, and second of the type returned by ``fun``. This function
+            can either return the result, or perform the aggregation in-place on
+            the first element and return ``None``. If using multi-processing, ``map``
+            will return an async-iterator over the aggregated results from each process.
+            If ``None``, do not aggregate and instead return will iterate over
+            result for each block.
+        init:
+            initial value used for aggregation. If using an aggregating function
+            and ``init`` is ``None``, perform a deep copy of the first element
+        begin:
+            function with signature ``fun(it: LH5Iterator)`` that is run before we
+            loop through a chunk of the iterator
+        terminate:
+            function with the signature ``fun(it: LH5Iterator)`` that is run after
+            we finish looping through a chunk of the iterator
+        """
+
+        # if no aggregate is provided, append results to a list
+        if aggregate is None:
+            init = []
+            aggregate = _append_copy
+
+        if processes is None:
+            return _map_helper(fun, aggregate, init, begin, terminate, self)
+
+        if isinstance(processes, int):
+            processes = ProcessPoolExecutor(processes)
+
+        if chunks is None:
+            chunks = processes._max_workers
+        it_pool = self._generate_workers(chunks)
+
+        result = processes.map(
+            partial(_map_helper, fun, aggregate, init, begin, terminate), it_pool
+        )
+
+        # If no aggregator was given, chain iterators
+        if aggregate is _append_copy:
+            return chain.from_iterable(result)
+        return result
+
+    def query(
+        self,
+        where: Callable | str,
+        processes: Executor | int = None,
+    ):
+        """
+        Query the data files in the iterator and return the selected data
+        as a single table in one of several formats.
+
+        Parameters
+        ----------
+        where:
+            A filter function for selecting data entries. Can be:
+            - A function that returns reduced data, with signature
+              ``fun(lh5_obj: Table, it: LH5Iterator)``. Can return:
+              - ``NDArray``: if 1D list of values; if 2D list of lists of values in
+                same order as axes
+              - ``Collection[ArrayLike]``: return list of values in same order as axes
+              - ``Mapping[str, ArrayLike]``: mapping from axis name to values
+              - ``pandas.DataFrame``: pandas dataframe. Treat as mapping from column
+                name to values
+            - A string expression. This will call `pd.DataFrame.query <https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.query.html>`_ and return
+              a pandas DataFrame containing all columns in the fields mask.
+        processes:
+            number of processes or multiprocessing processor pool
+        """
+        if where is None:
+            where = _identity
+
+        if isinstance(where, str):
+            where = _pandas_query(where)
+
+        test = where(self.lh5_buffer, self)
+        if isinstance(test, LGDOCollection):
+            it = self.map(where, processes, aggregate=Table.append)
+            if isinstance(it, LGDOCollection):
+                return it
+            ret = next(it)
+            for res in it:
+                ret.append(res)
+            return ret
+        if isinstance(test, pd.DataFrame):
+            return pd.concat(list(self.map(where, processes)), ignore_index=True)
+        if isinstance(test, np.ndarray):
+            return np.concatenate(list(self.map(where, processes)))
+        if isinstance(test, ak.Array):
+            return ak.concatenate(list(self.map(where, processes)))
+
+        msg = f"Cannot call query with return type {test.__class__}. "
+        "Allowed return types: LGDOCollection, np.array, pd.DataFrame, ak.Array"
+        raise ValueError(msg)
+
+    def hist(
+        self,
+        ax: Hist | axis | Collection[axis],
+        where: Callable | str = None,
+        processes: Executor | int = None,
+        keys: Collection[str] | str = None,
+        **hist_kwargs,
+    ) -> Hist:
+        """
+        Fill a histogram from data produced by our `where`. If
+        `where` is `None`, fill with all data fetched by iterator.
+
+        Parameters
+        ----------
+        ax:
+            Axis object(s) used to construct the histogram. Can provide a Hist
+            which will be filled as well.
+        where:
+            A filter function for selecting data entries to put into the histogram. Can be:
+            - A function that returns reduced data, with signature
+              ``fun(lh5_obj: Table, it: LH5Iterator)``. Can return:
+              - ``NDArray``: if 1D list of values; if 2D list of lists of values in
+                same order as axes
+              - ``Collection[ArrayLike]``: return list of values in same order as axes
+              - ``Mapping[str, ArrayLike]``: mapping from axis name to values
+              - ``pandas.DataFrame``: pandas dataframe. Treat as mapping from column
+                name to values
+            - A string expression. This will call `pd.DataFrame.query <https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.query.html>`_ and return
+              a pandas DataFrame containing all columns in the fields mask.
+        processes:
+            number of processes or multiprocessing processor pool
+        keys:
+            list of keys fields corresponding to axes. Use if where
+            returns a mapping with names different from axis names.
+        hist_kwargs:
+            additional keyword arguments for constructing Hist. See `hist.Hist`.
+        """
+
+        # get initial hist for each thread
+        if isinstance(ax, axis.AxesMixin):
+            h = Hist(ax, **hist_kwargs)
+        elif isinstance(ax, Collection):
+            h = Hist(*ax, **hist_kwargs)
+        elif isinstance(ax, Hist):
+            h = ax.copy()
+            h[...] = 0
+
+        if where is None:
+            where = _identity
+        elif isinstance(where, str):
+            where = _pandas_query(where)
+
+        h = self.map(
+            where,
+            processes=processes,
+            aggregate=_hist_filler(keys),
+            init=h,
+        )
+        if isinstance(h, Iterator):
+            h = sum(h)
+
+        if isinstance(ax, Hist):
+            ax += h
+            return ax
+        return h
+
+
+# Would that python multiprocessing allowed lambdas...
+def _identity(val, _):
+    return val
+
+
+def _append_copy(list, val):
+    list.append(deepcopy(val))
+
+
+def _map_helper(fun, aggregator, init, begin, terminate, it):
+    if begin:
+        begin(it)
+
+    aggregate = init
+    for tab in it:
+        result = fun(tab, it)
+
+        if aggregate is None:
+            # if no init, initialize on first entry
+            aggregate = deepcopy(result)
+        else:
+            res = aggregator(aggregate, result)
+            if res is not None:
+                aggregate = res
+
+    if terminate:
+        terminate(it)
+
+    return aggregate
+
+
+@dataclass
+class _pandas_query:
+    "Helper for when query is called on a string"
+
+    expr: str
+
+    def __call__(self, tab, _):
+        return tab.view_as("pd").query(self.expr)
+
+
+class _hist_filler:
+    def __init__(self, keys):
+        if keys is not None:
+            if isinstance(keys, str):
+                keys = [keys]
+            elif not isinstance(keys, list):
+                keys = list(keys)
+        self.keys = keys
+
+    def __call__(self, hist, data):
+        if isinstance(data, np.ndarray) and len(data.shape) == 1:
+            hist.fill(data)
+        elif isinstance(data, np.ndarray) and len(data.shape) == 2:
+            hist.fill(*data)
+        elif isinstance(data, (pd.DataFrame, Mapping)):
+            if self.keys is not None:
+                hist.fill(*[data[k] for k in self.keys])
+            else:
+                hist.fill(**data)
+        elif isinstance(data, ak.Array):
+            # TODO: handle nested ak arrays
+            if self.keys is not None:
+                hist.fill(*[data[k] for k in self.keys])
+            else:
+                hist.fill(*[data[f] for f in data.fields])
+        elif isinstance(data, Collection):
+            hist.fill(*data)
+        else:
+            msg = "data returned by where is not compatible with hist. Must be a 1d or 2d numpy array, a list of arrays, or a mapping from str to array"
+            raise ValueError(msg)
