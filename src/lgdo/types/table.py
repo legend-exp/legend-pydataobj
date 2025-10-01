@@ -104,31 +104,46 @@ class Table(Struct, LGDOCollection):
         """Provides ``__len__`` for this array-like class."""
         return self.size
 
-    def reserve_capacity(self, capacity: int | list) -> None:
-        "Set size (number of rows) of internal memory buffer"
+    def reserve_capacity(self, capacity: int | Mapping[str | int]) -> None:
+        """Set size (number of rows) of internal memory buffer
+
+        Parameters
+        ----------
+        capacity
+            new capacities for fields in table. If `int`, set all capacities
+            to value; if `Mapping`, set capacity field-by-field.
+        """
         if isinstance(capacity, int):
             for obj in self.values():
                 obj.reserve_capacity(capacity)
         else:
-            if len(capacity) != len(self.keys()):
-                msg = "List of capacities must have same length as number of keys"
-                raise ValueError(msg)
+            for field, cap in capacity.items():
+                self[field].reserve_capacity(cap)
 
-            for obj, cap in zip(self.values(), capacity):
-                obj.reserve_capacity(cap)
-
-    def get_capacity(self) -> int:
-        "Get list of capacities for each key"
-        return [v.get_capacity() for v in self.values()]
+    def get_capacity(self) -> dict[str, int]:
+        "Return mapping from field name to capacity"
+        return {k: v.get_capacity() for k, v in self.items()}
 
     def trim_capacity(self) -> int:
-        "Set capacity to be minimum needed to support Array size"
+        "Set capacity for each column to be minimum needed to support size"
         for v in self.values():
             v.trim_capacity()
 
     def resize(
         self, new_size: int | None = None, do_warn: bool = False, trim: bool = False
     ) -> None:
+        """Resize all columns of the table
+
+        Parameters
+        ----------
+        new_size
+            new size of table. If ``None`` use size of first field found
+        do_warn
+            emit a warning if contents for any field must be resized. This
+            is intended for use with ``new_size = None``
+        trim
+            call :meth:`trim_capacity` after resizing to conserve memory
+        """
         # if new_size = None, use the size from the first field
         for field, obj in self.items():
             if new_size is None:
@@ -145,14 +160,31 @@ class Table(Struct, LGDOCollection):
                     obj.resize(new_size, trim)
         self.size = new_size
 
-    def insert(self, i: int, vals: dict) -> None:
-        "Insert vals into table at row i. Vals is a mapping from table key to val"
+    def insert(self, i: int, vals: Table | Mapping[str, Any]) -> None:
+        """Insert new row(s) into table
+
+        Parameters
+        ----------
+        i
+            row at which to insert values
+        vals
+            values to add. Require same keys as table
+        """
+        new_size = None
         for k, ar in self.items():
             ar.insert(i, vals[k])
-        self.size += 1
+            if new_size is None:
+                new_size = len(ar)
+            elif new_size != len(ar):
+                msg = "inserted vals must all have same length"
+                raise ValueError(msg)
+        self.size = new_size
 
     def add_field(
-        self, name: str, obj: LGDOCollection, use_obj_size: bool = False
+        self,
+        name: str,
+        obj: LGDOCollection | Mapping[str, LGDOCollection],
+        use_obj_size: bool = False,
     ) -> None:
         """Add a field (column) to the table.
 
@@ -162,15 +194,22 @@ class Table(Struct, LGDOCollection):
         Parameters
         ----------
         name
-            the name for the field in the table.
+            key to use for field. Key can be nested (e.g. ``name1.name2`` or
+            ``name1/name2``); this will navigate through the tree, creating
+            new fields as needed
         obj
-            the object to be added to the table.
+            object to add. Can be any :class:`.LGDOCollection`, or a mapping from names
+            to LGDOCollections that will be converted to an LGDO :class:`.Table`.
+            Size of ``obj`` should match size of this Table
         use_obj_size
             if ``True``, resize the table to match the length of `obj`.
         """
-        if not hasattr(obj, "__len__"):
-            msg = "cannot add field of type"
-            raise TypeError(msg, type(obj).__name__)
+        if not isinstance(obj, LGDO):
+            if isinstance(obj, Mapping):
+                obj = Table(obj, size=self.size)
+            else:
+                msg = "cannot add field of type"
+                raise TypeError(msg, type(obj).__name__)
 
         super().add_field(name, obj)
 
@@ -190,6 +229,10 @@ class Table(Struct, LGDOCollection):
             new_size = len(obj) if use_obj_size else self.size
             self.resize(new_size=new_size)
 
+    def replace(self, i: int, vals: Mapping | Table) -> None:
+        for k, ar in self.items():
+            ar.replace(i, vals[k])
+
     def add_column(
         self, name: str, obj: LGDOCollection, use_obj_size: bool = False
     ) -> None:
@@ -201,7 +244,13 @@ class Table(Struct, LGDOCollection):
         super().remove_field(name, delete)
 
     def join(
-        self, other_table: Table, cols: list[str] | None = None, do_warn: bool = True
+        self,
+        other_table: Table,
+        cols: list[str] | None = None,
+        keep_mine: bool = False,
+        prefix: str = "",
+        suffix: str = "",
+        do_warn: bool = True,
     ) -> None:
         """Add the columns of another table to this table.
 
@@ -219,6 +268,13 @@ class Table(Struct, LGDOCollection):
         cols
             a list of names of columns from `other_table` to be joined into
             this table.
+        keep_mine
+            if there is a column name conflict, keep this Tables col if
+            ``True``, or joined Table's column if ``False`` (default).
+        prefix
+            prepend to joined column names; can be used to avoid name conflicts.
+        suffix
+            append to joined column names; can be used to avoid name conflicts.
         do_warn
             set to ``False`` to turn off warnings associated with mismatched
             `loc` parameter or :meth:`add_column` warnings.
@@ -230,7 +286,10 @@ class Table(Struct, LGDOCollection):
         if cols is None:
             cols = other_table.keys()
         for name in cols:
-            self.add_column(name, other_table[name])
+            joined_name = f"{prefix}{name}{suffix}"
+            if joined_name in self and keep_mine:
+                continue
+            self.add_column(joined_name, other_table[name])
 
     def get_dataframe(
         self,

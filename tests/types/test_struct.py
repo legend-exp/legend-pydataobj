@@ -82,6 +82,81 @@ def test_remove_field():
     assert list(struct.keys()) == []
 
 
+def test_nested_access():
+    struct = lgdo.Struct()
+    struct.add_field("struct1/scalar1", lgdo.Scalar(value=10))
+    struct.add_field("struct1/struct2/scalar2", lgdo.Scalar(value=20))
+    struct.add_field("struct1/scalar3", lgdo.Scalar(value=30))
+
+    assert "struct1" in struct
+    assert "struct1/struct2" in struct
+    assert "struct1/struct2/scalar2" in struct
+    assert "struct1/scalar2" not in struct
+
+    assert set(struct.keys()) == {"struct1"}
+    assert set(struct["struct1"].keys()) == {"scalar1", "struct2", "scalar3"}
+    assert set(struct["struct1/struct2"].keys()) == {"scalar2"}
+    assert struct["struct1/scalar1"] == lgdo.Scalar(value=10)
+    assert struct["struct1/struct2/scalar2"] == lgdo.Scalar(value=20)
+    assert struct["struct1/scalar3"] == lgdo.Scalar(value=30)
+
+    struct.remove_field("struct1/scalar1")
+    struct.remove_field("struct1/struct2")
+    assert set(struct["struct1"].keys()) == {"scalar3"}
+
+
+def test_update():
+    st_final = lgdo.Struct(
+        {
+            "a": {
+                "b": lgdo.Scalar(1),
+                "c": lgdo.Scalar(3),
+                "d": lgdo.Scalar(5),
+            }
+        }
+    )
+
+    st = lgdo.Struct({"a": {"b": lgdo.Scalar(1), "c": lgdo.Scalar(2)}})
+    st.update(
+        lgdo.Struct(
+            {
+                "a": {
+                    "c": lgdo.Scalar(3),
+                    "d": lgdo.Scalar(5),
+                }
+            }
+        )
+    )
+    assert st == st_final
+
+    st = lgdo.Struct({"a": {"b": lgdo.Scalar(1), "c": lgdo.Scalar(2)}})
+    st.update(
+        {
+            "a/c": lgdo.Scalar(3),
+            "a/d": lgdo.Scalar(5),
+        }
+    )
+    assert st == st_final
+
+    st = lgdo.Struct({"a": {"b": lgdo.Scalar(1), "c": lgdo.Scalar(2)}})
+    st.update(
+        a={
+            "c": lgdo.Scalar(3),
+            "d": lgdo.Scalar(5),
+        }
+    )
+    assert st == st_final
+
+    st = lgdo.Struct({"a": {"b": lgdo.Scalar(1), "c": lgdo.Scalar(2)}})
+    st.update(
+        [
+            ("a/c", lgdo.Scalar(3)),
+            ("a/d", lgdo.Scalar(5)),
+        ]
+    )
+    assert st == st_final
+
+
 def test_pickle():
     obj_dict = {"scalar1": lgdo.Scalar(value=10)}
     attrs = {"attr1": 1}
