@@ -18,7 +18,6 @@ from numpy.typing import ArrayLike, DTypeLike, NDArray
 
 from .. import utils
 from . import arrayofequalsizedarrays as aoesa
-from . import vovutils
 from .array import Array
 from .lgdo import LGDOCollection
 
@@ -117,12 +116,12 @@ class VectorOfVectors(LGDOCollection):
                 data = ak.Array([data])
 
             # make sure it's not a record array
-            if not vovutils._ak_is_valid(data):
+            if not VectorOfVectors._ak_is_valid(data):
                 msg = "input array type is not supported!"
                 raise ValueError(msg)
 
             # array might be non-jagged! ('container' will hold a ndim NumPy array)
-            if not vovutils._ak_is_jagged(data):
+            if not VectorOfVectors._ak_is_jagged(data):
                 data = ak.from_regular(data, axis=None)
 
             # ak.to_buffer helps in de-serialization
@@ -507,7 +506,9 @@ class VectorOfVectors(LGDOCollection):
                 nan_val = np.iinfo(self.flattened_data.dtype).min
             else:
                 nan_val = np.nan
-            vovutils._nb_fill(
+            from .vovutils import _nb_fill  # noqa: PLC0415
+
+            _nb_fill(
                 vec,
                 lens,
                 np.array([nan_val]).astype(self.flattened_data.nda.dtype),
@@ -518,6 +519,48 @@ class VectorOfVectors(LGDOCollection):
             self.cumulative_length[i : i + len(lens)] = cum_lens
         else:
             raise NotImplementedError
+
+    @staticmethod
+    def _ak_is_jagged(type_: ak.types.Type) -> bool:
+        """Returns ``True`` if :class:`ak.Array` is jagged at all axes.
+
+        This assures that :func:`ak.to_buffers` returns the expected data
+        structures.
+        """
+        if isinstance(type_, ak.Array):
+            return VectorOfVectors._ak_is_jagged(type_.type)
+
+        if isinstance(type_, (ak.types.ArrayType, ak.types.ListType)):
+            return VectorOfVectors._ak_is_jagged(type_.content)
+
+        if isinstance(type_, ak.types.ScalarType):
+            msg = "Expected ArrayType or its content"
+            raise TypeError(msg)
+
+        return not isinstance(type_, ak.types.RegularType)
+
+    # https://github.com/scikit-hep/awkward/discussions/3049
+    @staticmethod
+    def _ak_is_valid(type_: ak.types.Type) -> bool:
+        """Returns ``True`` if :class:`ak.Array` contains only elements we can serialize to LH5."""
+        if isinstance(type_, ak.Array):
+            return VectorOfVectors._ak_is_valid(type_.type)
+
+        if isinstance(type_, (ak.types.ArrayType, ak.types.ListType)):
+            return VectorOfVectors._ak_is_valid(type_.content)
+
+        if isinstance(type_, ak.types.ScalarType):
+            msg = "Expected ArrayType or its content"
+            raise TypeError(msg)
+
+        return not isinstance(
+            type_,
+            (
+                ak.types.OptionType,
+                ak.types.UnionType,
+                ak.types.RecordType,
+            ),
+        )
 
     def __iter__(self) -> Iterator[NDArray]:
         if self.ndim == 2:

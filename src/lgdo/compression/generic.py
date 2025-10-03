@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 
 from .. import types as lgdo
-from . import radware, varlen
 from .base import WaveformCodec
 
 log = logging.getLogger(__name__)
@@ -25,6 +24,8 @@ def encode(
         algorithm to be used for encoding.
     """
     log.debug(f"encoding {obj!r} with {codec}")
+
+    from . import radware, varlen  # noqa: PLC0415
 
     if _is_codec(codec, radware.RadwareSigcompress):
         enc_obj = radware.encode(obj, shift=codec.codec_shift)
@@ -65,6 +66,8 @@ def decode(
 
     codec = obj.attrs["codec"]
     log.debug(f"decoding {obj!r} with {codec}")
+
+    from . import radware, varlen  # noqa: PLC0415
 
     if _is_codec(codec, radware.RadwareSigcompress):
         return radware.decode(
