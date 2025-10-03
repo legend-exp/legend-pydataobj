@@ -584,3 +584,17 @@ def test_bytestrings():
     # test bytestring with ak Array
     ak_arr = v.view_as("ak", with_units=False)
     assert len(ak_arr[0]) == 0
+
+
+def test_ak_input_validity(testvov):
+    for v in testvov:
+        assert VectorOfVectors._ak_is_jagged(v) is True
+        assert VectorOfVectors._ak_is_valid(v) is True
+
+    assert VectorOfVectors._ak_is_jagged(ak.Array([[1], [1, 2], [1, 3, 4]])) is True
+    assert VectorOfVectors._ak_is_jagged(ak.Array(np.empty(shape=(2, 3, 4)))) is False
+
+    assert VectorOfVectors._ak_is_valid(ak.Array([[1], [1, 2], [1, 3, 4]])) is True
+    assert VectorOfVectors._ak_is_valid(ak.Array(np.empty(shape=(2, 3, 4)))) is True
+    assert VectorOfVectors._ak_is_valid(ak.Array([[1, None], [1, 2], [1, 3, 4]])) is False
+    assert VectorOfVectors._ak_is_valid(ak.Array({"a": [1, 2], "b": [3, 4]})) is False

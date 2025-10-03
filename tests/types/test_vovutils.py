@@ -79,20 +79,6 @@ def test_nb_fill():
     )
 
 
-def test_ak_input_validity(testvov):
-    for v in testvov:
-        assert vovutils._ak_is_jagged(v) is True
-        assert vovutils._ak_is_valid(v) is True
-
-    assert vovutils._ak_is_jagged(ak.Array([[1], [1, 2], [1, 3, 4]])) is True
-    assert vovutils._ak_is_jagged(ak.Array(np.empty(shape=(2, 3, 4)))) is False
-
-    assert vovutils._ak_is_valid(ak.Array([[1], [1, 2], [1, 3, 4]])) is True
-    assert vovutils._ak_is_valid(ak.Array(np.empty(shape=(2, 3, 4)))) is True
-    assert vovutils._ak_is_valid(ak.Array([[1, None], [1, 2], [1, 3, 4]])) is False
-    assert vovutils._ak_is_valid(ak.Array({"a": [1, 2], "b": [3, 4]})) is False
-
-
 def test_build_cl_and_explodes():
     cl = np.array([3, 4], dtype=np.uint64)
     exp = np.array([0, 0, 0, 1], dtype=np.uint64)
