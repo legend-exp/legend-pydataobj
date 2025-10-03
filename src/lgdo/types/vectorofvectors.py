@@ -507,6 +507,7 @@ class VectorOfVectors(LGDOCollection):
             else:
                 nan_val = np.nan
             from .vovutils import _nb_fill
+
             _nb_fill(
                 vec,
                 lens,
@@ -537,7 +538,6 @@ class VectorOfVectors(LGDOCollection):
             raise TypeError(msg)
 
         return not isinstance(type_, ak.types.RegularType)
-
 
     # https://github.com/scikit-hep/awkward/discussions/3049
     @staticmethod

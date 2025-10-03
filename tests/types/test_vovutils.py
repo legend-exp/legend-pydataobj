@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from collections import namedtuple
 
-import awkward as ak
 import numpy as np
 import pytest
 

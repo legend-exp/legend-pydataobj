@@ -19,6 +19,7 @@ _radware_sigcompress_mask = uint16([0, 1, 3, 7, 15, 31, 63, 127, 255, 511, 1023,
                                    2047, 4095, 8191, 16383, 32767, 65535])
 # fmt: on
 
+
 @dataclass(frozen=True)
 class RadwareSigcompress(WaveformCodec):
     """`radware-sigcompress` array codec.

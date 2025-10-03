@@ -26,6 +26,7 @@ def encode(
     log.debug(f"encoding {obj!r} with {codec}")
 
     from . import radware, varlen
+
     if _is_codec(codec, radware.RadwareSigcompress):
         enc_obj = radware.encode(obj, shift=codec.codec_shift)
     elif _is_codec(codec, varlen.ULEB128ZigZagDiff):
@@ -67,6 +68,7 @@ def decode(
     log.debug(f"decoding {obj!r} with {codec}")
 
     from . import radware, varlen
+
     if _is_codec(codec, radware.RadwareSigcompress):
         return radware.decode(
             obj, sig_out=out_buf, shift=int(obj.attrs.get("codec_shift", 0))

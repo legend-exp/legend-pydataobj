@@ -596,5 +596,7 @@ def test_ak_input_validity(testvov):
 
     assert VectorOfVectors._ak_is_valid(ak.Array([[1], [1, 2], [1, 3, 4]])) is True
     assert VectorOfVectors._ak_is_valid(ak.Array(np.empty(shape=(2, 3, 4)))) is True
-    assert VectorOfVectors._ak_is_valid(ak.Array([[1, None], [1, 2], [1, 3, 4]])) is False
+    assert (
+        VectorOfVectors._ak_is_valid(ak.Array([[1, None], [1, 2], [1, 3, 4]])) is False
+    )
     assert VectorOfVectors._ak_is_valid(ak.Array({"a": [1, 2], "b": [3, 4]})) is False

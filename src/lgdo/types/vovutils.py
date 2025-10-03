@@ -8,7 +8,6 @@ from __future__ import annotations
 import logging
 from collections.abc import Sequence
 
-import awkward as ak
 import numba
 import numpy as np
 from numpy.typing import NDArray
@@ -17,6 +16,7 @@ from ..utils import numba_defaults_kwargs as nb_kwargs
 from .array import Array
 
 log = logging.getLogger(__name__)
+
 
 def build_cl(
     sorted_array_in: NDArray, cumulative_length_out: NDArray | None = None

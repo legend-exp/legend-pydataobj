@@ -18,8 +18,7 @@ def str2wfcodec(expr: str) -> WaveformCodec:
         raise ValueError(msg)
 
     match = match.groups()
-    print(match, __name__, sys.modules[__name__])
-    codec = getattr(sys.modules['.'.join(__name__.split('.')[:-1])], match[0].strip())
+    codec = getattr(sys.modules[".".join(__name__.split(".")[:-1])], match[0].strip())
     args = {}
 
     if match[1]:
