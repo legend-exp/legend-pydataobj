@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from collections import namedtuple
 
-import awkward as ak
 import numpy as np
 import pytest
 
@@ -77,20 +76,6 @@ def test_nb_fill():
         flattened_array_out,
         np.array([1, 2, 3, 0, 4, 5, 6], dtype=aoa_in[0].dtype),
     )
-
-
-def test_ak_input_validity(testvov):
-    for v in testvov:
-        assert vovutils._ak_is_jagged(v) is True
-        assert vovutils._ak_is_valid(v) is True
-
-    assert vovutils._ak_is_jagged(ak.Array([[1], [1, 2], [1, 3, 4]])) is True
-    assert vovutils._ak_is_jagged(ak.Array(np.empty(shape=(2, 3, 4)))) is False
-
-    assert vovutils._ak_is_valid(ak.Array([[1], [1, 2], [1, 3, 4]])) is True
-    assert vovutils._ak_is_valid(ak.Array(np.empty(shape=(2, 3, 4)))) is True
-    assert vovutils._ak_is_valid(ak.Array([[1, None], [1, 2], [1, 3, 4]])) is False
-    assert vovutils._ak_is_valid(ak.Array({"a": [1, 2], "b": [3, 4]})) is False
 
 
 def test_build_cl_and_explodes():

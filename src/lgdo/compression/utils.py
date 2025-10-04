@@ -4,8 +4,6 @@ import re
 import sys
 
 from .base import WaveformCodec
-from .radware import RadwareSigcompress  # noqa: F401
-from .varlen import ULEB128ZigZagDiff  # noqa: F401
 
 
 def str2wfcodec(expr: str) -> WaveformCodec:
@@ -20,7 +18,7 @@ def str2wfcodec(expr: str) -> WaveformCodec:
         raise ValueError(msg)
 
     match = match.groups()
-    codec = getattr(sys.modules[__name__], match[0].strip())
+    codec = getattr(sys.modules[".".join(__name__.split(".")[:-1])], match[0].strip())
     args = {}
 
     if match[1]:

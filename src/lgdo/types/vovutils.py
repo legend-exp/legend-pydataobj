@@ -1,11 +1,13 @@
-""":class:`~.lgdo.typing.vectorofvectors.VectorOfVectors` utilities."""
+""":class:`~.lgdo.typing.vectorofvectors.VectorOfVectors` utilities.
+Note: importing this module takes a long time, so it should be lazily
+imported inside of a function call rather than with a full module
+"""
 
 from __future__ import annotations
 
 import logging
 from collections.abc import Sequence
 
-import awkward as ak
 import numba
 import numpy as np
 from numpy.typing import NDArray
@@ -284,47 +286,3 @@ def explode_arrays(
     for ii in range(len(arrays)):
         explode(cumulative_length, arrays[ii], arrays_out[ii])
     return arrays_out
-
-
-def _ak_is_jagged(type_: ak.types.Type) -> bool:
-    """Returns ``True`` if :class:`ak.Array` is jagged at all axes.
-
-    This assures that :func:`ak.to_buffers` returns the expected data
-    structures.
-    """
-    if isinstance(type_, ak.Array):
-        return _ak_is_jagged(type_.type)
-
-    if isinstance(type_, (ak.types.ArrayType, ak.types.ListType)):
-        return _ak_is_jagged(type_.content)
-
-    if isinstance(type_, ak.types.ScalarType):
-        msg = "Expected ArrayType or its content"
-        raise TypeError(msg)
-
-    return not isinstance(type_, ak.types.RegularType)
-
-
-# https://github.com/scikit-hep/awkward/discussions/3049
-def _ak_is_valid(type_: ak.types.Type) -> bool:
-    """Returns ``True`` if :class:`ak.Array` contains only elements we can serialize to LH5."""
-    if isinstance(type_, ak.Array):
-        return _ak_is_valid(type_.type)
-
-    if isinstance(type_, (ak.types.ArrayType, ak.types.ListType)):
-        return _ak_is_valid(type_.content)
-
-    if isinstance(type_, ak.types.ScalarType):
-        msg = "Expected ArrayType or its content"
-        raise TypeError(msg)
-
-    return not isinstance(
-        type_,
-        (
-            ak.types.OptionType,
-            ak.types.UnionType,
-            ak.types.RecordType,
-        ),
-    )
-
-    return isinstance(type_, ak.types.NumpyType)
