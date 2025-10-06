@@ -67,7 +67,7 @@ def _h5_read_vector_of_vectors(
             idx2 = idx2[1:]
             fd_start = 0  # this variable avoids an ndarray append
 
-        fd_starts, fds_n_rows_read = _h5_read_array(
+        fd_starts, _fds_n_rows_read = _h5_read_array(
             h5d_cl,
             fname,
             f"{oname}/cumulative_length",

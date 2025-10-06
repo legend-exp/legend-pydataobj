@@ -140,7 +140,7 @@ def test_must_shift_wf(wftable):
 
     shift = -32768
     enc_wf, enc_len = encode(wf, shift=shift)
-    dec_wf, dec_len = decode((enc_wf, enc_len), shift=shift)
+    dec_wf, _dec_len = decode((enc_wf, enc_len), shift=shift)
     assert np.array_equal(dec_wf, wf)
 
 
@@ -149,7 +149,7 @@ def test_must_shift_uint32_wf(wftable):
 
     shift = -32768
     enc_wf, enc_len = encode(wf, shift=shift)
-    dec_wf, dec_len = decode((enc_wf, enc_len), shift=shift)
+    dec_wf, _dec_len = decode((enc_wf, enc_len), shift=shift)
     assert np.array_equal(dec_wf, wf)
 
 
@@ -189,7 +189,7 @@ def test_performance(lgnd_test_data):
 
     sum = 0
     for wf in obj["values"].nda:
-        comp_wf, comp_len = encode(wf, shift=-32768)
+        _comp_wf, comp_len = encode(wf, shift=-32768)
         sum += comp_len / len(wf) / 2
 
     print(
@@ -669,7 +669,7 @@ def test_special_wfs():
 
     enc_wf, stop = encode(wf, shift=0)
 
-    (nsig_c, shift, enc_wf_c) = read_sigcompress_c_output(config_dir / "special-wf-clipped.dat")
+    (_nsig_c, shift, enc_wf_c) = read_sigcompress_c_output(config_dir / "special-wf-clipped.dat")
     assert shift == 0
     assert np.array_equal(_to_u16(enc_wf[:stop]), enc_wf_c)
 
