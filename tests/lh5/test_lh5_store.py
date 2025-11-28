@@ -470,6 +470,21 @@ def test_read_with_field_mask(lh5_file):
     ]
 
 
+def test_read_with_nested_field_mask(lh5_file):
+    store = lh5.LH5Store()
+
+    lh5_obj = store.read("/data", lh5_file, field_mask=["struct/table"])
+    assert sorted(lh5_obj.struct.keys()) == ["table"]
+
+    lh5_obj = store.read("/data", lh5_file, field_mask=["struct/table/a"])
+    assert sorted(lh5_obj.struct.table.keys()) == ["a"]
+
+    lh5_obj = store.read(
+        "/data", lh5_file, decompress=False, field_mask={"struct/table/b": False}
+    )
+    assert sorted(lh5_obj.struct.table.keys()) == ["a", "c", "d"]
+
+
 def test_read_lgnd_array(lgnd_file):
     store = lh5.LH5Store()
 
