@@ -86,7 +86,9 @@ def read(
         this parameter as its default.
     field_mask
         For tables and structs, determines which fields get read out.
-        Only applies to immediate fields of the requested objects. If a dict
+        Nested struct elements can be accessed by using ``/`` as a separator
+        (e.g. refer to field ``a`` inside the table ``table`` which is stored
+        inside the struct ``struct`` as ``struct/table/a``). If a dict
         is used, a default dict will be made with the default set to the
         opposite of the first element in the dict. This way if one specifies
         a few fields at ``False``, all but those fields will be read out,
