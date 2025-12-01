@@ -790,28 +790,25 @@ class LH5Iterator(Iterator):
     def map(
         self,
         fun: Callable[Table, LH5Iterator, Any],
-        processes: Executor | int = None,
-        chunks: int = None,
         aggregate: Callable = None,
         init: Any = None,
         begin: Callable[LH5Iterator] = None,
         terminate: Callable[LH5Iterator] = None,
+        processes: int = None,
+        executor: Executor = None,
     ) -> Iterator[Any]:
         """Map function over iterator blocks and return order-preserving list
-        of outputs. Can be multi-threaded provided there are no attempts
-        to modify existing objects. Results will be returned asynchronously for
-        each chunk.
+        of outputs. Can be multi-threaded provided there are no attempts to
+        modify existing objects. Multi-threading splits the iterator into
+        multiple independent streams with an approximately equal number of
+        files/groups, concurrently processed under a single program multiple
+        data model. Results will be returned asynchronously for each process.
 
         Parameters
         ----------
         fun:
             function with signature fun(lh5_obj: Table, it: LH5Iterator) -> Any
             Outputs of function will be collected in list and returned
-        processes:
-            number of processes or multiprocessing processor pool
-        chunks:
-            number of chunks to divide iterator into if multiprocessing. By
-            default use one chunk per thread
         aggregate:
             function used to iterably combine outputs of ``fun`` for each block
             of data. Should have two inputs; first input should be the type of
@@ -830,6 +827,13 @@ class LH5Iterator(Iterator):
         terminate:
             function with the signature ``fun(it: LH5Iterator)`` that is run after
             we finish looping through a chunk of the iterator
+        processes:
+            number of processes. If ``None``, use number equal to threads available
+            to ``executor`` (if provided), or else do not parallelize
+        executor:
+            `concurrent.futures.Executor <https://docs.python.org/3/library/concurrent.futures.html>`_
+            object for managing parallelism. If ``None``, create a ``ProcessPoolExecutor`` with
+            number of processes equal to ``processes``.
         """
 
         # if no aggregate is provided, append results to a list
@@ -838,16 +842,17 @@ class LH5Iterator(Iterator):
             aggregate = _append_copy
 
         if processes is None:
-            return _map_helper(fun, aggregate, init, begin, terminate, self)
+            if isinstance(executor, Executor):
+                processes = executor._max_workers
+            else:
+                return _map_helper(fun, aggregate, init, begin, terminate, self)
 
-        if isinstance(processes, int):
-            processes = ProcessPoolExecutor(processes)
+        if executor is None:
+            executor = ProcessPoolExecutor(processes)
 
-        if chunks is None:
-            chunks = processes._max_workers
-        it_pool = self._generate_workers(chunks)
+        it_pool = self._generate_workers(processes)
 
-        result = processes.map(
+        result = executor.map(
             partial(_map_helper, fun, aggregate, init, begin, terminate), it_pool
         )
 
@@ -860,6 +865,7 @@ class LH5Iterator(Iterator):
         self,
         where: Callable | str,
         processes: Executor | int = None,
+        executor: Executor = None,
     ):
         """
         Query the data files in the iterator and return the selected data
@@ -869,18 +875,27 @@ class LH5Iterator(Iterator):
         ----------
         where:
             A filter function for selecting data entries. Can be:
+
             - A function that returns reduced data, with signature
               ``fun(lh5_obj: Table, it: LH5Iterator)``. Can return:
+
               - ``NDArray``: if 1D list of values; if 2D list of lists of values in
                 same order as axes
               - ``Collection[ArrayLike]``: return list of values in same order as axes
               - ``Mapping[str, ArrayLike]``: mapping from axis name to values
               - ``pandas.DataFrame``: pandas dataframe. Treat as mapping from column
                 name to values
+
             - A string expression. This will call `pd.DataFrame.query <https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.query.html>`_ and return
               a pandas DataFrame containing all columns in the fields mask.
+
         processes:
-            number of processes or multiprocessing processor pool
+            number of processes. If ``None``, use number equal to threads available
+            to ``executor`` (if provided), or else do not parallelize
+        executor:
+            `concurrent.futures.Executor <https://docs.python.org/3/library/concurrent.futures.html>`_
+            object for managing parallelism. If ``None``, create a ``ProcessPoolExecutor`` with
+            number of processes equal to ``processes``.
         """
         if where is None:
             where = _identity
@@ -890,7 +905,9 @@ class LH5Iterator(Iterator):
 
         test = where(self.lh5_buffer, self)
         if isinstance(test, LGDOCollection):
-            it = self.map(where, processes, aggregate=Table.append)
+            it = self.map(
+                where, processes=processes, executor=executor, aggregate=Table.append
+            )
             if isinstance(it, LGDOCollection):
                 return it
             ret = next(it)
@@ -898,11 +915,18 @@ class LH5Iterator(Iterator):
                 ret.append(res)
             return ret
         if isinstance(test, pd.DataFrame):
-            return pd.concat(list(self.map(where, processes)), ignore_index=True)
+            return pd.concat(
+                list(self.map(where, processes=processes, executor=executor)),
+                ignore_index=True,
+            )
         if isinstance(test, np.ndarray):
-            return np.concatenate(list(self.map(where, processes)))
+            return np.concatenate(
+                list(self.map(where, processes=processes, executor=executor))
+            )
         if isinstance(test, ak.Array):
-            return ak.concatenate(list(self.map(where, processes)))
+            return ak.concatenate(
+                list(self.map(where, processes=processes, executor=executor))
+            )
 
         msg = f"Cannot call query with return type {test.__class__}. "
         "Allowed return types: LGDOCollection, np.array, pd.DataFrame, ak.Array"
@@ -912,23 +936,26 @@ class LH5Iterator(Iterator):
         self,
         ax: Hist | axis | Collection[axis],
         where: Callable | str = None,
-        processes: Executor | int = None,
         keys: Collection[str] | str = None,
+        processes: Executor | int = None,
+        executor: Executor = None,
         **hist_kwargs,
     ) -> Hist:
         """
-        Fill a histogram from data produced by our `where`. If
-        `where` is `None`, fill with all data fetched by iterator.
+        Fill a histogram from data produced by our ``where``. If
+        ``where`` is ``None``, fill with all data fetched by iterator.
 
         Parameters
         ----------
         ax:
-            Axis object(s) used to construct the histogram. Can provide a Hist
+            Axis object(s) used to construct the histogram. Can provide a ``Hist``
             which will be filled as well.
         where:
             A filter function for selecting data entries to put into the histogram. Can be:
+
             - A function that returns reduced data, with signature
               ``fun(lh5_obj: Table, it: LH5Iterator)``. Can return:
+
               - ``NDArray``: if 1D list of values; if 2D list of lists of values in
                 same order as axes
               - ``Collection[ArrayLike]``: return list of values in same order as axes
@@ -937,11 +964,17 @@ class LH5Iterator(Iterator):
                 name to values
             - A string expression. This will call `pd.DataFrame.query <https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.query.html>`_ and return
               a pandas DataFrame containing all columns in the fields mask.
-        processes:
-            number of processes or multiprocessing processor pool
+
         keys:
             list of keys fields corresponding to axes. Use if where
             returns a mapping with names different from axis names.
+        processes:
+            number of processes. If ``None``, use number equal to threads available
+            to ``executor`` (if provided), or else do not parallelize
+        executor:
+            `concurrent.futures.Executor <https://docs.python.org/3/library/concurrent.futures.html>`_
+            object for managing parallelism. If ``None``, create a ``ProcessPoolExecutor`` with
+            number of processes equal to ``processes``.
         hist_kwargs:
             additional keyword arguments for constructing Hist. See `hist.Hist`.
         """
@@ -963,6 +996,7 @@ class LH5Iterator(Iterator):
         h = self.map(
             where,
             processes=processes,
+            executor=executor,
             aggregate=_hist_filler(keys),
             init=h,
         )
@@ -981,10 +1015,12 @@ def _identity(val, _):
 
 
 def _append_copy(list, val):
+    "Helper for aggregating tables in query"
     list.append(deepcopy(val))
 
 
 def _map_helper(fun, aggregator, init, begin, terminate, it):
+    "Helper for executing int, begin and terminate functions when calling map"
     if begin:
         begin(it)
 
@@ -1017,6 +1053,8 @@ class _pandas_query:
 
 
 class _hist_filler:
+    "Helper for filling histogram"
+
     def __init__(self, keys):
         if keys is not None:
             if isinstance(keys, str):
