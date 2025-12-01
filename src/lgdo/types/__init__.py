@@ -7,7 +7,7 @@ from .arrayofequalsizedarrays import ArrayOfEqualSizedArrays
 from .encoded import ArrayOfEncodedEqualSizedArrays, VectorOfEncodedVectors
 from .fixedsizearray import FixedSizeArray
 from .histogram import Histogram
-from .lgdo import LGDO
+from .lgdo import LGDO, LGDOCollection
 from .scalar import Scalar
 from .struct import Struct
 from .table import Table
@@ -21,6 +21,7 @@ __all__ = [
     "ArrayOfEqualSizedArrays",
     "FixedSizeArray",
     "Histogram",
+    "LGDOCollection",
     "Scalar",
     "Struct",
     "Table",
