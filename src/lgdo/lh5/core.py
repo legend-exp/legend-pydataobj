@@ -115,7 +115,10 @@ def read(
     """
     close_after = False
     if isinstance(lh5_file, h5py.File):
-        lh5_obj = lh5_file[name]
+        try:
+            lh5_obj = lh5_file[name]
+        except KeyError as oe:
+            raise LH5DecodeError(oe, lh5_file, name) from oe
     elif isinstance(lh5_file, (str, Path)):
         try:
             lh5_file = h5py.File(str(Path(lh5_file)), mode="r", locking=locking)
