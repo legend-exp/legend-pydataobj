@@ -128,7 +128,6 @@ class LH5Iterator(Iterator):
             opens files read-only while ``a`` allow opening files for
             write-appending as well.
         """
-        self.lh5_st = LH5Store(base_path=base_path, keep_open=file_cache)
 
         if h5py_open_mode == "read":
             h5py_open_mode = "r"
@@ -138,7 +137,12 @@ class LH5Iterator(Iterator):
             msg = f"unknown h5py_open_mode '{h5py_open_mode}'"
             raise ValueError(msg)
 
-        # List of files, with wildcards and env vars expanded
+        self.lh5_st = LH5Store(
+            base_path=base_path,
+            keep_open=file_cache,
+            default_mode=h5py_open_mode
+        )
+
         if isinstance(lh5_files, str):
             lh5_files = [lh5_files]
         elif not isinstance(lh5_files, Collection):
