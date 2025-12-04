@@ -5,6 +5,7 @@ from copy import deepcopy
 
 import awkward as ak
 import numpy as np
+import pandas as pd
 import pytest
 from hist import axis
 
@@ -293,7 +294,7 @@ def test_iterate(more_lgnd_files):
         assert set(lh5_out.keys()) == {"is_valid_0vbb", "timestamp", "zacEmax_ctc_cal"}
         assert lh5_it.current_i_entry % 5 == 0
         assert len(lh5_out) == 5
-    print(lh5_it.get_global_entrylist())
+
     assert all(
         i == j
         for i, j in zip(
@@ -313,10 +314,11 @@ def test_iterate(more_lgnd_files):
         assert lh5_it.current_i_entry % 5 == 0
         assert len(lh5_out) == 5
 
+    # different number of file sets and group sets
     with pytest.raises(ValueError):
         lh5.LH5Iterator(
             more_lgnd_files[2],
-            [["ch1084803/hit", "ch1084804/hit"], "ch1084803/hit"],
+            [["ch1084803/hit", "ch1084804/hit"]],
             field_mask=["is_valid_0vbb", "timestamp", "zacEmax_ctc_cal"],
             buffer_len=5,
         )
@@ -329,6 +331,57 @@ def test_iterate(more_lgnd_files):
             buffer_len=5,
         )
 
+def test_group_data(more_lgnd_files):
+    # test provision of metadata about groups
+    lh5_it = lh5.LH5Iterator(
+        more_lgnd_files[2],
+        ["ch1084803/hit", "ch1084804/hit", "ch1121600/hit"],
+        field_mask=["is_valid_0vbb", "timestamp", "zacEmax_ctc_cal"],
+        buffer_len=5,
+        group_data={"chan":[1084803, 1084804, 1121600]},
+    )
+
+    exp_chan = [
+        [1084803]*5, [1084803]*5, [1084804]*5, [1084804]*5, [1121600]*5, [1121600]*5, 
+        [1084803]*5, [1084803]*5, [1084804]*5, [1084804]*5, [1121600]*5, [1121600]*5, 
+    ]
+    for tb, ec in zip(lh5_it, exp_chan):
+        assert set(tb.keys()) == {"is_valid_0vbb", "timestamp", "zacEmax_ctc_cal", "chan"}
+        assert all(tb.chan.nda == ec)
+
+    # group_data must be same shape as field_mask
+    with pytest.raises(ValueError):
+        lh5_it = lh5.LH5Iterator(
+            more_lgnd_files[2],
+            ["ch1084803/hit", "ch1084804/hit", "ch1121600/hit"],
+            field_mask=["is_valid_0vbb", "timestamp", "zacEmax_ctc_cal"],
+            buffer_len=5,
+            group_data={"chan":[1084803, 1084804, 1121600, 1234567]},
+        )
+
+    # group_data provided using pandas dataframe
+    lh5_it = lh5.LH5Iterator(
+        more_lgnd_files[2],
+        ["ch1084803/hit", "ch1084804/hit", "ch1121600/hit"],
+        field_mask=["is_valid_0vbb", "timestamp", "zacEmax_ctc_cal"],
+        buffer_len=5,
+        group_data=pd.DataFrame({"chan":[1084803, 1084804, 1121600]}),
+    )
+    for tb, ec in zip(lh5_it, exp_chan):
+        assert set(tb.keys()) == {"is_valid_0vbb", "timestamp", "zacEmax_ctc_cal", "chan"}
+        assert all(tb.chan.nda == ec)
+
+    # group_data provided using awkward array as array of records
+    lh5_it = lh5.LH5Iterator(
+        more_lgnd_files[2],
+        ["ch1084803/hit", "ch1084804/hit", "ch1121600/hit"],
+        field_mask=["is_valid_0vbb", "timestamp", "zacEmax_ctc_cal"],
+        buffer_len=5,
+        group_data=pd.DataFrame([{"chan":1084803}, {"chan":1084804}, {"chan":1121600}]),
+    )
+    for tb, ec in zip(lh5_it, exp_chan):
+        assert set(tb.keys()) == {"is_valid_0vbb", "timestamp", "zacEmax_ctc_cal", "chan"}
+        assert all(tb.chan.nda == ec)
 
 def test_range(lgnd_file):
     lh5_it = lh5.LH5Iterator(

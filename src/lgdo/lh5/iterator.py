@@ -6,7 +6,7 @@ from concurrent.futures import Executor, ProcessPoolExecutor
 from copy import deepcopy
 from dataclasses import dataclass
 from functools import partial
-from itertools import chain
+from itertools import chain, product
 from typing import Any
 from warnings import warn
 
@@ -31,17 +31,19 @@ class LH5Iterator(Iterator):
 
     Examples
     --------
-    Iterate through a table one chunk at a time::
+    .. codeblock:: python
+        :caption: Iterate through a table one chunk at a time and call ``process``
+        on each chunk
 
-        from lgdo.lh5 import LH5Iterator
+            from lgdo.lh5 import LH5Iterator
+            for table in LH5Iterator("data.lh5", "geds/raw/energy", buffer_len=100):
+                process(table)
 
-        for table in LH5Iterator("data.lh5", "geds/raw/energy", buffer_len=100):
-            process(table)
+    .. codeblock:: python
+        :caption: ``LH5Iterator`` can also be used for random access::
 
-    ``LH5Iterator`` can also be used for random access::
-
-        it = LH5Iterator(files, groups)
-        table = it.read(i_entry)
+            it = LH5Iterator(files, groups)
+            table = it.read(i_entry)
 
     In case of multiple files or an entry selection, ``i_entry`` refers to the
     global event index across all files.
@@ -64,33 +66,58 @@ class LH5Iterator(Iterator):
 
     def __init__(
         self,
-        lh5_files: str | Collection[str],
-        groups: str | Collection[str] | Collection[Collection[str]],
+        lh5_files: str | Collection[str | Collection[str]],
+        groups: str | Collection[str | Collection[str]],
+        *,
         base_path: str = "",
         entry_list: Collection[int] | Collection[Collection[int]] = None,
         entry_mask: Collection[bool] | Collection[Collection[bool]] = None,
         i_start: int = 0,
         n_entries: int = None,
         field_mask: Mapping[str, bool] | Collection[str] = None,
+        group_data: Mapping[Collection] | ak.Array = None,
         buffer_len: int = "100*MB",
         file_cache: int = 10,
-        file_map: NDArray[int] = None,
+        ds_map: NDArray[int] = None,
         friend: Collection[LH5Iterator] = None,
         friend_prefix: str = "",
         friend_suffix: str = "",
         h5py_open_mode: str = "r",
     ) -> None:
         """
+        Constructor for LH5Iterator. Must provide a file or collection of
+        files, and an lh5 group or collection of groups to read data from.
+
+        Collections of files and groups can be nested. At the top level, we
+        expect the same number of entries (one set of files to one set of groups).
+        For each corresponding pair of sets, we will loop over each pairing of
+        a file and group, with an inner loop over the groups to minimize the
+        opening of files. Wildcards used for files will be expanded and applied
+        in the inner loop (i.e. each file in a wildcard will read the same groups).
+        If groups is an un-nested collection of strings, use all groups for all files.
+
+        Examples
+        --------
+        .. codeblock:: python
+            :caption: read "ch1/table" and "ch2/table" from "file.lh5"
+
+            LH5Iterator("/path/to/file.lh5", ["ch1/table", "ch2/table"])
+
+        .. codeblock:: python
+            :caption: read "ch1" from all lh5 files in "/path1", then read "ch1" and "ch2" from
+            "/path2/file.lh5", and then read "ch1/2/3" from both "file1.lh5" and "file2.lh5"
+
+            LH5Iterator(
+                ["/path1/*.lh5", "/path2/file.lh5", ["/path3/file1.lh5", "/path3/file2.lh5"]],
+                ["ch1/table", ["ch1/table", "ch2/table"], ["ch1/table, "ch2/table, "ch3/table"]]
+            )
+
         Parameters
         ----------
         lh5_files
-            file or files to read from. May include wildcards and environment
-            variables.
+            file(s) to read from (see above). May include wildcards and environment variables.
         groups
-            HDF5 group(s) to read. If a list of strings is provided, use
-            same groups for each file. If a list of lists is provided, size
-            of outer list must match size of file list, and each inner list
-            will apply to a single file (or set of wildcarded files)
+            HDF5 group(s) to read (see above).
         entry_list
             list of entry numbers to read. If a nested list is provided,
             expect one top-level list for each file, containing a list of
@@ -105,20 +132,26 @@ class LH5Iterator(Iterator):
         field_mask
             mask of which fields to read. See :meth:`LH5Store.read` for
             more details.
+        group_data
+            mapping of values corresponding to each provided lh5 group. Values
+            will be duplicated for each entry in each dataset, corresponding to
+            the correct group, and added to the output table. This should have
+            same structure as ``groups``.
         buffer_len
             number of entries to read at a time while iterating through files.
         file_cache
             maximum number of files to keep open at a time
-        file_map
-            cumulative file/group entries. This can be provided on construction
-            to speed up random or sparse access; otherwise, we sequentially
-            read the size of each group. WARNING: no checks for accuracy are
-            performed so only use this if you know what you are doing!
+        ds_map
+            cumulative entries in datasets corresponding to file/group pairs.
+            This can be provided on construction to speed up random or sparse
+            access; otherwise, we sequentially read the size of each group.
+            WARNING: no checks for accuracy are performed so only use this if
+            you know what you are doing!
         friend
-            a \"friend\" LH5Iterator that will be read in parallel with this.
-            The friend should have the same length and entry list. A single
-            LH5 table containing columns from both iterators will be returned.
-            Note that buffer_len will be set to the minimum of the two.
+            a \"friend\" LH5Iterator that will be joined to this one, and read
+            in parallel. The friend should have the same length and entry list.
+            Each iteration will return a single LH5 Table containing columns from
+            both iterators. The buffer_len will be set to the minimum of the two.
         friend_prefix
             prefix for fields in friend iterator for resolving naming conflicts
         friend_suffix
@@ -143,62 +176,100 @@ class LH5Iterator(Iterator):
             default_mode=h5py_open_mode
         )
 
+        # convert lh5_files into a nested list
         if isinstance(lh5_files, str):
-            lh5_files = [lh5_files]
+            self.lh5_files = [expand_path(lh5_files, list=True, base_path=base_path)]
         elif not isinstance(lh5_files, Collection):
             msg = "lh5_files must be a string or list of strings"
             raise ValueError(msg)
+        else:
+            self.lh5_files = []
+            for i, f in enumerate(lh5_files):
+                if isinstance(f, str):
+                    self.lh5_files.append(expand_path(f, list=True, base_path=base_path))
+                elif isinstance(f, Collection) and all(isinstance(name, str) for name in f):
+                    self.lh5_files.append(sum((expand_path(name, list=True, base_path=base_path) for name in f), start=[]))
+                else:
+                    msg = "lh5_files must be a collection of strings with up to two levels of nesting"
 
+        # convert groups into a nested list
         if isinstance(groups, str):
-            groups = [[groups]] * len(lh5_files)
+            self.groups = [[groups]] * len(self.lh5_files)
         elif not isinstance(groups, Collection):
-            msg = "group must be a string or appropriate list"
+            msg = "group must be a string or collection of strings"
             raise ValueError(msg)
         elif all(isinstance(g, str) for g in groups):
-            groups = [groups] * len(lh5_files)
-        elif len(groups) == len(lh5_files) and all(
-            isinstance(gr_list, Collection) and not isinstance(gr_list, str)
-            for gr_list in groups
-        ):
-            pass
+            self.groups = [groups] * len(self.lh5_files)
         else:
-            msg = "group must be a string or appropriate list"
+            self.groups = []
+            for i, g in enumerate(groups):
+                if isinstance(g, str):
+                    g = [g]
+                elif not isinstance(g, Collection) and all(isinstance(name, str) for name in g):
+                    msg = "groups must be a collection of strings with up to two levels of nesting"
+                    raise ValueError(msg)
+                self.groups.append(g)
+        
+        # convert group_data into array of records
+        if isinstance(group_data, pd.DataFrame):
+            self.group_data = ak.Array({k:d for k, d in group_data.items()})
+        elif group_data is not None:
+            self.group_data = ak.Array(group_data)
+        else:
+            self.group_data = None
+
+        if isinstance(self.group_data, ak.Array):
+            if not self.group_data.fields:
+                msg = "group_data must have named fields"
+                raise ValueError(msg)
+            self.group_data = ak.zip({f:self.group_data[f] for f in self.group_data.fields})
+            if self.group_data.ndim == 1:
+                self.group_data = ak.Array([self.group_data] * len(self.lh5_files))
+            if not all(len(gd)==len(gps) for gd, gps in zip(self.group_data, self.groups)):
+                msg = "group_data must have same array structure as groups"
+                raise ValueError(msg)
+
+        # check that groups and lh5_files are compatible
+        if len(self.groups) != len(self.lh5_files):
+            msg = "lh5_files and groups must have same length at first level of nesting"
             raise ValueError(msg)
 
-        if len(groups) != len(lh5_files):
-            msg = "lh5_files and groups must have same length"
-            raise ValueError(msg)
-
-        # make flattened outer-product-like list of files and groups
-        self.lh5_files = []
-        self.groups = []
-        for f, g in zip(lh5_files, groups):
-            for f_exp in expand_path(f, list=True, base_path=base_path):
-                self.lh5_files += [f_exp] * len(g)
-                self.groups += list(g)
-
-        # open files in the requested mode so they are writable if needed
-        for f in set(self.lh5_files):
-            self.lh5_st.gimme_file(f, mode=h5py_open_mode)
+        # outer-product and flatten nested lists to get all group/file combinations for datasets
+        file_list = []
+        group_list = []
+        group_data_list = [] if self.group_data is not None else None
+        for i in range(len(self.lh5_files)):
+            f_list = self.lh5_files[i]
+            g_list = self.groups[i]
+            gd_list = self.group_data[i] if self.group_data is not None else None
+            for i_f, i_g in product(range(len(f_list)), range(len(g_list))):
+                file_list.append(f_list[i_f])
+                group_list.append(g_list[i_g])
+                if gd_list is not None:
+                    group_data_list.append(gd_list[i_g])
+        self.lh5_files = file_list
+        self.groups = group_list
+        self.group_data = group_data_list
+        self.n_datasets = len(self.lh5_files)
 
         if entry_list is not None and entry_mask is not None:
             msg = "entry_list and entry_mask arguments are mutually exclusive"
             raise ValueError(msg)
 
         # Map to last row in each file
-        if file_map is None:
-            self.file_map = np.full(len(self.lh5_files), np.iinfo("q").max, "q")
+        if ds_map is None:
+            self.ds_map = np.full(self.n_datasets, np.iinfo("q").max, "q")
         else:
-            self.file_map = np.array(file_map)
+            self.ds_map = np.array(ds_map)
 
         # Map to last iterator entry for each file
-        self.entry_map = np.full(len(self.lh5_files), np.iinfo("q").max, "q")
+        self.entry_map = np.full(self.n_datasets, np.iinfo("q").max, "q")
 
         self.friend = []
         self.friend_prefix = []
         self.friend_suffix = []
 
-        if len(self.lh5_files) == 0:
+        if self.n_datasets == 0:
             msg = f"can't open any files from {lh5_files}"
             raise RuntimeError(msg)
 
@@ -223,6 +294,7 @@ class LH5Iterator(Iterator):
         self.available_fields = get_available_fields(self.lh5_buffer)
 
         # set field mask and buffer length
+        # Note: group_data is added to table here!
         self.reset_field_mask(field_mask)
         self.buffer_len = buffer_len
 
@@ -254,69 +326,58 @@ class LH5Iterator(Iterator):
         if entry_list is not None:
             entry_list = list(entry_list)
             if isinstance(entry_list[0], int):
-                self.local_entry_list = [None] * len(self.file_map)
+                self.local_entry_list = [None] * self.n_datasets
                 self.global_entry_list = np.array(entry_list, "q")
                 self.global_entry_list.sort()
 
             else:
-                self.local_entry_list = [[]] * len(self.file_map)
-                for i_file, local_list in enumerate(entry_list):
-                    self.local_entry_list[i_file] = np.array(local_list, "q")
-                    self.local_entry_list[i_file].sort()
+                self.local_entry_list = [[]] * self.n_datasets
+                for i_ds, local_list in enumerate(entry_list):
+                    self.local_entry_list[i_ds] = np.array(local_list, "q")
+                    self.local_entry_list[i_ds].sort()
 
         elif entry_mask is not None:
             # Convert entry mask into an entry list
             if isinstance(entry_mask, pd.Series):
                 entry_mask = entry_mask.to_numpy()
             if isinstance(entry_mask, np.ndarray):
-                self.local_entry_list = [None] * len(self.file_map)
+                self.local_entry_list = [None] * self.n_datasets
                 self.global_entry_list = np.nonzero(entry_mask)[0]
             else:
-                self.local_entry_list = [[]] * len(self.file_map)
-                for i_file, local_mask in enumerate(entry_mask):
-                    self.local_entry_list[i_file] = np.nonzero(local_mask)[0]
+                self.local_entry_list = [[]] * self.n_datasets
+                for i_ds, local_mask in enumerate(entry_mask):
+                    self.local_entry_list[i_ds] = np.nonzero(local_mask)[0]
 
-    def _get_file_cumlen(self, i_file: int) -> int:
-        """Helper to get cumulative file length of file"""
-        if i_file < 0:
+    def _get_ds_cumlen(self, i_ds: int) -> int:
+        """Helper to get cumulative dataset length of file/groups"""
+        if i_ds < 0:
             return 0
-        fcl = self.file_map[i_file]
+        fcl = self.ds_map[i_ds]
 
-        # if we haven't already calculated, calculate for all files up to i_file
+        # if we haven't already calculated, calculate for all files up to i_ds
         if fcl == np.iinfo("q").max:
-            i_start = np.searchsorted(self.file_map, np.iinfo("q").max)
-            fcl = self.file_map[i_start - 1] if i_start > 0 else 0
+            i_start = np.searchsorted(self.ds_map, np.iinfo("q").max)
+            fcl = self.ds_map[i_start - 1] if i_start > 0 else 0
 
-            for i in range(i_start, i_file + 1):
+            for i in range(i_start, i_ds + 1):
                 fcl += self.lh5_st.read_n_rows(self.groups[i], self.lh5_files[i])
-                self.file_map[i] = fcl
+                self.ds_map[i] = fcl
         return fcl
 
-    @property
-    def current_entry(self) -> int:
-        "deprecated alias for current_i_entry"
-        warn(
-            "current_entry has been renamed to current_i_entry.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-
-        return self.current_i_entry
-
-    def _get_file_cumentries(self, i_file: int) -> int:
-        """Helper to get cumulative iterator entries in file"""
-        if i_file < 0:
+    def _get_ds_cumentries(self, i_ds: int) -> int:
+        """Helper to get cumulative iterator entries in file/groups"""
+        if i_ds < 0:
             return 0
-        n = self.entry_map[i_file]
+        n = self.entry_map[i_ds]
 
-        # if we haven't already calculated, calculate for all files up to i_file
+        # if we haven't already calculated, calculate for all files up to i_ds
         if n == np.iinfo("q").max:
             i_start = np.searchsorted(self.entry_map, np.iinfo("q").max)
             n = self.entry_map[i_start - 1] if i_start > 0 else 0
 
-            for i in range(i_start, i_file + 1):
-                elist = self.get_file_entrylist(i)
-                fcl = self._get_file_cumlen(i)
+            for i in range(i_start, i_ds + 1):
+                elist = self.get_ds_entrylist(i)
+                fcl = self._get_ds_cumlen(i)
                 if elist is None:
                     # no entry list provided
                     n = fcl
@@ -329,33 +390,33 @@ class LH5Iterator(Iterator):
                 self.entry_map[i] = n
         return n
 
-    def get_file_entrylist(self, i_file: int) -> np.ndarray:
-        """Helper to get entry list for file"""
+    def get_ds_entrylist(self, i_ds: int) -> np.ndarray:
+        """Helper to get entry list for dataset"""
         # If no entry list is provided
         if self.local_entry_list is None:
             return None
 
-        elist = self.local_entry_list[i_file]
+        elist = self.local_entry_list[i_ds]
         if elist is None:
-            # Get local entrylist for this file from global entry list
-            f_start = self._get_file_cumlen(i_file - 1)
-            f_end = self._get_file_cumlen(i_file)
-            i_start = self._get_file_cumentries(i_file - 1)
+            # Get local entrylist for this dataset from global entry list
+            f_start = self._get_ds_cumlen(i_ds - 1)
+            f_end = self._get_ds_cumlen(i_ds)
+            i_start = self._get_ds_cumentries(i_ds - 1)
             i_stop = np.searchsorted(self.global_entry_list, f_end, "right")
             elist = np.array(self.global_entry_list[i_start:i_stop], "q") - f_start
-            self.local_entry_list[i_file] = elist
+            self.local_entry_list[i_ds] = elist
         return elist
 
     def get_global_entrylist(self) -> np.ndarray:
         """Get global entry list, constructing it if needed"""
         if self.global_entry_list is None and self.local_entry_list is not None:
             self.global_entry_list = np.zeros(len(self), "q")
-            for i_file in range(len(self.lh5_files)):
-                i_start = self._get_file_cumentries(i_file - 1)
-                i_stop = self._get_file_cumentries(i_file)
-                f_start = self._get_file_cumlen(i_file - 1)
+            for i_ds in range(self.n_datasets):
+                i_start = self._get_ds_cumentries(i_ds - 1)
+                i_stop = self._get_ds_cumentries(i_ds)
+                f_start = self._get_ds_cumlen(i_ds - 1)
                 self.global_entry_list[i_start:i_stop] = (
-                    self.get_file_entrylist(i_file) + f_start
+                    self.get_ds_entrylist(i_ds) + f_start
                 )
         return self.global_entry_list
 
@@ -371,31 +432,31 @@ class LH5Iterator(Iterator):
             msg = "n_entries cannot be larger than buffer_len"
             raise ValueError(msg)
 
-        # if file hasn't been opened yet, search through files
+        # if dataset hasn't been opened yet, search through datasets
         # sequentially until we find the right one
-        i_file = np.searchsorted(self.entry_map, i_entry, "right")
-        if i_file < len(self.lh5_files) and self.entry_map[i_file] == np.iinfo("q").max:
-            while i_file < len(self.lh5_files) and i_entry >= self._get_file_cumentries(
-                i_file
+        i_ds = np.searchsorted(self.entry_map, i_entry, "right")
+        if i_ds < self.n_datasets and self.entry_map[i_ds] == np.iinfo("q").max:
+            while i_ds < self.n_datasets and i_entry >= self._get_ds_cumentries(
+                i_ds
             ):
-                i_file += 1
+                i_ds += 1
 
-        if i_file == len(self.lh5_files):
+        if i_ds == self.n_datasets:
             return self.lh5_buffer
-        local_i_entry = i_entry - self._get_file_cumentries(i_file - 1)
+        local_i_entry = i_entry - self._get_ds_cumentries(i_ds - 1)
 
-        while len(self.lh5_buffer) < n_entries and i_file < len(self.file_map):
-            # Loop through files
-            local_idx = self.get_file_entrylist(i_file)
+        while len(self.lh5_buffer) < n_entries and i_ds < self.n_datasets:
+            # Loop through datasets
+            local_idx = self.get_ds_entrylist(i_ds)
             if local_idx is not None and len(local_idx) == 0:
-                i_file += 1
+                i_ds += 1
                 local_i_entry = 0
                 continue
 
             i_local = local_i_entry if local_idx is None else local_idx[local_i_entry]
             self.lh5_buffer = self.lh5_st.read(
-                self.groups[i_file],
-                self.lh5_files[i_file],
+                self.groups[i_ds],
+                self.lh5_files[i_ds],
                 start_row=i_local,
                 n_rows=n_entries - len(self.lh5_buffer),
                 idx=local_idx,
@@ -404,7 +465,12 @@ class LH5Iterator(Iterator):
                 obj_buf_start=len(self.lh5_buffer),
             )
 
-            i_file += 1
+            if self.group_data is not None:
+                data = self.group_data[i_ds]
+                for f in data.fields:
+                    self.lh5_buffer[f][local_idx:] = data[f]
+
+            i_ds += 1
             local_i_entry = 0
 
         self.current_i_entry = i_entry
@@ -564,32 +630,38 @@ class LH5Iterator(Iterator):
                 prefix=pre,
                 suffix=suf,
             )
+        
+        # join Table with group metadata; repeat first record to initialize
+        if self.group_data:
+            tb_gd = deepcopy(Table(ak.Array([self.group_data[0]])))
+            tb_gd.resize(len(self.lh5_buffer))
+            self.lh5_buffer.join(tb_gd)
 
         if warn_missing and len(remaining_fields) > 0:
             logging.warning(f"Fields {remaining_fields} in field mask were not found")
 
     @property
     def current_local_entries(self) -> NDArray[int]:
-        """Return list of local file entries in buffer"""
+        """Return list of local dataset entries in buffer"""
         cur_entries = np.zeros(len(self.lh5_buffer), dtype="int32")
-        i_file = np.searchsorted(self.entry_map, self.current_i_entry, "right")
-        file_start = self._get_file_cumentries(i_file - 1)
-        i_local = self.current_i_entry - file_start
+        i_ds = np.searchsorted(self.entry_map, self.current_i_entry, "right")
+        ds_start = self._get_ds_cumentries(i_ds - 1)
+        i_local = self.current_i_entry - ds_start
         i = 0
 
         while i < len(cur_entries):
             # number of entries to read from this file
-            file_end = self._get_file_cumentries(i_file)
-            n = min(file_end - file_start - i_local, len(cur_entries) - i)
-            entries = self.get_file_entrylist(i_file)
+            ds_end = self._get_ds_cumentries(i_ds)
+            n = min(ds_end - ds_start - i_local, len(cur_entries) - i)
+            entries = self.get_ds_entrylist(i_ds)
 
             if entries is None:
                 cur_entries[i : i + n] = np.arange(i_local, i_local + n)
             else:
                 cur_entries[i : i + n] = entries[i_local : i_local + n]
 
-            i_file += 1
-            file_start = file_end
+            i_ds += 1
+            ds_start = ds_end
             i_local = 0
             i += n
 
@@ -599,28 +671,28 @@ class LH5Iterator(Iterator):
     def current_global_entries(self) -> NDArray[int]:
         """Return list of local file entries in buffer"""
         cur_entries = np.zeros(len(self.lh5_buffer), dtype="int32")
-        i_file = np.searchsorted(self.entry_map, self.current_i_entry, "right")
-        file_start = self._get_file_cumentries(i_file - 1)
-        i_local = self.current_i_entry - file_start
+        i_ds = np.searchsorted(self.entry_map, self.current_i_entry, "right")
+        ds_start = self._get_ds_cumentries(i_ds - 1)
+        i_local = self.current_i_entry - ds_start
         i = 0
 
         while i < len(cur_entries):
             # number of entries to read from this file
-            file_end = self._get_file_cumentries(i_file)
-            n = min(file_end - file_start - i_local, len(cur_entries) - i)
-            entries = self.get_file_entrylist(i_file)
+            ds_end = self._get_ds_cumentries(i_ds)
+            n = min(ds_end - ds_start - i_local, len(cur_entries) - i)
+            entries = self.get_ds_entrylist(i_ds)
 
             if entries is None:
-                cur_entries[i : i + n] = self._get_file_cumlen(i_file - 1) + np.arange(
+                cur_entries[i : i + n] = self._get_ds_cumlen(i_ds - 1) + np.arange(
                     i_local, i_local + n
                 )
             else:
                 cur_entries[i : i + n] = (
-                    self._get_file_cumlen(i_file - 1) + entries[i_local : i_local + n]
+                    self._get_ds_cumlen(i_ds - 1) + entries[i_local : i_local + n]
                 )
 
-            i_file += 1
-            file_start = file_end
+            i_ds += 1
+            ds_start = ds_end
             i_local = 0
             i += n
 
@@ -630,19 +702,19 @@ class LH5Iterator(Iterator):
     def current_files(self) -> NDArray[str]:
         """Return list of file names for entries in buffer"""
         cur_files = np.zeros(len(self.lh5_buffer), dtype=object)
-        i_file = np.searchsorted(self.entry_map, self.current_i_entry, "right")
-        file_start = self._get_file_cumentries(i_file - 1)
-        i_local = self.current_i_entry - file_start
+        i_ds = np.searchsorted(self.entry_map, self.current_i_entry, "right")
+        ds_start = self._get_ds_cumentries(i_ds - 1)
+        i_local = self.current_i_entry - ds_start
         i = 0
 
         while i < len(cur_files):
             # number of entries to read from this file
-            file_end = self._get_file_cumentries(i_file)
-            n = min(file_end - file_start - i_local, len(cur_files) - i)
-            cur_files[i : i + n] = self.lh5_files[i_file]
+            ds_end = self._get_ds_cumentries(i_ds)
+            n = min(ds_end - ds_start - i_local, len(cur_files) - i)
+            cur_files[i : i + n] = self.lh5_files[i_ds]
 
-            i_file += 1
-            file_start = file_end
+            i_ds += 1
+            ds_start = ds_end
             i_local = 0
             i += n
 
@@ -652,19 +724,19 @@ class LH5Iterator(Iterator):
     def current_groups(self) -> NDArray[str]:
         """Return list of group names for entries in buffer"""
         cur_groups = np.zeros(len(self.lh5_buffer), dtype=object)
-        i_file = np.searchsorted(self.entry_map, self.current_i_entry, "right")
-        file_start = self._get_file_cumentries(i_file - 1)
-        i_local = self.current_i_entry - file_start
+        i_ds = np.searchsorted(self.entry_map, self.current_i_entry, "right")
+        ds_start = self._get_ds_cumentries(i_ds - 1)
+        i_local = self.current_i_entry - ds_start
         i = 0
 
         while i < len(cur_groups):
             # number of entries to read from this file
-            file_end = self._get_file_cumentries(i_file)
-            n = min(file_end - file_start - i_local, len(cur_groups) - i)
-            cur_groups[i : i + n] = self.groups[i_file]
+            ds_end = self._get_ds_cumentries(i_ds)
+            n = min(ds_end - ds_start - i_local, len(cur_groups) - i)
+            cur_groups[i : i + n] = self.groups[i_ds]
 
-            i_file += 1
-            file_start = file_end
+            i_ds += 1
+            ds_start = ds_end
             i_local = 0
             i += n
 
@@ -675,12 +747,12 @@ class LH5Iterator(Iterator):
         if len(self.entry_map) == 0:
             return 0
         if self.n_entries is None:
-            return self._get_file_cumentries(len(self.lh5_files) - 1)
+            return self._get_ds_cumentries(self.n_datasets - 1)
         # only check as many files as we strictly need to
-        for i in range(len(self.lh5_files)):
-            if self.n_entries < self._get_file_cumentries(i):
+        for i in range(self.n_datasets):
+            if self.n_entries < self._get_ds_cumentries(i):
                 return self.n_entries
-        return self._get_file_cumentries(len(self.lh5_files) - 1)
+        return self._get_ds_cumentries(self.n_datasets - 1)
 
     def __iter__(self) -> LH5Iterator:
         """Loop through entries in blocks of size buffer_len."""
@@ -750,13 +822,14 @@ class LH5Iterator(Iterator):
         s = slice(i_beg, i_end)
         self.lh5_files = self.lh5_files[s]
         self.groups = self.groups[s]
+        self.n_datasets = i_end - i_beg
 
         if i_beg > 0:
             np.subtract(
-                self.file_map,
-                self.file_map[i_beg - 1],
-                out=self.file_map,
-                where=self.file_map != np.iinfo("q").max,
+                self.ds_map,
+                self.ds_map[i_beg - 1],
+                out=self.ds_map,
+                where=self.ds_map != np.iinfo("q").max,
             )
             np.subtract(
                 self.entry_map,
@@ -764,7 +837,7 @@ class LH5Iterator(Iterator):
                 out=self.entry_map,
                 where=self.entry_map != np.iinfo("q").max,
             )
-        self.file_map = self.file_map[s]
+        self.ds_map = self.ds_map[s]
         self.entry_map = self.entry_map[s]
 
         if self.local_entry_list is not None:
@@ -775,18 +848,18 @@ class LH5Iterator(Iterator):
             fr._select_groups(i_beg, i_end)
 
     def _generate_workers(self, n_workers: int):
-        """Create n_workers copy of this iterator, dividing the files and
+        """Create n_workers copy of this iterator, dividing the datasets (file/groups)
         groups between them. These are intended for parallel use"""
-        i_files = np.linspace(0, len(self.lh5_files), n_workers + 1).astype("int")
+        i_datasets = np.linspace(0, len(self.lh5_files), n_workers + 1).astype("int")
         # if we have an entry list, get local entries for all files
         if self.local_entry_list is not None:
             for i in range(len(self.lh5_files)):
-                self.get_file_entries(i)
+                self.get_ds_entrylist(i)
 
         worker_its = []
         for i_worker in range(n_workers):
             it = deepcopy(self)
-            it._select_groups(i_files[i_worker], i_files[i_worker + 1])
+            it._select_groups(i_datasets[i_worker], i_datasets[i_worker + 1])
             worker_its += [it]
 
         return worker_its
