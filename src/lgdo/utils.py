@@ -47,7 +47,7 @@ def get_element_type(obj: object) -> str:
         return "real"
     if kind == "c":
         return "complex"
-    if kind in ["S", "U"]:
+    if kind in ["S", "T", "U"]:
         return "string"
     if (
         kind == "O"
