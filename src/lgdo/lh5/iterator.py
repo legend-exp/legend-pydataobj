@@ -8,7 +8,6 @@ from dataclasses import dataclass
 from functools import partial
 from itertools import chain, product
 from typing import Any
-from warnings import warn
 
 import awkward as ak
 import numpy as np
@@ -171,9 +170,7 @@ class LH5Iterator(Iterator):
             raise ValueError(msg)
 
         self.lh5_st = LH5Store(
-            base_path=base_path,
-            keep_open=file_cache,
-            default_mode=h5py_open_mode
+            base_path=base_path, keep_open=file_cache, default_mode=h5py_open_mode
         )
 
         # convert lh5_files into a nested list
@@ -186,9 +183,21 @@ class LH5Iterator(Iterator):
             self.lh5_files = []
             for i, f in enumerate(lh5_files):
                 if isinstance(f, str):
-                    self.lh5_files.append(expand_path(f, list=True, base_path=base_path))
-                elif isinstance(f, Collection) and all(isinstance(name, str) for name in f):
-                    self.lh5_files.append(sum((expand_path(name, list=True, base_path=base_path) for name in f), start=[]))
+                    self.lh5_files.append(
+                        expand_path(f, list=True, base_path=base_path)
+                    )
+                elif isinstance(f, Collection) and all(
+                    isinstance(name, str) for name in f
+                ):
+                    self.lh5_files.append(
+                        sum(
+                            (
+                                expand_path(name, list=True, base_path=base_path)
+                                for name in f
+                            ),
+                            start=[],
+                        )
+                    )
                 else:
                     msg = "lh5_files must be a collection of strings with up to two levels of nesting"
 
@@ -205,14 +214,16 @@ class LH5Iterator(Iterator):
             for i, g in enumerate(groups):
                 if isinstance(g, str):
                     g = [g]
-                elif not isinstance(g, Collection) and all(isinstance(name, str) for name in g):
+                elif not isinstance(g, Collection) and all(
+                    isinstance(name, str) for name in g
+                ):
                     msg = "groups must be a collection of strings with up to two levels of nesting"
                     raise ValueError(msg)
                 self.groups.append(g)
-        
+
         # convert group_data into array of records
         if isinstance(group_data, pd.DataFrame):
-            self.group_data = ak.Array({k:d for k, d in group_data.items()})
+            self.group_data = ak.Array({k: d for k, d in group_data.items()})
         elif group_data is not None:
             self.group_data = ak.Array(group_data)
         else:
@@ -222,10 +233,14 @@ class LH5Iterator(Iterator):
             if not self.group_data.fields:
                 msg = "group_data must have named fields"
                 raise ValueError(msg)
-            self.group_data = ak.zip({f:self.group_data[f] for f in self.group_data.fields})
+            self.group_data = ak.zip(
+                {f: self.group_data[f] for f in self.group_data.fields}
+            )
             if self.group_data.ndim == 1:
                 self.group_data = ak.Array([self.group_data] * len(self.lh5_files))
-            if not all(len(gd)==len(gps) for gd, gps in zip(self.group_data, self.groups)):
+            if not all(
+                len(gd) == len(gps) for gd, gps in zip(self.group_data, self.groups)
+            ):
                 msg = "group_data must have same array structure as groups"
                 raise ValueError(msg)
 
@@ -436,9 +451,7 @@ class LH5Iterator(Iterator):
         # sequentially until we find the right one
         i_ds = np.searchsorted(self.entry_map, i_entry, "right")
         if i_ds < self.n_datasets and self.entry_map[i_ds] == np.iinfo("q").max:
-            while i_ds < self.n_datasets and i_entry >= self._get_ds_cumentries(
-                i_ds
-            ):
+            while i_ds < self.n_datasets and i_entry >= self._get_ds_cumentries(i_ds):
                 i_ds += 1
 
         if i_ds == self.n_datasets:
@@ -630,7 +643,7 @@ class LH5Iterator(Iterator):
                 prefix=pre,
                 suffix=suf,
             )
-        
+
         # join Table with group metadata; repeat first record to initialize
         if self.group_data:
             tb_gd = deepcopy(Table(ak.Array([self.group_data[0]])))
@@ -943,6 +956,7 @@ class LH5Iterator(Iterator):
         where: Callable | str,
         processes: Executor | int = None,
         executor: Executor = None,
+        library: str = None,
     ):
         """
         Query the data files in the iterator and return the selected data
@@ -963,8 +977,9 @@ class LH5Iterator(Iterator):
               - ``pandas.DataFrame``: pandas dataframe. Treat as mapping from column
                 name to values
 
-            - A string expression. This will call `pd.DataFrame.query <https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.query.html>`_ and return
-              a pandas DataFrame containing all columns in the fields mask.
+            - A string expression. This will call `Table.eval` to select events and
+                return a table with all fields in the `field_mask`, in a data format
+                provided with `library`.
 
         processes:
             number of processes. If ``None``, use number equal to threads available
@@ -973,12 +988,15 @@ class LH5Iterator(Iterator):
             `concurrent.futures.Executor <https://docs.python.org/3/library/concurrent.futures.html>`_
             object for managing parallelism. If ``None``, create a ``ProcessPoolExecutor`` with
             number of processes equal to ``processes``.
+        library:
+            library to convert the columns to when using a string expression for ``where``.
+            See :meth:`Table.eval`.
         """
         if where is None:
             where = _identity
 
         if isinstance(where, str):
-            where = _pandas_query(where)
+            where = _table_query(where, library)
 
         test = where(self.lh5_buffer, self)
         if isinstance(test, LGDOCollection):
@@ -1068,7 +1086,7 @@ class LH5Iterator(Iterator):
         if where is None:
             where = _identity
         elif isinstance(where, str):
-            where = _pandas_query(where)
+            where = _table_query(where, "ak")
 
         h = self.map(
             where,
@@ -1120,13 +1138,23 @@ def _map_helper(fun, aggregator, init, begin, terminate, it):
 
 
 @dataclass
-class _pandas_query:
+class _table_query:
     "Helper for when query is called on a string"
 
     expr: str
+    library: str
 
     def __call__(self, tab, _):
-        return tab.view_as("pd").query(self.expr)
+        "Evaluate selection and return selected elements"
+        # Note this could probably be done more simply if we
+        # implemented __getitem__ to work with lists/slices
+        mask = tab.eval(self.expr)
+        ret = tab.view_as("ak")[mask]
+        if self.library == "ak":
+            return ret
+        if self.library is None:
+            return Table(ret)
+        return Table(ret).view_as(self.library)
 
 
 class _hist_filler:
