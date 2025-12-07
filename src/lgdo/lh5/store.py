@@ -43,7 +43,7 @@ class LH5Store:
         base_path: str | Path = "",
         keep_open: bool = False,
         locking: bool = False,
-        default_mode: str = 'r',
+        default_mode: str = "r",
     ) -> None:
         """
         Parameters
