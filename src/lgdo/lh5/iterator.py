@@ -714,7 +714,7 @@ class LH5Iterator(Iterator):
     @property
     def current_files(self) -> NDArray[str]:
         """Return list of file names for entries in buffer"""
-        cur_files = np.zeros(len(self.lh5_buffer), dtype=object)
+        cur_files = np.zeros(len(self.lh5_buffer), dtype=np.dtypes.StringDType)
         i_ds = np.searchsorted(self.entry_map, self.current_i_entry, "right")
         ds_start = self._get_ds_cumentries(i_ds - 1)
         i_local = self.current_i_entry - ds_start
@@ -736,7 +736,7 @@ class LH5Iterator(Iterator):
     @property
     def current_groups(self) -> NDArray[str]:
         """Return list of group names for entries in buffer"""
-        cur_groups = np.zeros(len(self.lh5_buffer), dtype=object)
+        cur_groups = np.zeros(len(self.lh5_buffer), dtype=np.dtypes.StringDType)
         i_ds = np.searchsorted(self.entry_map, self.current_i_entry, "right")
         ds_start = self._get_ds_cumentries(i_ds - 1)
         i_local = self.current_i_entry - ds_start
