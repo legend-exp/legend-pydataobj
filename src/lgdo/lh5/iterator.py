@@ -30,16 +30,13 @@ class LH5Iterator(Iterator):
 
     Examples
     --------
-    .. codeblock:: python
-        :caption: Iterate through a table one chunk at a time and call ``process``
-        on each chunk
+    Iterate through a table one chunk at a time and call ``process`` on each chunk::
 
             from lgdo.lh5 import LH5Iterator
             for table in LH5Iterator("data.lh5", "geds/raw/energy", buffer_len=100):
                 process(table)
 
-    .. codeblock:: python
-        :caption: ``LH5Iterator`` can also be used for random access::
+    ``LH5Iterator`` can also be used for random access::
 
             it = LH5Iterator(files, groups)
             table = it.read(i_entry)
@@ -97,14 +94,12 @@ class LH5Iterator(Iterator):
 
         Examples
         --------
-        .. codeblock:: python
-            :caption: read "ch1/table" and "ch2/table" from "file.lh5"
+        Read "ch1/table" and "ch2/table" from "file.lh5"::
 
             LH5Iterator("/path/to/file.lh5", ["ch1/table", "ch2/table"])
 
-        .. codeblock:: python
-            :caption: read "ch1" from all lh5 files in "/path1", then read "ch1" and "ch2" from
-            "/path2/file.lh5", and then read "ch1/2/3" from both "file1.lh5" and "file2.lh5"
+        Read "ch1" from all lh5 files in "/path1", then read "ch1" and "ch2" from
+        "/path2/file.lh5", and then read "ch1/2/3" from both "file1.lh5" and "file2.lh5"::
 
             LH5Iterator(
                 ["/path1/*.lh5", "/path2/file.lh5", ["/path3/file1.lh5", "/path3/file2.lh5"]],
@@ -181,7 +176,7 @@ class LH5Iterator(Iterator):
             raise ValueError(msg)
         else:
             self.lh5_files = []
-            for i, f in enumerate(lh5_files):
+            for f in lh5_files:
                 if isinstance(f, str):
                     self.lh5_files.append(
                         expand_path(f, list=True, base_path=base_path)
@@ -190,13 +185,13 @@ class LH5Iterator(Iterator):
                     isinstance(name, str) for name in f
                 ):
                     self.lh5_files.append(
-                        sum(
-                            (
-                                expand_path(name, list=True, base_path=base_path)
-                                for name in f
-                            ),
-                            start=[],
-                        )
+                        [
+                            path
+                            for name in f
+                            for path in expand_path(
+                                name, list=True, base_path=base_path
+                            )
+                        ]
                     )
                 else:
                     msg = "lh5_files must be a collection of strings with up to two levels of nesting"
@@ -211,9 +206,9 @@ class LH5Iterator(Iterator):
             self.groups = [groups] * len(self.lh5_files)
         else:
             self.groups = []
-            for i, g in enumerate(groups):
+            for g in groups:
                 if isinstance(g, str):
-                    g = [g]
+                    g = [g]  # noqa: PLW2901
                 elif not isinstance(g, Collection) and all(
                     isinstance(name, str) for name in g
                 ):
@@ -223,7 +218,7 @@ class LH5Iterator(Iterator):
 
         # convert group_data into array of records
         if isinstance(group_data, pd.DataFrame):
-            self.group_data = ak.Array({k: d for k, d in group_data.items()})
+            self.group_data = ak.Array(dict(group_data))
         elif group_data is not None:
             self.group_data = ak.Array(group_data)
         else:
@@ -887,17 +882,61 @@ class LH5Iterator(Iterator):
         processes: int = None,
         executor: Executor = None,
     ) -> Iterator[Any]:
-        """Map function over iterator blocks and return order-preserving list
-        of outputs. Can be multi-threaded provided there are no attempts to
-        modify existing objects. Multi-threading splits the iterator into
-        multiple independent streams with an approximately equal number of
-        files/groups, concurrently processed under a single program multiple
-        data model. Results will be returned asynchronously for each process.
+        """Map function over iterator blocks.
+
+        Returns order-preserving list of outputs. Can be multi-threaded
+        provided there are no attempts to modify existing objects.
+        Multi-threading splits the iterator into multiple independent
+        streams with an approximately equal number of files/groups,
+        concurrently processed under a single program multiple data
+        model. Results will be returned asynchronously for each process.
+
+        Note: see :meth:`query` and :meth:`hist`
+
+        Example
+        -------
+        Process a table and sum the products at the end::
+
+            def process(lh5_tab, lh5_it):
+                ...process the table
+                return result_of_processing
+
+            results = lh5_it.map(process, processes=4)
+            # results are an iterator over lists
+            result = sum(val for result in results for val in result)
+
+        Process a table as above, using aggregate to sum the results::
+
+            def process(lh5_tab, lh5_it):
+                ...process the table
+                return result_of_processing
+
+            result = lh5_it.map(process, aggregate=np.add, init=0, processes=4)
+
+        Process a table using a more arbitrary output::
+
+            class Result:
+                def __init__(self):
+                    ...initialize
+
+                @classmethod
+                def process_table(tab):
+                    ...process the table
+
+                def aggregate(self, result):
+                    ...add data from processing into object
+
+            result = lh5_it.map(
+                Result.process_table,
+                aggregate=Result.aggregate,
+                init=Result(),
+                processes=4
+            )
 
         Parameters
         ----------
         fun:
-            function with signature fun(lh5_obj: Table, it: LH5Iterator) -> Any
+            function with signature ``fun(lh5_obj: Table, it: LH5Iterator) -> Any``
             Outputs of function will be collected in list and returned
         aggregate:
             function used to iterably combine outputs of ``fun`` for each block
@@ -921,9 +960,9 @@ class LH5Iterator(Iterator):
             number of processes. If ``None``, use number equal to threads available
             to ``executor`` (if provided), or else do not parallelize
         executor:
-            `concurrent.futures.Executor <https://docs.python.org/3/library/concurrent.futures.html>`_
-            object for managing parallelism. If ``None``, create a ``ProcessPoolExecutor`` with
-            number of processes equal to ``processes``.
+            :class:`concurrent.futures.Executor` object for managing parallelism.
+            If ``None``, create a :class:`concurrent.futures.`ProcessPoolExecutor`
+            with number of processes equal to ``processes``.
         """
 
         # if no aggregate is provided, append results to a list
@@ -959,8 +998,23 @@ class LH5Iterator(Iterator):
         library: str = None,
     ):
         """
-        Query the data files in the iterator and return the selected data
-        as a single table in one of several formats.
+        Query the data files in the iterator
+
+        Returns the selected data as a single table in one of several formats.
+
+        Examples
+        --------
+        Query data using a string selection::
+
+            tab = lh5_it.query("(col1 == 0) & (col2 > 100)")
+
+        Query data using a function::
+
+            def select(lh5_tab, lh5_it):
+                ...process data and produce a new table
+                return result
+
+            tab = lh5_it.query(select)
 
         Parameters
         ----------
@@ -970,8 +1024,8 @@ class LH5Iterator(Iterator):
             - A function that returns reduced data, with signature
               ``fun(lh5_obj: Table, it: LH5Iterator)``. Can return:
 
-              - ``NDArray``: if 1D list of values; if 2D list of lists of values in
-                same order as axes
+              - :class:`numpy.ndarray`: if 1D list of values; if 2D list of lists of
+                values in same order as axes
               - ``Collection[ArrayLike]``: return list of values in same order as axes
               - ``Mapping[str, ArrayLike]``: mapping from axis name to values
               - ``pandas.DataFrame``: pandas dataframe. Treat as mapping from column
@@ -985,9 +1039,9 @@ class LH5Iterator(Iterator):
             number of processes. If ``None``, use number equal to threads available
             to ``executor`` (if provided), or else do not parallelize
         executor:
-            `concurrent.futures.Executor <https://docs.python.org/3/library/concurrent.futures.html>`_
-            object for managing parallelism. If ``None``, create a ``ProcessPoolExecutor`` with
-            number of processes equal to ``processes``.
+            :class:`concurrent.futures.Executor` object for managing parallelism.
+            If ``None``, create a :class:`concurrent.futures.`ProcessPoolExecutor`
+            with number of processes equal to ``processes``.
         library:
             library to convert the columns to when using a string expression for ``where``.
             See :meth:`Table.eval`.
@@ -1037,27 +1091,49 @@ class LH5Iterator(Iterator):
         **hist_kwargs,
     ) -> Hist:
         """
-        Fill a histogram from data produced by our ``where``. If
+        Fill a histogram from data produced by a query selecting on ``where``. If
         ``where`` is ``None``, fill with all data fetched by iterator.
+
+        Examples
+        --------
+        Build a 1D histogram of values in ``col3`` with a string selection::
+
+            h = lh5_it.query(
+                hist.axis.RegularAxis(100, 0, 500, label="col3")
+                where = "(col1 == 0) & (col2 > 100)",
+                keys = "col3"
+            )
+
+        Build a 2D histogram with a value axis and string-category axis after
+        applying some processing::
+
+            def get_val(lh5_tab, lh5_it):
+                ...process data
+                return value, category
+
+            h = lh5_it
+                [hist.axis.RegularAxis(100, 0, 500, label="Value"),
+                 hist.axis.StrCategory([], growth=True, label="Category")],
+                 where = get_val,
+            )
 
         Parameters
         ----------
         ax:
-            Axis object(s) used to construct the histogram. Can provide a ``Hist``
-            which will be filled as well.
+            :class:`hist.axis` object(s) used to construct the histogram. Can provide a
+            :class:`hist.Hist` which will be filled as well.
         where:
             A filter function for selecting data entries to put into the histogram. Can be:
 
             - A function that returns reduced data, with signature
               ``fun(lh5_obj: Table, it: LH5Iterator)``. Can return:
 
-              - ``NDArray``: if 1D list of values; if 2D list of lists of values in
-                same order as axes
+              - :class:`numpy.ndarray`: if 1D list of values; if 2D list of lists of
+                values in same order as axes
               - ``Collection[ArrayLike]``: return list of values in same order as axes
               - ``Mapping[str, ArrayLike]``: mapping from axis name to values
-              - ``pandas.DataFrame``: pandas dataframe. Treat as mapping from column
-                name to values
-            - A string expression. This will call `pd.DataFrame.query <https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.query.html>`_ and return
+              - :class:`pandas.DataFrame`: treat as mapping from column name to values
+            - A string expression. This will call :meth:`lgdo.Table.eval` and return
               a pandas DataFrame containing all columns in the fields mask.
 
         keys:
@@ -1067,11 +1143,11 @@ class LH5Iterator(Iterator):
             number of processes. If ``None``, use number equal to threads available
             to ``executor`` (if provided), or else do not parallelize
         executor:
-            `concurrent.futures.Executor <https://docs.python.org/3/library/concurrent.futures.html>`_
-            object for managing parallelism. If ``None``, create a ``ProcessPoolExecutor`` with
-            number of processes equal to ``processes``.
+            :class:`concurrent.futures.Executor` object for managing parallelism.
+            If ``None``, create a :class:`concurrent.futures.`ProcessPoolExecutor`
+            with number of processes equal to ``processes``.
         hist_kwargs:
-            additional keyword arguments for constructing Hist. See `hist.Hist`.
+            additional keyword arguments for constructing Hist. See :class:`hist.Hist`.
         """
 
         # get initial hist for each thread
