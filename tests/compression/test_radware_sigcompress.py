@@ -169,7 +169,7 @@ def test_aoesa(wftable):
     assert isinstance(dec_aoesa, ArrayOfEqualSizedArrays)
     assert np.issubdtype(dec_aoesa.dtype, np.integer)
 
-    for wf1, wf2 in zip(dec_aoesa, wftable.values):
+    for wf1, wf2 in zip(dec_aoesa, wftable.values, strict=False):
         assert np.array_equal(wf1, wf2)
 
     # test using pre-allocated decoded array

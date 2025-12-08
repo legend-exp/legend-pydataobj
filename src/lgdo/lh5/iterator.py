@@ -237,7 +237,8 @@ class LH5Iterator(Iterator):
             if self.group_data.ndim == 1:
                 self.group_data = ak.Array([self.group_data] * len(self.lh5_files))
             if not all(
-                len(gd) == len(gps) for gd, gps in zip(self.group_data, self.groups)
+                len(gd) == len(gps)
+                for gd, gps in zip(self.group_data, self.groups, strict=False)
             ):
                 msg = "group_data must have same array structure as groups"
                 raise ValueError(msg)
@@ -325,7 +326,9 @@ class LH5Iterator(Iterator):
             friend_prefix = [friend_prefix] * len(friend)
         if isinstance(friend_suffix, str):
             friend_suffix = [friend_suffix] * len(friend)
-        for fr, prefix, suffix in zip(friend, friend_prefix, friend_suffix):
+        for fr, prefix, suffix in zip(
+            friend, friend_prefix, friend_suffix, strict=False
+        ):
             self.add_friend(fr, prefix, suffix)
 
         self.i_start = i_start
@@ -581,7 +584,7 @@ class LH5Iterator(Iterator):
             }
 
             for fr, pre, suf in zip(
-                self.friend, self.friend_prefix, self.friend_suffix
+                self.friend, self.friend_prefix, self.friend_suffix, strict=False
             ):
                 mask_lookup = {
                     f"{pre}{field}{suf}": field for field in fr.available_fields
@@ -604,7 +607,7 @@ class LH5Iterator(Iterator):
             mask -= self.field_mask
 
             for fr, pre, suf in zip(
-                self.friend, self.friend_prefix, self.friend_suffix
+                self.friend, self.friend_prefix, self.friend_suffix, strict=False
             ):
                 mask_lookup = {
                     f"{pre}{field}{suf}": field for field in fr.available_fields
@@ -634,7 +637,9 @@ class LH5Iterator(Iterator):
             ),
         )
 
-        for fr, pre, suf in zip(self.friend, self.friend_prefix, self.friend_suffix):
+        for fr, pre, suf in zip(
+            self.friend, self.friend_prefix, self.friend_suffix, strict=False
+        ):
             self.lh5_buffer.join(
                 fr.lh5_buffer,
                 keep_mine=True,
@@ -820,7 +825,9 @@ class LH5Iterator(Iterator):
             size=self.buffer_len,
             field_mask=self.field_mask,
         )
-        for fr, pre, suf in zip(self.friend, self.friend_prefix, self.friend_suffix):
+        for fr, pre, suf in zip(
+            self.friend, self.friend_prefix, self.friend_suffix, strict=False
+        ):
             self.lh5_buffer.join(
                 fr.lh5_buffer,
                 keep_mine=True,

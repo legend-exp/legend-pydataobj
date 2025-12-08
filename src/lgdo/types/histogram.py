@@ -392,7 +392,7 @@ class Histogram(Struct):
         idx = np.zeros(N, np.float64)  # bin indices for flattened array
         oor_mask = np.ones(N, np.bool_)  # mask to remove out of range values
         stride = [s // self.weights.dtype.itemsize for s in self.weights.nda.strides]
-        for col, ax, s in zip(data, self.binning, stride):
+        for col, ax, s in zip(data, self.binning, stride, strict=False):
             if ax.is_range:
                 idx += s * np.floor((col - ax.first) / ax.step - int(not ax.closedleft))
                 if ax.closedleft:
