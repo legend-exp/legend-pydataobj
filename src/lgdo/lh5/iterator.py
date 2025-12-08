@@ -132,7 +132,10 @@ class LH5Iterator(Iterator):
             the correct group, and added to the output table. This should have
             same structure as ``groups``.
         buffer_len
-            number of entries to read at a time while iterating through files.
+            number of entries in tables yielded by iterator. Can be provided as
+            a value with a unit of memory; in this case, use the estimated number
+            of rows that will yield tables that require the provided memory.
+            Default to 100*MB.
         file_cache
             maximum number of files to keep open at a time
         ds_map
