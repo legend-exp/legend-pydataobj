@@ -43,6 +43,7 @@ class LH5Store:
         base_path: str | Path = "",
         keep_open: bool = False,
         locking: bool = False,
+        default_mode: str = "r",
     ) -> None:
         """
         Parameters
@@ -55,6 +56,10 @@ class LH5Store:
             ``n`` most recently opened files; if ``True``, no limit
         locking
             whether to lock files when reading
+        default_mode
+            default mode in which to open files with this ``LH5Store``. See
+            :class:`h5py.File` documentation. If default_mode is ``"r"``, use
+            ``"a"`` when calling `LH5Store.write`.
         """
         base_path = str(Path(base_path)) if base_path != "" else ""
         self.base_path = "" if base_path == "" else utils.expand_path(base_path)
@@ -62,10 +67,27 @@ class LH5Store:
         self.locking = locking
         self.files = OrderedDict()
 
+        if default_mode == "read":
+            default_mode = "r"
+        if default_mode == "write_safe":
+            default_mode = "w"
+        if default_mode == "append":
+            default_mode = "a"
+        if default_mode == "overwrite":
+            default_mode = "o"
+        if default_mode == "overwrite_file":
+            default_mode = "of"
+        if default_mode == "append_column":
+            default_mode = "ac"
+        if default_mode not in ["r", "w", "a", "o", "of", "ac"]:
+            msg = f"unknown wo_mode '{default_mode}'"
+            raise ValueError(msg)
+        self.default_mode = default_mode
+
     def gimme_file(
         self,
         lh5_file: str | Path | h5py.File,
-        mode: str = "r",
+        mode: str = None,
         page_buffer: int = 0,
         **file_kwargs,
     ) -> h5py.File:
@@ -76,7 +98,8 @@ class LH5Store:
         lh5_file
             LH5 file name.
         mode
-            mode in which to open file. See :class:`h5py.File` documentation.
+            mode in which to open file. See :class:`h5py.File` documentation. If
+            ``None``, use default provided at construction
         page_buffer
             enable paged aggregation with a buffer of this size in bytes
             Only used when creating a new file. Useful when writing a file
@@ -89,6 +112,9 @@ class LH5Store:
             return lh5_file
 
         lh5_file = str(Path(lh5_file))
+
+        if mode is None:
+            mode = self.default_mode
 
         if mode == "r":
             lh5_file = utils.expand_path(lh5_file, base_path=self.base_path)
@@ -191,9 +217,9 @@ class LH5Store:
         """
         # grab files from store
         if isinstance(lh5_file, (str, Path, h5py.File)):
-            h5f = self.gimme_file(lh5_file, "r", **file_kwargs)
+            h5f = self.gimme_file(lh5_file, **file_kwargs)
         else:
-            h5f = [self.gimme_file(f, "r", **file_kwargs) for f in lh5_file]
+            h5f = [self.gimme_file(f, **file_kwargs) for f in lh5_file]
         return read(
             name,
             h5f,
@@ -215,7 +241,7 @@ class LH5Store:
         group: str | h5py.Group = "/",
         start_row: int = 0,
         n_rows: int | None = None,
-        wo_mode: str = "append",
+        wo_mode: str = None,
         write_start: int = 0,
         page_buffer: int = 0,
         **h5py_kwargs,
@@ -226,6 +252,8 @@ class LH5Store:
         --------
         .lh5.core.write
         """
+        if wo_mode is None and self.default_mode in ["r", "read"]:
+            wo_mode = "a"
         if wo_mode == "write_safe":
             wo_mode = "w"
         if wo_mode == "append":

@@ -64,6 +64,7 @@ all = [
 ]
 docs = [
     "furo",
+    "hist[plot]",
     "jupyter",
     "myst-parser",
     "nbsphinx",

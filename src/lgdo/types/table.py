@@ -624,6 +624,12 @@ class Table(Struct, LGDOCollection):
 def _ak_to_lgdo_or_col_dict(array: ak.Array):
     if isinstance(array.type.content, ak.types.RecordType):
         return {field: _ak_to_lgdo_or_col_dict(array[field]) for field in array.fields}
+    if array.type.content.parameters.get("__array__") == "string":
+        # Variable length strings aren't quite up to snuff yet, so pad the
+        # fixed-width string length in case we want to update the array
+        # TODO: numpy 2.2.5 fixes this; but it required python v3.10 or higher
+        s_len = np.max(ak.num(array))
+        return Array(np.array(array, dtype=f"<U{s_len * 2}"))
     if isinstance(array.type.content, ak.types.NumpyType):
         return Array(ak.to_numpy(array))
     return VectorOfVectors(array)
