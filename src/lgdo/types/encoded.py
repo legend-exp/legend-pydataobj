@@ -174,7 +174,7 @@ class VectorOfEncodedVectors(LGDOCollection):
         return (self.encoded_data[i], self.decoded_size[i])
 
     def __iter__(self) -> Iterator[tuple[NDArray, int]]:
-        yield from zip(self.encoded_data, self.decoded_size)
+        yield from zip(self.encoded_data, self.decoded_size, strict=False)
 
     def __str__(self) -> str:
         string = ""

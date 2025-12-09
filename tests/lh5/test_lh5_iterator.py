@@ -298,7 +298,9 @@ def test_iterate(more_lgnd_files):
     assert all(
         i == j
         for i, j in zip(
-            lh5_it.get_global_entrylist(), [0, 1, 2, 3, 5, 8, 13, 21, 34, 55]
+            lh5_it.get_global_entrylist(),
+            [0, 1, 2, 3, 5, 8, 13, 21, 34, 55],
+            strict=False,
         )
     )
 
@@ -356,7 +358,7 @@ def test_group_data(more_lgnd_files):
         [1121600] * 5,
         [1121600] * 5,
     ]
-    for tb, ec in zip(lh5_it, exp_chan):
+    for tb, ec in zip(lh5_it, exp_chan, strict=False):
         assert set(tb.keys()) == {
             "is_valid_0vbb",
             "timestamp",
@@ -383,7 +385,7 @@ def test_group_data(more_lgnd_files):
         buffer_len=5,
         group_data=pd.DataFrame({"chan": [1084803, 1084804, 1121600]}),
     )
-    for tb, ec in zip(lh5_it, exp_chan):
+    for tb, ec in zip(lh5_it, exp_chan, strict=False):
         assert set(tb.keys()) == {
             "is_valid_0vbb",
             "timestamp",
@@ -402,7 +404,7 @@ def test_group_data(more_lgnd_files):
             [{"chan": 1084803}, {"chan": 1084804}, {"chan": 1121600}]
         ),
     )
-    for tb, ec in zip(lh5_it, exp_chan):
+    for tb, ec in zip(lh5_it, exp_chan, strict=False):
         assert set(tb.keys()) == {
             "is_valid_0vbb",
             "timestamp",
@@ -434,7 +436,7 @@ def test_range(lgnd_file):
 
     exp_i_entries = [7, 12, 17]
     exp_lens = [5, 5, 3]
-    for lh5_obj, exp_i, exp_len in zip(lh5_it, exp_i_entries, exp_lens):
+    for lh5_obj, exp_i, exp_len in zip(lh5_it, exp_i_entries, exp_lens, strict=False):
         entry = lh5_it.current_i_entry
         assert len(lh5_obj) == exp_len
         assert entry == exp_i
@@ -466,7 +468,9 @@ def test_map(more_lgnd_files):
 
     map_out = lh5_it.map(return_tb)
 
-    assert all(tb_out == tb_map for tb_out, tb_map in zip(exp_out, map_out))
+    assert all(
+        tb_out == tb_map for tb_out, tb_map in zip(exp_out, map_out, strict=False)
+    )
 
     # test use of append as aggregator
     tb_exp = exp_out[0]
@@ -489,7 +493,7 @@ def test_map(more_lgnd_files):
     # buffer_len evenly divides iterator length for each file!
     map_mp = lh5_it.map(return_tb, processes=2)
 
-    assert all(tb == tb_mp for tb, tb_mp in zip(lh5_it, map_mp))
+    assert all(tb == tb_mp for tb, tb_mp in zip(lh5_it, map_mp, strict=False))
 
 
 def query_lgdo(tb, _):
