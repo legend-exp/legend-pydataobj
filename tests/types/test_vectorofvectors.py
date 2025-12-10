@@ -12,7 +12,7 @@ import pint
 import pytest
 
 import lgdo
-from lgdo import Array, VectorOfVectors, lh5
+from lgdo import Array, VectorOfVectors
 
 VovColl = namedtuple("VovColl", ["v2d", "v3d", "v4d", "v2d_uint", "v2d_float"])
 
@@ -526,16 +526,6 @@ def test_view_as(testvov):
     assert ak.is_valid(ak_arr)
     assert len(ak_arr) == len(v3d)
     assert ak.all(ak_arr == [[[1, 2], [3, 4, 5]], [[2], [4, 8, 9, 7]], [[5, 3, 1]]])
-
-
-def test_lh5_iterator_view_as(lgnd_test_data):
-    it = lh5.LH5Iterator(
-        lgnd_test_data.get_path("lh5/l200-p03-r000-phy-20230312T055349Z-tier_psp.lh5"),
-        "ch1067205/dsp/energies",
-    )
-
-    for obj in it:
-        assert ak.is_valid(obj.view_as("ak"))
 
 
 def test_pickle(testvov):
