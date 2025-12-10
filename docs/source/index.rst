@@ -46,7 +46,6 @@ Next steps
    :maxdepth: 1
 
    manual/index
-   tutorials
    Package API reference <api/modules>
 
 .. toctree::
