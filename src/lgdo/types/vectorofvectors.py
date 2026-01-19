@@ -92,6 +92,8 @@ class VectorOfVectors(LGDOCollection):
         data: ArrayLike | None = None,
         flattened_data: ArrayLike | None = None,
         cumulative_length: ArrayLike | VectorOfVectors | None = None,
+        *,
+        offsets: ArrayLike | None = None,
         shape_guess: Sequence[int, ...] | None = None,
         dtype: DTypeLike | None = None,
         fill_val: int | float | None = None,
@@ -117,6 +119,10 @@ class VectorOfVectors(LGDOCollection):
             `self.cumulative_length`. Should be `dtype` :any:`numpy.uint32`. If
             `cumulative_length` is ``None``, an internal `cumulative_length` is
             allocated based on the first element of `shape_guess`.
+        offsets
+            if not ``None``, used directly as the internal offsets array
+            (PyArrow-compatible format with leading 0). Takes priority over
+            `cumulative_length`. Mutually exclusive with `cumulative_length`.
         shape_guess
             a NumPy-format shape specification, required if either of
             `flattened_data` or `cumulative_length` are not supplied.  The
@@ -133,6 +139,11 @@ class VectorOfVectors(LGDOCollection):
             a set of user attributes to be carried along with this LGDO.
         """
         # sanitize
+        if offsets is not None and cumulative_length is not None:
+            msg = "offsets and cumulative_length are mutually exclusive"
+            raise ValueError(msg)
+        if offsets is not None and not isinstance(offsets, Array):
+            offsets = Array(offsets)
         if cumulative_length is not None and not isinstance(cumulative_length, Array):
             cumulative_length = Array(cumulative_length)
         if flattened_data is not None and not isinstance(
@@ -228,8 +239,11 @@ class VectorOfVectors(LGDOCollection):
             self.flattened_data = None
             self.cumulative_length = None
 
-            # let's first setup cumulative_length...
-            if cumulative_length is None:
+            # let's first setup cumulative_length/offsets...
+            if offsets is not None:
+                # use offsets directly (PyArrow-compatible format)
+                self._offsets = offsets
+            elif cumulative_length is None:
                 # initialize based on shape_guess
                 if shape_guess is None:
                     # just make an empty 2D vector
