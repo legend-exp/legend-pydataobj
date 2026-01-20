@@ -29,9 +29,12 @@ def test_init():
 
 
 def test_ak_init():
-    orig = ak.Array([1, 2, 3, 4])
+    orig = ak.with_parameter([1, 2, 3, 4], "units", "mm")
+    assert ak.parameters(orig)["units"] == "mm"
+
     array = Array(orig)
     assert isinstance(array.nda, np.ndarray)
+    assert array.attrs["units"] == "mm"
     assert (array.nda == orig.to_numpy()).all()
 
     # check that this is a view
