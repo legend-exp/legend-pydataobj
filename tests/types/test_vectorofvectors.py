@@ -100,6 +100,12 @@ def test_init(testvov):
     )
 
 
+def test_init_with_units():
+    v = ak.with_parameter([[1], [2, 3]], "units", "mm")
+    vov = VectorOfVectors(v)
+    assert vov.attrs["units"] == "mm"
+
+
 def test_eq(testvov):
     assert testvov.v2d == VectorOfVectors(
         [[1, 2], [3, 4, 5], [2], [4, 8, 9, 7], [5, 3, 1]]

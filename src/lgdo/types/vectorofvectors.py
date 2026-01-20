@@ -111,6 +111,16 @@ class VectorOfVectors(LGDOCollection):
             if not isinstance(data, ak.Array):
                 data = ak.Array(data)
 
+            # units: we don't just forward all ak parameters, there might be
+            # some weird thing in there
+            units = ak.parameters(data).get("units", None)
+            if units is not None:
+                if attrs is None:
+                    attrs = {}
+
+                # give precedence to the user units
+                attrs = {"units": units} | attrs
+
             if data.ndim < 2:
                 # treat as a single-row VoV
                 data = ak.Array([data])
