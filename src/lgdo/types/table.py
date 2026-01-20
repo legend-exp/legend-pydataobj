@@ -64,17 +64,24 @@ class Table(Struct, LGDOCollection):
             instantiate this table using the supplied mapping of column names
             and array-like objects. Supported input types are: mapping of
             strings to LGDOCollections, :class:`pd.DataFrame` and :class:`ak.Array`.
-            Note 1: no copy is performed, the objects are used directly (unless
-            :class:`ak.Array` is provided).  Note 2: if `size` is not ``None``,
-            all arrays will be resized to match it.  Note 3: if the arrays have
-            different lengths, all will be resized to match the length of the
-            first array.
         attrs
             A set of user attributes to be carried along with this LGDO.
 
         Notes
         -----
-        the :attr:`loc` attribute is initialized to 0.
+        - The :attr:`loc` attribute is initialized to 0.
+        - No copy is performed, the objects are used directly (unless
+          :class:`ak.Array` is provided).
+        - If `size` is not ``None``, all arrays will be resized to match it.
+        - If the arrays have different lengths, all will be resized to match the
+          length of the first array.
+
+        Warning
+        -------
+        This constructor has partial units support. It supports fishing `units`
+        from Awkward Array parameters but not (yet) from e.g. NumPy+Pint
+        arrays. In any case, the user can always attach units later by
+        modifying the dictionary held by :attr:`attrs`.
         """
         if isinstance(col_dict, pd.DataFrame):
             col_dict = {k: Array(v) for k, v in col_dict.items()}

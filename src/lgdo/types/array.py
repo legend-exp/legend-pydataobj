@@ -68,6 +68,13 @@ class Array(LGDOCollection):
             attributes have always precedence over all the others (e.g. those
             carried by `nda`).
 
+        Warning
+        -------
+        This constructor has partial units support. It supports fishing `units`
+        from Awkward Array parameters but not (yet) from e.g. NumPy+Pint
+        arrays. In any case, the user can always attach units later by
+        modifying the dictionary held by :attr:`attrs`.
+
         Note
         ----
         The array is used directly, not copied. If not supplied, internal
