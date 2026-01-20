@@ -92,7 +92,14 @@ class Array(LGDOCollection):
                 # give precedence to the user units
                 attrs = {"units": units} | attrs
 
-            nda = ak.to_numpy(nda)  # this is zero-copy
+            if nda.type.content.parameters.get("__array__") == "string":
+                # Variable length strings aren't quite up to snuff yet, so pad the
+                # fixed-width string length in case we want to update the array
+                # TODO: numpy 2.2.5 fixes this; but it required python v3.10 or higher
+                s_len = np.max(ak.num(nda))
+                nda = np.array(nda, dtype=f"<U{s_len * 2}")
+            else:
+                nda = ak.to_numpy(nda)  # this is zero-copy
 
         elif isinstance(nda, Array):
             nda = nda.nda

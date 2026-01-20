@@ -117,3 +117,8 @@ def test_pickle():
     assert ex.attrs["attr1"] == 1
     assert ex.attrs["datatype"] == obj.attrs["datatype"]
     assert np.all(ex.nda == np.array([1, 2, 3, 4]))
+
+
+def test_string_array():
+    array = Array(ak.Array(["e", "sticazzi", "non", "ce", "li", "metti?"]))
+    assert array.dtype == "<U16"
