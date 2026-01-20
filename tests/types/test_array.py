@@ -28,6 +28,17 @@ def test_init():
     assert array.attrs == attrs | {"datatype": "array<1>{real}"}
 
 
+def test_ak_init():
+    orig = ak.Array([1, 2, 3, 4])
+    array = Array(orig)
+    assert isinstance(array.nda, np.ndarray)
+    assert (array.nda == orig.to_numpy()).all()
+
+    # check that this is a view
+    array.nda[1] = -1
+    assert orig[1] == -1
+
+
 def test_resize_and_capacity():
     array = Array(nda=np.array([1, 2, 3, 4]))
     assert array.get_capacity() == 4

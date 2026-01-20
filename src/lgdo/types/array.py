@@ -40,9 +40,9 @@ class Array(LGDOCollection):
 
     def __init__(
         self,
-        nda: np.ndarray = None,
+        nda: np.ndarray | ak.Array | None = None,
         shape: tuple[int, ...] = (),
-        dtype: np.dtype = None,
+        dtype: np.dtype | None = None,
         fill_val: float | int | None = None,
         attrs: dict[str, Any] | None = None,
     ) -> None:
@@ -50,10 +50,10 @@ class Array(LGDOCollection):
         Parameters
         ----------
         nda
-            An :class:`numpy.ndarray` to be used for this object's internal
-            array. Note: the array is used directly, not copied. If not
-            supplied, internal memory is newly allocated based on the shape and
-            dtype arguments.
+            An :class:`numpy.ndarray` or :class:`ak.Array` to be used for this
+            object's internal array. Note: the array is used directly, not
+            copied. If not supplied, internal memory is newly allocated based
+            on the shape and dtype arguments.
         shape
             A numpy-format shape specification for shape of the internal
             ndarray. Required if `nda` is ``None``, otherwise unused.
@@ -74,6 +74,9 @@ class Array(LGDOCollection):
                 nda = np.zeros(shape, dtype=dtype)
             else:
                 nda = np.full(shape, fill_val, dtype=dtype)
+
+        elif isinstance(nda, ak.Array):
+            nda = ak.to_numpy(nda)  # this is zero-copy
 
         elif isinstance(nda, Array):
             nda = nda.nda

@@ -624,6 +624,10 @@ class Table(Struct, LGDOCollection):
 def _ak_to_lgdo_or_col_dict(array: ak.Array):
     if isinstance(array.type.content, ak.types.RecordType):
         return {field: _ak_to_lgdo_or_col_dict(array[field]) for field in array.fields}
+
+    # at this point, the array is not record-type so we assume that the values
+    # represent the same quantity with the same units
+
     if array.type.content.parameters.get("__array__") == "string":
         # Variable length strings aren't quite up to snuff yet, so pad the
         # fixed-width string length in case we want to update the array
