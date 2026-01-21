@@ -36,10 +36,20 @@ def _h5_read_vector_of_vectors(
         msg = "object buffer is not a VectorOfVectors"
         raise LH5DecodeError(msg, fname, oname)
 
-    # read out cumulative_length
-    cumulen_buf = None if obj_buf is None else obj_buf.cumulative_length
+    # read out cumulative_length (into offsets[1:] to avoid copy later)
     h5d_cl = h5py.h5d.open(h5g, b"cumulative_length")
-    cumulative_length, n_rows_read = _h5_read_array(
+
+    if obj_buf is not None:
+        # Buffer case: use existing _offsets buffer
+        offsets_buf = obj_buf._offsets
+        offsets_buf_start = obj_buf_start + 1
+    else:
+        # Non-buffer case: allocate new offsets array
+        offsets_buf = Array(nda=np.empty(1, dtype=h5d_cl.dtype))
+        offsets_buf[0] = 0
+        offsets_buf_start = 1
+
+    offsets, n_rows_read = _h5_read_array(
         h5d_cl,
         fname,
         f"{oname}/cumulative_length",
@@ -47,13 +57,11 @@ def _h5_read_vector_of_vectors(
         n_rows=n_rows,
         idx=idx,
         use_h5idx=use_h5idx,
-        obj_buf=cumulen_buf,
-        obj_buf_start=obj_buf_start,
+        obj_buf=offsets_buf,
+        obj_buf_start=offsets_buf_start,
     )
     # get a view of just what was read out for cleaner code below
-    this_cumulen_nda = cumulative_length.nda[
-        obj_buf_start : obj_buf_start + n_rows_read
-    ]
+    this_cumulen_nda = offsets.nda[offsets_buf_start : offsets_buf_start + n_rows_read]
 
     if idx is not None and n_rows_read > 0:
         # get the starting indices for each array in flattened data:
@@ -146,7 +154,7 @@ def _h5_read_vector_of_vectors(
     # data for this read.
     fd_buf_start = np.uint32(0)
     if obj_buf_start > 0:
-        fd_buf_start = cumulative_length.nda[obj_buf_start - 1]
+        fd_buf_start = offsets.nda[obj_buf_start]  # offsets[i] = cumulative_length[i-1]
         this_cumulen_nda += fd_buf_start
 
     # Now prepare the object buffer if necessary
@@ -198,7 +206,7 @@ def _h5_read_vector_of_vectors(
     return (
         VectorOfVectors(
             flattened_data=flattened_data,
-            cumulative_length=cumulative_length,
+            offsets=offsets,
             attrs=read_attrs(h5g, fname, oname),
         ),
         n_rows_read,
