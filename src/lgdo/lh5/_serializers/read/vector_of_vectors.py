@@ -135,9 +135,6 @@ def _h5_read_vector_of_vectors(
                 )
                 raise LH5DecodeError(msg, fname, oname)
 
-        # determine the number of rows for the flattened_data readout
-        fd_n_rows = this_cumulen_nda[-1] if n_rows_read > 0 else 0
-
         # Now done with this_cumulen_nda, so we can clean it up to be ready
         # to match the in-memory version of flattened_data. Note: these
         # operations on the view change the original array because they are
@@ -146,6 +143,9 @@ def _h5_read_vector_of_vectors(
         # First we need to subtract off the in-file offset for the start of
         # read for flattened_data
         this_cumulen_nda -= fd_start
+
+        # determine the number of rows for the flattened_data readout
+        fd_n_rows = this_cumulen_nda[-1] if n_rows_read > 0 else 0
 
     h5d_cl.close()
 

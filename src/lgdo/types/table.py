@@ -64,17 +64,24 @@ class Table(Struct, LGDOCollection):
             instantiate this table using the supplied mapping of column names
             and array-like objects. Supported input types are: mapping of
             strings to LGDOCollections, :class:`pd.DataFrame` and :class:`ak.Array`.
-            Note 1: no copy is performed, the objects are used directly (unless
-            :class:`ak.Array` is provided).  Note 2: if `size` is not ``None``,
-            all arrays will be resized to match it.  Note 3: if the arrays have
-            different lengths, all will be resized to match the length of the
-            first array.
         attrs
             A set of user attributes to be carried along with this LGDO.
 
         Notes
         -----
-        the :attr:`loc` attribute is initialized to 0.
+        - The :attr:`loc` attribute is initialized to 0.
+        - No copy is performed, the objects are used directly (unless
+          :class:`ak.Array` is provided).
+        - If `size` is not ``None``, all arrays will be resized to match it.
+        - If the arrays have different lengths, all will be resized to match the
+          length of the first array.
+
+        Warning
+        -------
+        This constructor has partial units support. It supports fishing `units`
+        from Awkward Array parameters but not (yet) from e.g. NumPy+Pint
+        arrays. In any case, the user can always attach units later by
+        modifying the dictionary held by :attr:`attrs`.
         """
         if isinstance(col_dict, pd.DataFrame):
             col_dict = {k: Array(v) for k, v in col_dict.items()}
@@ -624,12 +631,13 @@ class Table(Struct, LGDOCollection):
 def _ak_to_lgdo_or_col_dict(array: ak.Array):
     if isinstance(array.type.content, ak.types.RecordType):
         return {field: _ak_to_lgdo_or_col_dict(array[field]) for field in array.fields}
-    if array.type.content.parameters.get("__array__") == "string":
-        # Variable length strings aren't quite up to snuff yet, so pad the
-        # fixed-width string length in case we want to update the array
-        # TODO: numpy 2.2.5 fixes this; but it required python v3.10 or higher
-        s_len = np.max(ak.num(array))
-        return Array(np.array(array, dtype=f"<U{s_len * 2}"))
-    if isinstance(array.type.content, ak.types.NumpyType):
-        return Array(ak.to_numpy(array))
+
+    # be smart and just use Array when it makes sense
+    if (
+        isinstance(array.type.content, ak.types.NumpyType)
+        or array.type.content.parameters.get("__array__") == "string"
+    ):
+        return Array(array)
+
+    # otherwise fallback to VoV
     return VectorOfVectors(array)

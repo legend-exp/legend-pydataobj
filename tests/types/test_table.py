@@ -63,6 +63,7 @@ def test_ak_array_init():
             "a": [1, 2, 3, 4],
             "b": [[1, 2], [3], [4], [5, 6, 7]],
             "c": {"f1": [[], [5], [3, 7, 6], []], "f2": [5, 6, 7, 8]},
+            "d": ["boh", "hello", "there", "!"],
         }
     )
     tbl = Table(array)
@@ -71,6 +72,28 @@ def test_ak_array_init():
     assert isinstance(tbl.c, Table)
     assert isinstance(tbl.c.f1, lgdo.VectorOfVectors)
     assert isinstance(tbl.c.f2, lgdo.Array)
+
+
+def test_ak_array_init_attrs():
+    array = ak.Array(
+        {
+            "a": ak.with_parameter([1, 2, 3, 4], "units", "mm"),
+            "b": ak.with_parameter([[1, 2], [3], [4], [5, 6, 7]], "units", "keV"),
+            "c": {
+                "f1": [[], [5], [3, 7, 6], []],
+                "f2": ak.with_parameter([5, 6, 7, 8], "units", "C"),
+            },
+        }
+    )
+    tbl = Table(array)
+    assert isinstance(tbl.a, lgdo.Array)
+    assert tbl.a.attrs["units"] == "mm"
+    assert isinstance(tbl.b, lgdo.VectorOfVectors)
+    assert tbl.b.attrs["units"] == "keV"
+    assert isinstance(tbl.c, Table)
+    assert isinstance(tbl.c.f1, lgdo.VectorOfVectors)
+    assert isinstance(tbl.c.f2, lgdo.Array)
+    assert tbl.c.f2.attrs["units"] == "C"
 
 
 def test_datatype_name():

@@ -40,9 +40,9 @@ class Array(LGDOCollection):
 
     def __init__(
         self,
-        nda: np.ndarray = None,
+        nda: np.ndarray | ak.Array | None = None,
         shape: tuple[int, ...] = (),
-        dtype: np.dtype = None,
+        dtype: np.dtype | None = None,
         fill_val: float | int | None = None,
         attrs: dict[str, Any] | None = None,
     ) -> None:
@@ -50,10 +50,9 @@ class Array(LGDOCollection):
         Parameters
         ----------
         nda
-            An :class:`numpy.ndarray` to be used for this object's internal
-            array. Note: the array is used directly, not copied. If not
-            supplied, internal memory is newly allocated based on the shape and
-            dtype arguments.
+            An :class:`numpy.ndarray` or :class:`ak.Array` to be used for this
+            object's internal array. If the Awkward array carries a ``units``
+            parameter, it will forwarded as LGDO attribute.
         shape
             A numpy-format shape specification for shape of the internal
             ndarray. Required if `nda` is ``None``, otherwise unused.
@@ -65,7 +64,21 @@ class Array(LGDOCollection):
             the array is allocated with all elements set to the corresponding
             fill value. If `nda` is not ``None``, this parameter is ignored.
         attrs
-            A set of user attributes to be carried along with this LGDO.
+            A set of user attributes to be carried along with this LGDO. These
+            attributes have always precedence over all the others (e.g. those
+            carried by `nda`).
+
+        Warning
+        -------
+        This constructor has partial units support. It supports fishing `units`
+        from Awkward Array parameters but not (yet) from e.g. NumPy+Pint
+        arrays. In any case, the user can always attach units later by
+        modifying the dictionary held by :attr:`attrs`.
+
+        Note
+        ----
+        The array is used directly, not copied. If not supplied, internal
+        memory is newly allocated based on the shape and dtype arguments.
         """
         if nda is None:
             if fill_val is None:
@@ -74,6 +87,26 @@ class Array(LGDOCollection):
                 nda = np.zeros(shape, dtype=dtype)
             else:
                 nda = np.full(shape, fill_val, dtype=dtype)
+
+        elif isinstance(nda, ak.Array):
+            # units: we don't just forward all ak parameters, there might be
+            # some weird thing in there
+            units = ak.parameters(nda).get("units", None)
+            if units is not None:
+                if attrs is None:
+                    attrs = {}
+
+                # give precedence to the user units
+                attrs = {"units": units} | attrs
+
+            if nda.type.content.parameters.get("__array__") == "string":
+                # Variable length strings aren't quite up to snuff yet, so pad the
+                # fixed-width string length in case we want to update the array
+                # TODO: numpy 2.2.5 fixes this; but it required python v3.10 or higher
+                s_len = np.max(ak.num(nda))
+                nda = np.array(nda, dtype=f"<U{s_len * 2}")
+            else:
+                nda = ak.to_numpy(nda)  # this is zero-copy
 
         elif isinstance(nda, Array):
             nda = nda.nda
