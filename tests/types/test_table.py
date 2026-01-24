@@ -81,8 +81,8 @@ def test_ak_array_init():
     assert isinstance(tbl.c, Table)
     assert isinstance(tbl.c.f1, lgdo.VectorOfVectors)
     assert isinstance(tbl.c.f2, lgdo.Array)
-    assert isinstance(tbl.e, lgdo.ArrayOfEqualSizedArrays)
-    assert isinstance(tbl.f, lgdo.ArrayOfEqualSizedArrays)
+    assert isinstance(tbl.e, lgdo.Array)
+    assert isinstance(tbl.f, lgdo.Array)
 
 
 def test_ak_array_init_attrs():

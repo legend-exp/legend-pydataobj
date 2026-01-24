@@ -635,12 +635,10 @@ def _ak_to_lgdo_or_col_dict(array: ak.Array):
     # be smart and just use Array when it makes sense
     if (
         isinstance(array.type.content, ak.types.NumpyType)
+        or isinstance(array.type.content, ak.types.RegularType)
         or array.type.content.parameters.get("__array__") == "string"
     ):
         return Array(array)
-
-    if isinstance(array.type.content, ak.types.RegularType):
-        return ArrayOfEqualSizedArrays(nda=ak.to_numpy(array))
 
     # otherwise fallback to VoV
     return VectorOfVectors(array)
