@@ -465,8 +465,10 @@ def test_set_vector_unsafe(testvov):
             shape_guess=(5, 5), dtype=current_testvov.dtype
         )
         current_testvov = VectorOfVectors(
-            flattened_data = current_testvov.flattened_data.nda[:current_testvov.cumulative_length[2]],
-            cumulative_length = current_testvov.cumulative_length[:3],
+            flattened_data=current_testvov.flattened_data.nda[
+                : current_testvov.cumulative_length[2]
+            ],
+            cumulative_length=current_testvov.cumulative_length[:3],
         )
         fifth_vov._set_vector_unsafe(0, desired_aoa[:3, ...], desired_lens[:3])
         assert len(fifth_vov) == 3
