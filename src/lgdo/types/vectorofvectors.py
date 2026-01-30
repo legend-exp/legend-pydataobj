@@ -243,6 +243,11 @@ class VectorOfVectors(LGDOCollection):
                 )
             elif self.flattened_data is None:
                 self.flattened_data = flattened_data
+                expected_fd_size = self.cumulative_length[-1] if len(self) > 0 else 0
+                if len(flattened_data) != expected_fd_size:
+                    msg = "provided flattened_data array has different size than indicated by cumulative_length. Resizing..."
+                    log.warning(msg)
+                    self.flattened_data.resize(expected_fd_size)
 
         super().__init__(attrs)
 
@@ -474,8 +479,8 @@ class VectorOfVectors(LGDOCollection):
         `vec` in ``self.flattened_data[j:sum(lens)]``. Finally updates
         ``self.cumulative_length[i]`` with the new flattened data array length.
 
-        Vectors stored after index `i` can be overridden, producing unintended
-        behavior. This method is typically used for fast sequential fill of a
+        Vectors stored after index `i` are removed and the VectorOfVectors is
+        resized. This method is typically used for fast sequential fill of a
         pre-allocated vector of vectors.
 
         If i`vec` is 1D array and `lens` is ``None``, set using full array. If
@@ -484,8 +489,9 @@ class VectorOfVectors(LGDOCollection):
 
         Danger
         ------
-        This method can lead to undefined behavior or vector invalidation if
-        used improperly. Use it only if you know what you are doing.
+        This method resizes the array, removes subsequent vectors, and can lead
+        to undefined behavior or vector-view invalidation if used improperly.
+        Use it only if you know what you are doing.
 
         See Also
         --------
@@ -517,6 +523,9 @@ class VectorOfVectors(LGDOCollection):
             else:
                 nan_val = np.nan
             from .vovutils import _nb_fill  # noqa: PLC0415
+
+            self.flattened_data.resize(cum_lens[-1])
+            self.cumulative_length.resize(i + len(lens))
 
             _nb_fill(
                 vec,
