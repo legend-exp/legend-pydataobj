@@ -610,7 +610,9 @@ class LH5Iterator(Iterator):
 
         elif isinstance(mask, Mapping):
             self.field_mask = {
-                field: mask[field] for field in self.available_fields if field in mask
+                field.replace(".", "/"): mask[field]
+                for field in self.available_fields
+                if field in mask
             }
             mask = {
                 field: mask[field] for field in mask if field not in self.field_mask
@@ -635,7 +637,7 @@ class LH5Iterator(Iterator):
             remaining_fields = mask
 
         elif isinstance(mask, Collection) and all(isinstance(m, str) for m in mask):
-            mask = set(mask)
+            mask = {f.replace(".", "/") for f in mask}
             self.field_mask = mask & set(self.available_fields)
             mask -= self.field_mask
 
