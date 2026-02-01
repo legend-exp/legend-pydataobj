@@ -407,14 +407,14 @@ def test_group_data(more_lgnd_files):
         }
         assert all(tb.chan.nda == ec)
 
-    # group_data must be same shape as field_mask
+    # group_data must be same shape as froup_list
     with pytest.raises(ValueError):
         lh5_it = lh5.LH5Iterator(
             more_lgnd_files[2],
             ["ch1084803/hit", "ch1084804/hit", "ch1121600/hit"],
             field_mask=["is_valid_0vbb", "timestamp", "zacEmax_ctc_cal"],
             buffer_len=5,
-            group_data={"chan": [1084803, 1084804, 1121600, 1234567]},
+            group_data={"chan": [1084803, 1084804, 1121600, 1234567, 9876543]},
         )
 
     # group_data provided using pandas dataframe
@@ -452,6 +452,63 @@ def test_group_data(more_lgnd_files):
             "chan",
         }
         assert all(tb.chan.nda == ec)
+
+    # test broadcasting of group data
+    lh5_it = lh5.LH5Iterator(
+        more_lgnd_files[2],
+        ["ch1084803/hit", "ch1084804/hit", "ch1121600/hit"],
+        field_mask=["is_valid_0vbb", "timestamp", "zacEmax_ctc_cal"],
+        buffer_len=5,
+        group_data={"chan": [1084803, 1084804, 1121600], "type": "geds"},
+    )
+    for tb, ec in zip(lh5_it, exp_chan, strict=False):
+        assert set(tb.keys()) == {
+            "is_valid_0vbb",
+            "timestamp",
+            "zacEmax_ctc_cal",
+            "chan",
+            "type",
+        }
+        assert all(tb.chan.nda == ec)
+        assert all(tb.type.nda == "geds")
+
+    # group_data that differs for each run
+    exp_chan = [
+        [1084803] * 5,
+        [1084803] * 5,
+        [1084804] * 5,
+        [1084804] * 5,
+        [1121600] * 5,
+        [1121600] * 5,
+        [2084803] * 5,
+        [2084803] * 5,
+        [2084804] * 5,
+        [2084804] * 5,
+        [2121600] * 5,
+        [2121600] * 5,
+    ]
+    exp_type = ["geds"] * 6 + ["gedss"] * 6
+
+    lh5_it = lh5.LH5Iterator(
+        more_lgnd_files[2],
+        ["ch1084803/hit", "ch1084804/hit", "ch1121600/hit"],
+        field_mask=["is_valid_0vbb", "timestamp", "zacEmax_ctc_cal"],
+        buffer_len=5,
+        group_data={
+            "chan": [[1084803, 1084804, 1121600], [2084803, 2084804, 2121600]],
+            "type": ["geds", "gedss"],
+        },
+    )
+    for tb, ec, et in zip(lh5_it, exp_chan, exp_type, strict=False):
+        assert set(tb.keys()) == {
+            "is_valid_0vbb",
+            "timestamp",
+            "zacEmax_ctc_cal",
+            "chan",
+            "type",
+        }
+        assert all(tb.chan.nda == ec)
+        assert all(tb.type.nda == et)
 
 
 def test_range(lgnd_file):

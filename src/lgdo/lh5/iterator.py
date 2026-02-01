@@ -223,30 +223,56 @@ class LH5Iterator(Iterator):
         if isinstance(group_data, pd.DataFrame):
             self.group_data = ak.Array(dict(group_data))
         elif group_data is not None:
-            self.group_data = ak.Array(group_data)
+            self.group_data = ak.from_iter(group_data)
         else:
             self.group_data = None
 
-        if isinstance(self.group_data, ak.Array):
+        # check that groups and lh5_files are compatible
+        if len(self.groups) != len(self.lh5_files):
+            msg = "lh5_files and groups could not be broadcast onto one another"
+            raise ValueError(msg)
+
+        if isinstance(self.group_data, (ak.Array, ak.Record)):
             if not self.group_data.fields:
                 msg = "group_data must have named fields"
                 raise ValueError(msg)
-            self.group_data = ak.zip(
-                {f: self.group_data[f] for f in self.group_data.fields}
-            )
-            if self.group_data.ndim == 1:
-                self.group_data = ak.Array([self.group_data] * len(self.lh5_files))
-            if not all(
-                len(gd) == len(gps)
-                for gd, gps in zip(self.group_data, self.groups, strict=False)
-            ):
-                msg = "group_data must have same array structure as groups"
-                raise ValueError(msg)
 
-        # check that groups and lh5_files are compatible
-        if len(self.groups) != len(self.lh5_files):
-            msg = "lh5_files and groups must have same length at first level of nesting"
-            raise ValueError(msg)
+            # flatten out any nested fields with _'s
+            def flatten_fields(ar: ak.Array):
+                ret = {}
+                for f in ar.fields:
+                    if not isinstance(ar[f], ak.Record):
+                        ret[f] = ar[f]
+                    else:
+                        contents = flatten_fields(ar[f])
+                        for sub_f, val in contents.items():
+                            ret[f"{f}_{sub_f}"] = val
+                return ret
+
+            self.group_data = flatten_fields(self.group_data)
+
+            # repeat group data over any dimensions as needed
+            broadcast_files = not all(
+                not isinstance(ar, ak.Array) or len(ar) == len(self.lh5_files)
+                for ar in self.group_data.values()
+            )
+            records = []
+            for i_f, gps in enumerate(self.groups):
+                records.append([])
+
+                for ar in self.group_data.values():
+                    v = ar if broadcast_files else ar[i_f]
+                    if isinstance(v, ak.Array) and len(v) != len(gps):
+                        msg = "group_data could not be broadcast onto groups"
+                        raise ValueError(msg)
+
+                for i_g in range(len(gps)):
+                    record = {}
+                    for f, ar in self.group_data.items():
+                        v = ar if broadcast_files else ar[i_f]
+                        record[f] = v if not isinstance(v, ak.Array) else v[i_g]
+                    records[i_f].append(record)
+            self.group_data = ak.Array(records)
 
         # outer-product and flatten nested lists to get all group/file combinations for datasets
         file_list = []
@@ -263,7 +289,8 @@ class LH5Iterator(Iterator):
                     group_data_list.append(gd_list[i_g])
         self.lh5_files = file_list
         self.groups = group_list
-        self.group_data = group_data_list
+        if self.group_data is not None:
+            self.group_data = ak.fill_none(ak.Array(group_data_list), np.nan)
         self.n_datasets = len(self.lh5_files)
 
         if entry_list is not None and entry_mask is not None:
@@ -847,6 +874,8 @@ class LH5Iterator(Iterator):
         s = slice(i_beg, i_end)
         self.lh5_files = self.lh5_files[s]
         self.groups = self.groups[s]
+        if self.group_data is not None:
+            self.group_data = self.group_data[s]
         self.n_datasets = i_end - i_beg
 
         if i_beg > 0:
