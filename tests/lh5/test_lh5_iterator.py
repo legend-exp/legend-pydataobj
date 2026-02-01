@@ -145,6 +145,46 @@ def test_friend(more_lgnd_files):
     assert isinstance(lh5_obj, lgdo.Table)
     assert set(lh5_obj.keys()) == {"waveform", "baseline", "is_valid_0vbb"}
 
+    # test resetting field mask with friends
+    lh5_raw_it = lh5.LH5Iterator(
+        more_lgnd_files[0],
+        "ch1084803/raw",
+        buffer_len=5,
+    )
+    lh5_it = lh5.LH5Iterator(
+        more_lgnd_files[2],
+        "ch1084803/hit",
+        buffer_len=5,
+        friend=lh5_raw_it,
+    )
+    lh5_it.reset_field_mask(["waveform", "baseline", "is_valid_0vbb"])
+
+    lh5_obj = lh5_it.read(0)
+
+    assert len(lh5_obj) == 5
+    assert isinstance(lh5_obj, lgdo.Table)
+    assert set(lh5_obj.keys()) == {"waveform", "baseline", "is_valid_0vbb"}
+
+    # test resetting field mask, leaving one friend with no fields
+    # test resetting field mask with friends
+    lh5_raw_it = lh5.LH5Iterator(
+        more_lgnd_files[0],
+        "ch1084803/raw",
+        buffer_len=5,
+    )
+    lh5_it = lh5.LH5Iterator(
+        more_lgnd_files[2],
+        "ch1084803/hit",
+        buffer_len=5,
+        friend=lh5_raw_it,
+    )
+    lh5_it.reset_field_mask(["waveform", "baseline"])
+
+    lh5_obj = lh5_it.read(0)
+
+    assert len(lh5_obj) == 5
+    assert isinstance(lh5_obj, lgdo.Table)
+    assert set(lh5_obj.keys()) == {"waveform", "baseline"}
 
 def test_friend_conflict(more_lgnd_files):
     lh5_raw_it = lh5.LH5Iterator(

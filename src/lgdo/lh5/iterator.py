@@ -468,16 +468,22 @@ class LH5Iterator(Iterator):
                 continue
 
             i_local = local_i_entry if local_idx is None else local_idx[local_i_entry]
-            self.lh5_buffer = self.lh5_st.read(
-                self.groups[i_ds],
-                self.lh5_files[i_ds],
-                start_row=i_local,
-                n_rows=n_entries - len(self.lh5_buffer),
-                idx=local_idx,
-                field_mask=self.field_mask,
-                obj_buf=self.lh5_buffer,
-                obj_buf_start=len(self.lh5_buffer),
-            )
+
+            if len(self.field_mask) > 0 or not isinstance(self.lh5_buffer, Table):
+                self.lh5_buffer = self.lh5_st.read(
+                    self.groups[i_ds],
+                    self.lh5_files[i_ds],
+                    start_row=i_local,
+                    n_rows=n_entries - len(self.lh5_buffer),
+                    idx=local_idx,
+                    field_mask=self.field_mask,
+                    obj_buf=self.lh5_buffer,
+                    obj_buf_start=len(self.lh5_buffer),
+                )
+            else:
+                self.lh5_buffer.resize(
+                    min(n_entries, self._get_ds_cumentries(i_ds) - i_entry)
+                )
 
             if self.group_data is not None:
                 data = self.group_data[i_ds]
@@ -573,7 +579,7 @@ class LH5Iterator(Iterator):
             for fr in self.friend:
                 fr.reset_field_mask(None)
 
-            remaining_fields = []
+            remaining_fields = set()
 
         elif isinstance(mask, Mapping):
             self.field_mask = {
@@ -627,15 +633,18 @@ class LH5Iterator(Iterator):
                 return new_buffer
             return old_buffer
 
-        self.lh5_buffer = copy_data(
-            self.lh5_buffer,
-            self.lh5_st.get_buffer(
-                self.groups[0],
-                self.lh5_files[0],
-                size=len(self.lh5_buffer),
-                field_mask=self.field_mask,
-            ),
-        )
+        if len(self.field_mask) > 0 or not isinstance(self.lh5_buffer, Table):
+            self.lh5_buffer = copy_data(
+                self.lh5_buffer,
+                self.lh5_st.get_buffer(
+                    self.groups[0],
+                    self.lh5_files[0],
+                    size=len(self.lh5_buffer),
+                    field_mask=self.field_mask,
+                ),
+            )
+        else:
+            self.lh5_buffer = Table(size=0)
 
         for fr, pre, suf in zip(
             self.friend, self.friend_prefix, self.friend_suffix, strict=False
@@ -648,9 +657,11 @@ class LH5Iterator(Iterator):
             )
 
         # join Table with group metadata; repeat first record to initialize
-        if self.group_data:
-            tb_gd = deepcopy(Table(ak.Array([self.group_data[0]])))
+        if self.group_data is not None:
+            # deepcopy required to prevent ownership conflict
+            tb_gd = deepcopy(Table(self.group_data[0:1], 1))
             tb_gd.resize(len(self.lh5_buffer))
+            remaining_fields -= set(tb_gd)
             self.lh5_buffer.join(tb_gd)
 
         if warn_missing and len(remaining_fields) > 0:
@@ -819,21 +830,17 @@ class LH5Iterator(Iterator):
         self.__dict__ = d
         self.lh5_st = LH5Store(**(d["lh5_st"]))
         self.lh5_st.gimme_file(self.lh5_files[0])
-        self.lh5_buffer = self.lh5_st.get_buffer(
-            self.groups[0],
-            self.lh5_files[0],
-            size=self.buffer_len,
-            field_mask=self.field_mask,
-        )
-        for fr, pre, suf in zip(
-            self.friend, self.friend_prefix, self.friend_suffix, strict=False
-        ):
-            self.lh5_buffer.join(
-                fr.lh5_buffer,
-                keep_mine=True,
-                prefix=pre,
-                suffix=suf,
-            )
+
+        self.lh5_buffer = Table(size=0)
+
+        # recursively walk through friends and append field_masks
+        def build_field_mask(it):
+            field_mask = it.field_mask
+            for fr in it.friend:
+                field_mask |= fr.field_mask
+            return field_mask
+
+        self.reset_field_mask(build_field_mask(self))
 
     def _select_groups(self, i_beg, i_end):
         """Reduce list of files and groups; used by _generate_workers"""
@@ -1234,13 +1241,24 @@ class _table_query:
         "Evaluate selection and return selected elements"
         # Note this could probably be done more simply if we
         # implemented __getitem__ to work with lists/slices
-        mask = tab.eval(self.expr)
-        ret = tab.view_as("ak")[mask]
-        if self.library == "ak":
-            return ret
+        mask = eval(
+            self.expr,
+            {"np": np, "numpy": np, "ak": ak, "awkward": ak},
+            tab.view_as("ak"),
+        )
+
+        # This avoids some funny business with empty string arrays...
+        if ak.all(~mask):
+            ret = tab
+            ret.resize(0)
+        elif self.library == "ak":
+            return tab.view_as("ak")[mask]
+        else:
+            ret = Table(tab.view_as("ak")[mask])
+
         if self.library is None:
-            return Table(ret)
-        return Table(ret).view_as(self.library)
+            return ret
+        return ret.view_as(self.library)
 
 
 class _hist_filler:

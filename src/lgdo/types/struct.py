@@ -98,14 +98,16 @@ class Struct(LGDO, MutableMapping):
         if name2:
             if not name1:
                 self.add_field(name2, obj)
+            elif name1 not in self:
+                new_obj = type(self)()
+                new_obj.add_field(name2, obj)
+                self.add_field(name1, new_obj)
             else:
-                if name1 not in self:
-                    self.add_field(name1, Struct())
                 self[name1].add_field(name2, obj)
         else:
             if not isinstance(obj, LGDO):
                 if isinstance(obj, Mapping):
-                    obj = Struct(obj)
+                    obj = type(self)(obj)
                 else:
                     msg = f"value of '{name}' ({obj!r}) is not an LGDO or a Mapping"
                     raise ValueError(msg)
