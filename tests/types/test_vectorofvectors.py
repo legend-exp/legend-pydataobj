@@ -185,6 +185,14 @@ def test_getitem(testvov):
     v = VectorOfVectors([[1, 2]], dtype="uint32")
     assert np.array_equal(v[-1], [1, 2])
 
+    new_desired = VectorOfVectors([desired[1], desired[3]], dtype=testvov.dtype)
+    test_slice = testvov[1::2]
+    assert test_slice == new_desired
+    test_fancy = testvov[[1, 3]]
+    assert test_fancy == new_desired
+    test_mask = testvov[np.array([0, 1, 0, 1, 0], dtype="bool")]
+    assert test_mask == new_desired
+
 
 def test_resize_and_capacity(testvov):
     vov = testvov.v2d

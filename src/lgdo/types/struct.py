@@ -8,7 +8,7 @@ from __future__ import annotations
 import copy
 import logging
 import re
-from collections.abc import Iterable, Iterator, Mapping, MutableMapping
+from collections.abc import Collection, Iterable, Iterator, Mapping, MutableMapping
 from itertools import chain
 from typing import Any
 
@@ -115,13 +115,18 @@ class Struct(LGDO, MutableMapping):
             self.obj_dict[name1] = obj
             self.update_datatype()
 
-    def __getitem__(self, name: str) -> LGDO:
+    def __getitem__(self, name: str | Collection[str]) -> LGDO:
         """Get value associated with field. Name can be nested (e.g. ``name1.name2``
         or ``name1/name2``); this will search in nested Structs
         """
-        name1, name2 = parser.match(name).groups()
-        obj = self.obj_dict[name1] if name1 else self
-        return obj if not name2 else obj[name2]
+        if isinstance(name, str):
+            name1, name2 = parser.match(name).groups()
+            obj = self.obj_dict[name1] if name1 else self
+            return obj if not name2 else obj[name2]
+        return type(self)(
+            {n: self[n] for n in name},
+            attrs={k: v for k, v in self.attrs.items() if k != "datatype"},
+        )
 
     def __setitem__(self, name: str, obj: LGDO) -> None:
         return self.add_field(name, obj)

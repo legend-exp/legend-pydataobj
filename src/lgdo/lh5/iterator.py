@@ -1275,21 +1275,13 @@ class _table_query:
         mask = eval(
             self.expr,
             {"np": np, "numpy": np, "ak": ak, "awkward": ak},
-            tab.view_as("ak"),
+            tab.view_as("ak", with_units=True),
         )
-
-        # This avoids some funny business with empty string arrays...
-        if ak.all(~mask):
-            ret = tab
-            ret.resize(0)
-        elif self.library == "ak":
-            return tab.view_as("ak")[mask]
-        else:
-            ret = Table(tab.view_as("ak")[mask])
+        ret = tab[mask]
 
         if self.library is None:
             return ret
-        return ret.view_as(self.library)
+        return ret.view_as(self.library, with_units=True)
 
 
 class _hist_filler:

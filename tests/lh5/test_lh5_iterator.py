@@ -186,6 +186,7 @@ def test_friend(more_lgnd_files):
     assert isinstance(lh5_obj, lgdo.Table)
     assert set(lh5_obj.keys()) == {"waveform", "baseline"}
 
+
 def test_friend_conflict(more_lgnd_files):
     lh5_raw_it = lh5.LH5Iterator(
         more_lgnd_files[0],
@@ -639,6 +640,11 @@ def test_query(more_lgnd_files):
     tb_lgdo_mp = lh5_it.query(query_lgdo, processes=3)
     assert tb_lgdo_mp == tb_exp
 
+    tb_lgdo = lh5_it.query("zacEmax_ctc_cal>200")
+    assert tb_lgdo == tb_exp
+    tb_lgdo_mp = lh5_it.query("zacEmax_ctc_cal>200", processes=3)
+    assert tb_lgdo_mp == tb_exp
+
     pd_out = lh5_it.query(query_pd)
     assert pd_out.equals(tb_exp.view_as("pd"))
     pd_out_mp = lh5_it.query(query_pd, processes=3)
@@ -653,11 +659,6 @@ def test_query(more_lgnd_files):
     assert np.all(np_out == tb_exp["zacEmax_ctc_cal"])
     np_out_mp = lh5_it.query(query_np, processes=3)
     assert np.all(np_out_mp == tb_exp["zacEmax_ctc_cal"])
-
-    pd_out_str = lh5_it.query("zacEmax_ctc_cal>200", library="pd")
-    assert pd_out_str.equals(tb_exp.view_as("pd"))
-    pd_out_str_mp = lh5_it.query("zacEmax_ctc_cal>200", processes=3, library="pd")
-    assert pd_out_str_mp.equals(tb_exp.view_as("pd"))
 
 
 def test_hist(more_lgnd_files):

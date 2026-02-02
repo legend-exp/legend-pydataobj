@@ -6,7 +6,7 @@ equal length and corresponding utilities.
 from __future__ import annotations
 
 import logging
-from collections.abc import Mapping
+from collections.abc import Collection, Mapping
 from types import ModuleType
 from typing import Any
 from warnings import warn
@@ -110,6 +110,26 @@ class Table(Struct, LGDOCollection):
     def __len__(self) -> int:
         """Provides ``__len__`` for this array-like class."""
         return self.size
+
+    def __getitem__(self, i) -> dict | Table:
+        if isinstance(i, int):
+            return Struct(
+                {k: Scalar(v[i]) for k, v in self.items()},
+                attrs={k: v for k, v in self.attrs.items() if k != "datatype"},
+            )
+        if isinstance(i, str) or (
+            isinstance(i, Collection) and all(isinstance(k, str) for k in i)
+        ):
+            return Struct.__getitem__(self, i)
+        ret = Table(attrs={k: v for k, v in self.attrs.items() if k != "datatype"})
+        for k, v in self.items():
+            # TODO: if Array.__getitem__ is made to return LGDO, this
+            # can be done more simply
+            if isinstance(v, Array):
+                ret[k] = type(v)(v[i], attrs=v.attrs)
+            else:
+                ret[k] = v[i]
+        return ret
 
     def reserve_capacity(self, capacity: int | Mapping[str | int]) -> None:
         """Set size (number of rows) of internal memory buffer
