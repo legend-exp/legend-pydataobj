@@ -468,23 +468,20 @@ def test_set_vector_unsafe(testvov):
             == np.nan_to_num(exp_entry_w_overflow, nan=0)
         )
 
-        # test vectorized filling when len is longer than array
-        fourth_vov = lgdo.VectorOfVectors(
+        # test vectorized filling with fewer elements than are in initial array
+        fifth_vov = lgdo.VectorOfVectors(
             shape_guess=(5, 5), dtype=current_testvov.dtype
         )
-        desired_lens[3] = 10
-        fourth_vov._set_vector_unsafe(0, desired_aoa, desired_lens)
-        if current_testvov.dtype in ["int32", "int64", "uint16", "uint32"]:
-            exp_entry_w_overflow = np.concatenate(
-                [desired[3], np.array([np.iinfo(current_testvov.dtype).min] * 6)]
-            )
-        else:
-            exp_entry_w_overflow = np.concatenate([desired[3], np.array([np.nan] * 6)])
-
-        assert np.all(
-            np.nan_to_num(fourth_vov[3], nan=0)
-            == np.nan_to_num(exp_entry_w_overflow, nan=0)
+        current_testvov = VectorOfVectors(
+            flattened_data=current_testvov.flattened_data.nda[
+                : current_testvov.cumulative_length[2]
+            ],
+            cumulative_length=current_testvov.cumulative_length[:3],
         )
+        fifth_vov._set_vector_unsafe(0, desired_aoa[:3, ...], desired_lens[:3])
+        assert len(fifth_vov) == 3
+        assert len(fifth_vov.flattened_data) == len(current_testvov.flattened_data)
+        assert current_testvov == fifth_vov
 
 
 def test_iter(testvov):
