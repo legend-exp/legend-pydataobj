@@ -1041,6 +1041,8 @@ class LH5Iterator(Iterator):
     def query(
         self,
         where: Callable | str,
+        *,
+        fields: Collection[str] = None,
         processes: Executor | int = None,
         executor: Executor = None,
         library: str = None,
@@ -1083,6 +1085,9 @@ class LH5Iterator(Iterator):
                 return a table with all fields in the `field_mask`, in a data format
                 provided with `library`.
 
+        fields:
+            list of fields to return. If ``None`` return all fields in ``field_mask``.
+
         processes:
             number of processes. If ``None``, use number equal to threads available
             to ``executor`` (if provided), or else do not parallelize
@@ -1098,7 +1103,7 @@ class LH5Iterator(Iterator):
             where = _identity
 
         if isinstance(where, str):
-            where = _table_query(where, library)
+            where = _table_query(where, library, fields)
 
         test = where(self.lh5_buffer, self)
         if isinstance(test, LGDOCollection):
@@ -1210,7 +1215,7 @@ class LH5Iterator(Iterator):
         if where is None:
             where = _identity
         elif isinstance(where, str):
-            where = _table_query(where, "ak")
+            where = _table_query(where, "ak", None)
 
         h = self.map(
             where,
@@ -1267,6 +1272,7 @@ class _table_query:
 
     expr: str
     library: str
+    fields: Collection[str] | None
 
     def __call__(self, tab, _):
         "Evaluate selection and return selected elements"
@@ -1277,7 +1283,7 @@ class _table_query:
             {"np": np, "numpy": np, "ak": ak, "awkward": ak},
             tab.view_as("ak", with_units=True),
         )
-        ret = tab[mask]
+        ret = tab[mask] if self.fields is None else tab[self.fields][mask]
 
         if self.library is None:
             return ret
