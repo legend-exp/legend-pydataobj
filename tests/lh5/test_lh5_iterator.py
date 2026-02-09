@@ -650,6 +650,11 @@ def test_query(more_lgnd_files):
     tb_lgdo_mp = lh5_it.query("zacEmax_ctc_cal>200", fields=["timestamp"], processes=3)
     assert tb_lgdo_mp == Table({"timestamp": tb_exp["timestamp"]})
 
+    tb_lgdo = lh5_it.query("zacEmax_ctc_cal>200", fields={"timestamp":None, "zacEmax_ctc_cal":"energy"})
+    assert tb_lgdo == Table({"timestamp": tb_exp["timestamp"], "energy": tb_exp["zacEmax_ctc_cal"]})
+    tb_lgdo_mp = lh5_it.query("zacEmax_ctc_cal>200", fields={"timestamp":None, "zacEmax_ctc_cal":"energy"}, processes=3)
+    assert tb_lgdo_mp == Table({"timestamp": tb_exp["timestamp"], "energy": tb_exp["zacEmax_ctc_cal"]})
+
     pd_out = lh5_it.query(query_pd)
     assert pd_out.equals(tb_exp.view_as("pd"))
     pd_out_mp = lh5_it.query(query_pd, processes=3)

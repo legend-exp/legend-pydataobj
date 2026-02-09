@@ -1042,7 +1042,7 @@ class LH5Iterator(Iterator):
         self,
         where: Callable | str,
         *,
-        fields: Collection[str] = None,
+        fields: Collection[str] | Mapping[str, str | None] = None,
         processes: Executor | int = None,
         executor: Executor = None,
         library: str = None,
@@ -1087,6 +1087,9 @@ class LH5Iterator(Iterator):
 
         fields:
             list of fields to return. If ``None`` return all fields in ``field_mask``.
+            If a mapping is provided, key corresponds to name of field in this iterator,
+            and value is an alias to name in returned table; if alias is ``None``, do
+            not rename.
 
         processes:
             number of processes. If ``None``, use number equal to threads available
@@ -1272,18 +1275,29 @@ class _table_query:
 
     expr: str
     library: str
-    fields: Collection[str] | None
+    fields: Collection[str] | Mapping[str, str | None] | None
+
+    def __post_init__(self):
+        # turn collection into mapping
+        if self.fields is not None and not isinstance(self.fields, Mapping):
+            self.fields = { k:None for k in self.fields }
 
     def __call__(self, tab, _):
         "Evaluate selection and return selected elements"
-        # Note this could probably be done more simply if we
-        # implemented __getitem__ to work with lists/slices
+        args = { f: a.view_as('ak', with_units = True) for f, a in tab.items() }
+        if self.fields is not None:
+            for k, v in self.fields.items():
+                if v is not None:
+                    args[v] = tab[k]
+
         mask = eval(
             self.expr,
             {"np": np, "numpy": np, "ak": ak, "awkward": ak},
-            tab.view_as("ak", with_units=True),
+            args,
         )
-        ret = tab[mask] if self.fields is None else tab[self.fields][mask]
+        ret = tab[mask]
+        if self.fields is not None:
+            ret = Table( { (k if f is None else f):ret[k] for k, f in self.fields.items() } )
 
         if self.library is None:
             return ret
