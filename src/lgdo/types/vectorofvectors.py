@@ -145,6 +145,7 @@ class VectorOfVectors(LGDOCollection):
             if (
                 "__array__" in curr.parameters
                 and curr.parameters["__array__"] == "bytestring"
+                and len(data)>0
             ):
                 diffs = np.diff(container[f"node{data.ndim - 1}-offsets"])
                 if (diffs != diffs[0]).all():
@@ -238,9 +239,13 @@ class VectorOfVectors(LGDOCollection):
                     raise ValueError(msg)
 
                 # now ready to initialize the object!
-                self.flattened_data = Array(
-                    shape=(self.cumulative_length[-1],), dtype=dtype, fill_val=fill_val
-                )
+                if len(self.cumulative_length)>0:
+                    self.flattened_data = Array(
+                        shape=(self.cumulative_length[-1],), dtype=dtype, fill_val=fill_val
+                    )
+                else:
+                    self.flattened_data = Array(shape=0, dtype=dtype)
+
             elif self.flattened_data is None:
                 self.flattened_data = flattened_data
                 expected_fd_size = self.cumulative_length[-1] if len(self) > 0 else 0
@@ -311,7 +316,7 @@ class VectorOfVectors(LGDOCollection):
 
             raise NotImplementedError
 
-        return VectorOfVectors(self.view_as("ak")[i], attrs=self.attrs)
+        return VectorOfVectors(self.view_as("ak")[i], dtype=self.dtype, attrs=self.attrs)
 
     def __setitem__(self, i: int, new: NDArray) -> None:
         if self.ndim == 2:
