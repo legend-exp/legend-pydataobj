@@ -78,6 +78,7 @@ class LH5Iterator(Iterator):
         friend: Collection[LH5Iterator] = None,
         friend_prefix: str = "",
         friend_suffix: str = "",
+        safe_mode: bool = True,
         h5py_open_mode: str = "r",
     ) -> None:
         """
@@ -153,6 +154,9 @@ class LH5Iterator(Iterator):
             prefix for fields in friend iterator for resolving naming conflicts
         friend_suffix
             suffix for fields in friend iterator for resolving naming conflicts
+        safe_mode
+            if ``True`` and a friend iterator has a different number of files,
+            groups, or elements in a dataset, raise an Exception.
         h5py_open_mode
             file open mode used when acquiring file handles. ``r`` (default)
             opens files read-only while ``a`` allow opening files for
@@ -340,6 +344,7 @@ class LH5Iterator(Iterator):
         self.buffer_len = buffer_len
 
         # Attach the friend(s)
+        self.safe_mode = safe_mode
         if friend is None:
             friend = []
         elif isinstance(friend, LH5Iterator):
@@ -525,6 +530,13 @@ class LH5Iterator(Iterator):
         for friend in self.friend:
             friend.read(i_entry)
 
+            if self.safe_mode and np.any(self.entry_map[:i_ds+1] != friend.entry_map[:i_ds+1]):
+                i_diff = np.argmax(self.entry_map[:i_ds] != friend.entry_map[:i_ds])
+                msg = f"with safe_mode = True, require that datasets have same sizes between friends."\
+                f"File {self.lh5_files[i_diff]} group {self.groups[i_diff]} differs from"\
+                f"file {friend.lh5_files[i_diff]} group {friend.groups[i_diff]}."
+                raise RuntimeError(msg)
+
         return self.lh5_buffer
 
     @property
@@ -564,6 +576,11 @@ class LH5Iterator(Iterator):
         if not isinstance(friend, LH5Iterator):
             msg = "Friend must be an LH5Iterator"
             raise ValueError(msg)
+        
+        if self.safe_mode and len(self.lh5_files) != len(friend.lh5_files):
+            msg = f"with safe_mode = True, friend iterator must have same number of datasets."\
+            f"Found {len(self.lh5_files)} in self, and {len(friend.lh5_files)} in friend."
+            raise RuntimeError(msg)
 
         # set buffer_lens to be equal
         if friend.buffer_len > self.buffer_len:

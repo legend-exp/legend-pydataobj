@@ -784,3 +784,54 @@ def test_iterator_wo_mode_write(tmp_path, lh5_file):
     )
     assert len(store.read("/data/dummy", dst.as_posix())) == 1
     assert len(it.read(0)) > 0
+
+
+def test_safe_mode(more_lgnd_files):
+    lh5_raw_it = lh5.LH5Iterator(
+        more_lgnd_files[0],
+        ["ch1084803/raw", "ch1084804/raw"],
+        field_mask=["waveform", "baseline"],
+        buffer_len=5,
+    )
+    with pytest.raises(RuntimeError):
+        lh5_it = lh5.LH5Iterator(
+            more_lgnd_files[2],
+            ["ch1084803/hit", "ch1084804/hit", "ch1121600/hit"],
+            field_mask=["is_valid_0vbb"],
+            buffer_len=5,
+            friend=lh5_raw_it,
+        )
+
+    lh5_raw_it = lh5.LH5Iterator(
+        more_lgnd_files[0],
+        ["ch1084803/raw", "ch1084804/raw"],
+        field_mask=["waveform", "baseline"],
+        buffer_len=5,
+    )
+    lh5_it = lh5.LH5Iterator(
+        more_lgnd_files[2],
+        ["ch1084803/hit", "ch1084804/hit", "ch1121600/hit"],
+        field_mask=["is_valid_0vbb"],
+        buffer_len=5,
+        friend=lh5_raw_it,
+        safe_mode=False,
+    )
+
+    lh5_raw_it = lh5.LH5Iterator(
+        more_lgnd_files[0],
+        ["ch1084803/raw"],
+        entry_list = [1, 3, 5, 7, 9, 11, 13],
+        field_mask=["waveform", "baseline"],
+        buffer_len=5,
+    )
+    lh5_it = lh5.LH5Iterator(
+        more_lgnd_files[2],
+        ["ch1084803/hit"],
+        entry_list = [1, 3, 5, 9, 11, 13],
+        field_mask=["is_valid_0vbb"],
+        buffer_len=5,
+        friend=lh5_raw_it,
+    )
+    with pytest.raises(RuntimeError):
+        for _ in lh5_it:
+            pass
