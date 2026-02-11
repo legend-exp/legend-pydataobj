@@ -190,6 +190,47 @@ def truncate(
         exclude_list: list[str] | None = None,
         file_type: str | None = None # auto-deduce from name
 ) -> None:
+    """Truncate an LH5 file and write the result to a new file.
+
+    This function produces a truncated copy of `infile` at `outfile` by applying
+    `length_or_slice` to array-like LGDOs contained in the file. There are two
+    supported truncation modes depending on the ordering of the input file:
+
+    - evt-ordered (file types: ``evt``, ``tcm``, ``any-evt``): arrays are truncated
+      by applying `length_or_slice` directly to each array (simple slicing).
+    - hit-ordered (file types: ``raw``, ``dsp``, ``hit``, ``any-hit``): rows belong
+      to channels and the truncation must preserve only those rows that fall into
+      the requested ``length_or_slice`` of the corresponding TCM mapping. For this
+      mode a `tcm_file` must be provided; the function reads
+      ``hardware_tcm_1/row_in_table`` and ``hardware_tcm_1/table_key`` from the
+      TCM file to build the per-channel row selection.
+
+    Parameters
+    ----------
+    infile:
+        Path to the input LH5 file to truncate.
+    outfile:
+        Path to the resulting truncated LH5 file to create.
+    length_or_slice:
+        Integer number of rows to keep (keeps first N rows) or a ``slice``
+        object to select rows. The semantics differ slightly between
+        evt- and hit-ordered files (see above).
+    overwrite:
+        If True, the output file will be overwritten when created; otherwise
+        a safe write/append strategy is used.
+    tcm_file:
+        Path to a TCM LH5 file. Required for hit-ordered truncation to map
+        channel keys to row indices.
+    include_list:
+        Optional list of fnmatch patterns selecting LGDO paths to include.
+    exclude_list:
+        Optional list of fnmatch patterns selecting LGDO paths to exclude.
+    file_type:
+        Optional override of the file type (auto-deduced from `infile` when
+        not provided). Use values like ``evt``, ``tcm``, ``raw``, ``dsp``,
+        ``hit``, or the generic ``any-evt``/``any-hit``.
+    """
+
     if file_type is None:
         if (match := re.search(r"tier_([a-z0-9]+)\.lh5", infile)) is not None:
             file_type = match.group(1)
