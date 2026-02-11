@@ -650,10 +650,20 @@ def test_query(more_lgnd_files):
     tb_lgdo_mp = lh5_it.query("zacEmax_ctc_cal>200", fields=["timestamp"], processes=3)
     assert tb_lgdo_mp == Table({"timestamp": tb_exp["timestamp"]})
 
-    tb_lgdo = lh5_it.query("zacEmax_ctc_cal>200", fields={"timestamp":None, "zacEmax_ctc_cal":"energy"})
-    assert tb_lgdo == Table({"timestamp": tb_exp["timestamp"], "energy": tb_exp["zacEmax_ctc_cal"]})
-    tb_lgdo_mp = lh5_it.query("zacEmax_ctc_cal>200", fields={"timestamp":None, "zacEmax_ctc_cal":"energy"}, processes=3)
-    assert tb_lgdo_mp == Table({"timestamp": tb_exp["timestamp"], "energy": tb_exp["zacEmax_ctc_cal"]})
+    tb_lgdo = lh5_it.query(
+        "zacEmax_ctc_cal>200", fields={"timestamp": None, "zacEmax_ctc_cal": "energy"}
+    )
+    assert tb_lgdo == Table(
+        {"timestamp": tb_exp["timestamp"], "energy": tb_exp["zacEmax_ctc_cal"]}
+    )
+    tb_lgdo_mp = lh5_it.query(
+        "zacEmax_ctc_cal>200",
+        fields={"timestamp": None, "zacEmax_ctc_cal": "energy"},
+        processes=3,
+    )
+    assert tb_lgdo_mp == Table(
+        {"timestamp": tb_exp["timestamp"], "energy": tb_exp["zacEmax_ctc_cal"]}
+    )
 
     pd_out = lh5_it.query(query_pd)
     assert pd_out.equals(tb_exp.view_as("pd"))
@@ -820,14 +830,14 @@ def test_safe_mode(more_lgnd_files):
     lh5_raw_it = lh5.LH5Iterator(
         more_lgnd_files[0],
         ["ch1084803/raw"],
-        entry_list = [1, 3, 5, 7, 9, 11, 13],
+        entry_list=[1, 3, 5, 7, 9, 11, 13],
         field_mask=["waveform", "baseline"],
         buffer_len=5,
     )
     lh5_it = lh5.LH5Iterator(
         more_lgnd_files[2],
         ["ch1084803/hit"],
-        entry_list = [1, 3, 5, 9, 11, 13],
+        entry_list=[1, 3, 5, 9, 11, 13],
         field_mask=["is_valid_0vbb"],
         buffer_len=5,
         friend=lh5_raw_it,
