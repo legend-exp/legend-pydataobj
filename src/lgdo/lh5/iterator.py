@@ -400,6 +400,8 @@ class LH5Iterator(Iterator):
         """Helper to get cumulative dataset length of file/groups"""
         if i_ds < 0:
             return 0
+        elif i_ds >= len(self.ds_map):
+            return self.ds_map[-1]
         fcl = self.ds_map[i_ds]
 
         # if we haven't already calculated, calculate for all files up to i_ds
@@ -416,6 +418,8 @@ class LH5Iterator(Iterator):
         """Helper to get cumulative iterator entries in file/groups"""
         if i_ds < 0:
             return 0
+        elif i_ds >= len(self.entry_map):
+            return self.entry_map[-1]
         n = self.entry_map[i_ds]
 
         # if we haven't already calculated, calculate for all files up to i_ds
@@ -530,10 +534,10 @@ class LH5Iterator(Iterator):
         for friend in self.friend:
             friend.read(i_entry)
 
-            if self.safe_mode and np.any(self.entry_map[:i_ds+1] != friend.entry_map[:i_ds+1]):
+            if self.safe_mode and self._get_ds_cumentries(i_ds) == friend._get_ds_cumentries(i_ds) and np.any(self.entry_map[:i_ds] != friend.entry_map[:i_ds]):
                 i_diff = np.argmax(self.entry_map[:i_ds] != friend.entry_map[:i_ds])
-                msg = f"with safe_mode = True, require that datasets have same sizes between friends."\
-                f"File {self.lh5_files[i_diff]} group {self.groups[i_diff]} differs from"\
+                msg = f"with safe_mode = True, require that datasets have same sizes between friends. "\
+                f"File {self.lh5_files[i_diff]} group {self.groups[i_diff]} differs from "\
                 f"file {friend.lh5_files[i_diff]} group {friend.groups[i_diff]}."
                 raise RuntimeError(msg)
 
@@ -578,7 +582,7 @@ class LH5Iterator(Iterator):
             raise ValueError(msg)
         
         if self.safe_mode and len(self.lh5_files) != len(friend.lh5_files):
-            msg = f"with safe_mode = True, friend iterator must have same number of datasets."\
+            msg = f"with safe_mode = True, friend iterator must have same number of datasets. "\
             f"Found {len(self.lh5_files)} in self, and {len(friend.lh5_files)} in friend."
             raise RuntimeError(msg)
 
