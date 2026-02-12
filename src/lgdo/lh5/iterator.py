@@ -400,7 +400,7 @@ class LH5Iterator(Iterator):
         """Helper to get cumulative dataset length of file/groups"""
         if i_ds < 0:
             return 0
-        elif i_ds >= len(self.ds_map):
+        if i_ds >= len(self.ds_map):
             return self.ds_map[-1]
         fcl = self.ds_map[i_ds]
 
@@ -418,7 +418,7 @@ class LH5Iterator(Iterator):
         """Helper to get cumulative iterator entries in file/groups"""
         if i_ds < 0:
             return 0
-        elif i_ds >= len(self.entry_map):
+        if i_ds >= len(self.entry_map):
             return self.entry_map[-1]
         n = self.entry_map[i_ds]
 
@@ -534,11 +534,17 @@ class LH5Iterator(Iterator):
         for friend in self.friend:
             friend.read(i_entry)
 
-            if self.safe_mode and self._get_ds_cumentries(i_ds) == friend._get_ds_cumentries(i_ds) and np.any(self.entry_map[:i_ds] != friend.entry_map[:i_ds]):
+            if (
+                self.safe_mode
+                and self._get_ds_cumentries(i_ds) == friend._get_ds_cumentries(i_ds)
+                and np.any(self.entry_map[:i_ds] != friend.entry_map[:i_ds])
+            ):
                 i_diff = np.argmax(self.entry_map[:i_ds] != friend.entry_map[:i_ds])
-                msg = f"with safe_mode = True, require that datasets have same sizes between friends. "\
-                f"File {self.lh5_files[i_diff]} group {self.groups[i_diff]} differs from "\
-                f"file {friend.lh5_files[i_diff]} group {friend.groups[i_diff]}."
+                msg = (
+                    f"with safe_mode = True, require that datasets have same sizes between friends. "
+                    f"File {self.lh5_files[i_diff]} group {self.groups[i_diff]} differs from "
+                    f"file {friend.lh5_files[i_diff]} group {friend.groups[i_diff]}."
+                )
                 raise RuntimeError(msg)
 
         return self.lh5_buffer
@@ -580,10 +586,12 @@ class LH5Iterator(Iterator):
         if not isinstance(friend, LH5Iterator):
             msg = "Friend must be an LH5Iterator"
             raise ValueError(msg)
-        
+
         if self.safe_mode and len(self.lh5_files) != len(friend.lh5_files):
-            msg = f"with safe_mode = True, friend iterator must have same number of datasets. "\
-            f"Found {len(self.lh5_files)} in self, and {len(friend.lh5_files)} in friend."
+            msg = (
+                f"with safe_mode = True, friend iterator must have same number of datasets. "
+                f"Found {len(self.lh5_files)} in self, and {len(friend.lh5_files)} in friend."
+            )
             raise RuntimeError(msg)
 
         # set buffer_lens to be equal
@@ -1301,11 +1309,11 @@ class _table_query:
     def __post_init__(self):
         # turn collection into mapping
         if self.fields is not None and not isinstance(self.fields, Mapping):
-            self.fields = { k:None for k in self.fields }
+            self.fields = dict.fromkeys(self.fields)
 
     def __call__(self, tab, _):
         "Evaluate selection and return selected elements"
-        args = { f: a.view_as('ak', with_units = True) for f, a in tab.items() }
+        args = {f: a.view_as("ak", with_units=True) for f, a in tab.items()}
         if self.fields is not None:
             for k, v in self.fields.items():
                 if v is not None:
@@ -1318,7 +1326,9 @@ class _table_query:
         )
         ret = tab[mask]
         if self.fields is not None:
-            ret = Table( { (k if f is None else f):ret[k] for k, f in self.fields.items() } )
+            ret = Table(
+                {(k if f is None else f): ret[k] for k, f in self.fields.items()}
+            )
 
         if self.library is None:
             return ret
