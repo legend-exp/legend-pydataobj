@@ -2,16 +2,15 @@
 from __future__ import annotations
 
 import sys
+from importlib import metadata
 from pathlib import Path
-
-from pkg_resources import get_distribution
 
 sys.path.insert(0, Path(__file__).parents[2].resolve().as_posix())
 sys.path.append(Path("extensions").resolve().as_posix())
 
 project = "legend-pydataobj"
 copyright = "2023, the LEGEND Collaboration"
-version = get_distribution("legend-pydataobj").version
+version = metadata.version("legend-pydataobj")
 
 extensions = [
     "sphinx.ext.autodoc",
