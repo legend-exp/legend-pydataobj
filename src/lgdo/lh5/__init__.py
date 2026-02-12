@@ -17,6 +17,7 @@ __all__ = [
     "LH5Iterator",
     "LH5Store",
     "concat",
+    "truncate",
     "default_hdf5_settings",
     "ls",
     "read",
