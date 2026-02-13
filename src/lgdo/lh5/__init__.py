@@ -17,7 +17,6 @@ __all__ = [
     "LH5Iterator",
     "LH5Store",
     "concat",
-    "truncate",
     "default_hdf5_settings",
     "ls",
     "read",
@@ -25,5 +24,6 @@ __all__ = [
     "read_n_rows",
     "reset_default_hdf5_settings",
     "show",
+    "truncate",
     "write",
 ]
