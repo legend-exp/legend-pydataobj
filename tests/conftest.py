@@ -26,5 +26,5 @@ def pytest_sessionfinish(session, exitstatus):  # noqa: ARG001
 @pytest.fixture(scope="session")
 def lgnd_test_data():
     ldata = LegendTestData()
-    ldata.checkout("df10dde")
+    ldata.checkout("59f9763")
     return ldata
