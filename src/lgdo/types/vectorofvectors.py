@@ -24,6 +24,39 @@ from .lgdo import LGDOCollection
 log = logging.getLogger(__name__)
 
 
+class _OffsetArrayView(Array):
+    """Array view into offsets[1:] that delegates mutations to the parent offsets."""
+
+    def __init__(self, offsets: Array) -> None:
+        self._parent_offsets = offsets
+        super().__init__(nda=offsets.nda[1:])
+
+    def _refresh_view(self) -> None:
+        self._nda = self._parent_offsets.nda[1:]
+        self._size = len(self._parent_offsets) - 1
+
+    def resize(self, new_size: int, trim: bool = False) -> None:
+        self._parent_offsets.resize(new_size + 1, trim)
+        self._refresh_view()
+
+    def reserve_capacity(self, capacity: int) -> None:
+        self._parent_offsets.reserve_capacity(capacity + 1)
+        self._refresh_view()
+
+    def get_capacity(self) -> int:
+        return self._parent_offsets.get_capacity() - 1
+
+    def trim_capacity(self) -> None:
+        self._parent_offsets.trim_capacity()
+        self._refresh_view()
+
+    def insert(self, i: int, value: Array | np.ndarray) -> None:
+        if isinstance(value, Array):
+            value = value.nda
+        self._parent_offsets.insert(i + 1, value)
+        self._refresh_view()
+
+
 class VectorOfVectors(LGDOCollection):
     """A n-dimensional variable-length 1D array of variable-length 1D arrays.
 
@@ -59,6 +92,8 @@ class VectorOfVectors(LGDOCollection):
         data: ArrayLike | None = None,
         flattened_data: ArrayLike | None = None,
         cumulative_length: ArrayLike | VectorOfVectors | None = None,
+        *,
+        offsets: ArrayLike | None = None,
         shape_guess: Sequence[int, ...] | None = None,
         dtype: DTypeLike | None = None,
         fill_val: int | float | None = None,
@@ -84,6 +119,10 @@ class VectorOfVectors(LGDOCollection):
             `self.cumulative_length`. Should be `dtype` :any:`numpy.uint32`. If
             `cumulative_length` is ``None``, an internal `cumulative_length` is
             allocated based on the first element of `shape_guess`.
+        offsets
+            if not ``None``, used directly as the internal offsets array
+            (PyArrow-compatible format with leading 0). Takes priority over
+            `cumulative_length`. Mutually exclusive with `cumulative_length`.
         shape_guess
             a NumPy-format shape specification, required if either of
             `flattened_data` or `cumulative_length` are not supplied.  The
@@ -100,6 +139,11 @@ class VectorOfVectors(LGDOCollection):
             a set of user attributes to be carried along with this LGDO.
         """
         # sanitize
+        if offsets is not None and cumulative_length is not None:
+            msg = "offsets and cumulative_length are mutually exclusive"
+            raise ValueError(msg)
+        if offsets is not None and not isinstance(offsets, Array):
+            offsets = Array(offsets)
         if cumulative_length is not None and not isinstance(cumulative_length, Array):
             cumulative_length = Array(cumulative_length)
         if flattened_data is not None and not isinstance(
@@ -205,8 +249,11 @@ class VectorOfVectors(LGDOCollection):
             self.flattened_data = None
             self.cumulative_length = None
 
-            # let's first setup cumulative_length...
-            if cumulative_length is None:
+            # let's first setup cumulative_length/offsets...
+            if offsets is not None:
+                # use offsets directly (PyArrow-compatible format)
+                self._offsets = offsets
+            elif cumulative_length is None:
                 # initialize based on shape_guess
                 if shape_guess is None:
                     # just make an empty 2D vector
@@ -271,6 +318,25 @@ class VectorOfVectors(LGDOCollection):
             else self.flattened_data.form_datatype()
         )
         return "array<1>{" + eltype + "}"
+
+    @property
+    def cumulative_length(self) -> Array:
+        """Return an Array view of offsets[1:] for backwards compatibility."""
+        return _OffsetArrayView(self._offsets)
+
+    @cumulative_length.setter
+    def cumulative_length(self, value) -> None:
+        """Set cumulative_length by converting to offsets with leading 0."""
+        if value is None:
+            self._offsets = None
+            return
+        if isinstance(value, Array):
+            value = value.nda
+        value = np.asarray(value)
+        offsets = np.empty(len(value) + 1, dtype=value.dtype)
+        offsets[0] = 0
+        offsets[1:] = value
+        self._offsets = Array(nda=offsets)
 
     def __len__(self) -> int:
         """Return the number of stored vectors along the first axis (0)."""
@@ -713,16 +779,8 @@ class VectorOfVectors(LGDOCollection):
         )
 
         if library == "ak":
-            # see https://github.com/scikit-hep/awkward/discussions/2848
-
-            # cannot avoid making a copy here. we should add the leading 0 to
-            # cumulative_length inside VectorOfVectors at some point in the
-            # future
-            offsets = np.empty(
-                len(self.cumulative_length) + 1, dtype=self.cumulative_length.dtype
-            )
-            offsets[1:] = self.cumulative_length.nda
-            offsets[0] = 0
+            # use internal offsets directly (includes leading 0)
+            offsets = self._offsets.nda
 
             if self.ndim != 2:
                 content = self.flattened_data.view_as(
