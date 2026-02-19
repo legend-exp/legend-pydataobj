@@ -70,6 +70,22 @@ def test_getattr():
     assert struct.scalar1.value == 10
 
 
+def test_getitem():
+    struct = lgdo.Struct(attrs={"test": "Hello, world!"})
+    struct.add_field("scalar1", lgdo.Scalar(value=10))
+    struct.add_field("array1", lgdo.Array(shape=(10), fill_val=0))
+    struct.add_field("scalar2", lgdo.Scalar(value=20))
+
+    assert struct["scalar1"] == lgdo.Scalar(value=10)
+    assert struct[["scalar1", "array1"]] == lgdo.Struct(
+        {
+            "scalar1": lgdo.Scalar(value=10),
+            "array1": lgdo.Array(shape=(10), fill_val=0),
+        },
+        attrs={"test": "Hello, world!"},
+    )
+
+
 def test_remove_field():
     struct = lgdo.Struct()
     struct.add_field("scalar1", lgdo.Scalar(value=10))

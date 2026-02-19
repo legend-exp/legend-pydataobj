@@ -8,7 +8,7 @@ from __future__ import annotations
 import copy
 import logging
 import re
-from collections.abc import Iterable, Iterator, Mapping, MutableMapping
+from collections.abc import Collection, Iterable, Iterator, Mapping, MutableMapping
 from itertools import chain
 from typing import Any
 
@@ -98,14 +98,16 @@ class Struct(LGDO, MutableMapping):
         if name2:
             if not name1:
                 self.add_field(name2, obj)
+            elif name1 not in self:
+                new_obj = type(self)()
+                new_obj.add_field(name2, obj)
+                self.add_field(name1, new_obj)
             else:
-                if name1 not in self:
-                    self.add_field(name1, Struct())
                 self[name1].add_field(name2, obj)
         else:
             if not isinstance(obj, LGDO):
                 if isinstance(obj, Mapping):
-                    obj = Struct(obj)
+                    obj = type(self)(obj)
                 else:
                     msg = f"value of '{name}' ({obj!r}) is not an LGDO or a Mapping"
                     raise ValueError(msg)
@@ -113,13 +115,18 @@ class Struct(LGDO, MutableMapping):
             self.obj_dict[name1] = obj
             self.update_datatype()
 
-    def __getitem__(self, name: str) -> LGDO:
+    def __getitem__(self, name: str | Collection[str]) -> LGDO:
         """Get value associated with field. Name can be nested (e.g. ``name1.name2``
         or ``name1/name2``); this will search in nested Structs
         """
-        name1, name2 = parser.match(name).groups()
-        obj = self.obj_dict[name1] if name1 else self
-        return obj if not name2 else obj[name2]
+        if isinstance(name, str):
+            name1, name2 = parser.match(name).groups()
+            obj = self.obj_dict[name1] if name1 else self
+            return obj if not name2 else obj[name2]
+        return type(self)(
+            {n: self[n] for n in name},
+            attrs={k: v for k, v in self.attrs.items() if k != "datatype"},
+        )
 
     def __setitem__(self, name: str, obj: LGDO) -> None:
         return self.add_field(name, obj)

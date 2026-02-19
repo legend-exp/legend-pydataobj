@@ -101,6 +101,36 @@ def test_datatype_name():
     assert tbl.datatype_name() == "table"
 
 
+def test_getitem():
+    col_dict = {
+        "a": lgdo.Array(nda=np.array([1, 2, 3, 4])),
+        "b": lgdo.Array(nda=np.array([5, 6, 7, 8])),
+        "c": lgdo.Array(nda=np.array([9, 10, 11, 12])),
+    }
+    attrs = {"test": "hello, world!"}
+    tbl = Table(col_dict, attrs=attrs)
+
+    assert tbl["a"] == col_dict["a"]
+    assert tbl[["a", "b"]] == Table(
+        {"a": col_dict["a"], "b": col_dict["b"]},
+        attrs=attrs,
+    )
+    assert tbl[1] == lgdo.Struct({k: lgdo.Scalar(v[1]) for k, v in col_dict.items()})
+    assert tbl[[1, 2]] == Table(
+        {k: lgdo.Array(nda=v.nda[[1, 2]]) for k, v in col_dict.items()},
+        attrs=attrs,
+    )
+    assert tbl[1:3] == Table(
+        {k: lgdo.Array(nda=v.nda[1:3]) for k, v in col_dict.items()},
+        attrs=attrs,
+    )
+    mask = np.array([0, 1, 1, 0], dtype="bool")
+    assert tbl[mask] == Table(
+        {k: lgdo.Array(nda=v.nda[mask]) for k, v in col_dict.items()},
+        attrs=attrs,
+    )
+
+
 def test_resize_and_capacity():
     col_dict = {
         "a": lgdo.Array(nda=np.array([1, 2, 3, 4])),

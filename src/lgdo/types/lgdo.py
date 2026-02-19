@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Collection
 from typing import Any
 
 import awkward as ak
@@ -106,6 +107,17 @@ class LGDOCollection(LGDO):
     @abstractmethod
     def __len__(self) -> int:
         """Provides ``__len__`` for this array-like class."""
+
+    def __getitem__(self, i: int | slice | Collection[int] | Collection[bool]) -> LGDO:
+        """
+        Get value(s) at index(ices) provided by ``i``. If ``i`` is:
+
+        - ``int``: return (non-LGDO) value at index i
+        - ``slice``: return entries with outer-indices described by slice
+        - ``Collection[int]``: return entries with indices contained in ``i``
+        - ``Collection[bool]``: return entries corresponding to values of ``True`` in Collection
+        """
+        # TODO: should int return non-LGDO value?
 
     @abstractmethod
     def reserve_capacity(self, capacity: int) -> None:
