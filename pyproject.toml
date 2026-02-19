@@ -34,9 +34,8 @@ dependencies = [
     "awkward>=2",
     "awkward-pandas",
     "colorlog",
-    "h5py>=3.10",
-    "hdf5plugin",
     "hist",
+    "legend-lh5io",
     "numba!=0.53.*,!=0.54.*",
     "numexpr",
     "numpy>=1.21",
@@ -74,15 +73,11 @@ docs = [
 ]
 test = [
     "pre-commit",
-    "pylegendtestdata",
     "pytest>=6.0",
     "pytest-cov",
-    "dbetto",
+    "h5py",
+    "dbetto"
 ]
-
-[project.scripts]
-lh5ls = "lgdo.cli:lh5ls"
-lh5concat = "lgdo.cli:lh5concat_cli"
 
 [tool.setuptools]
 include-package-data = true
