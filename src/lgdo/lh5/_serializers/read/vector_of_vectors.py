@@ -39,6 +39,28 @@ def _h5_read_vector_of_vectors(
     # read out cumulative_length
     cumulen_buf = None if obj_buf is None else obj_buf.cumulative_length
     h5d_cl = h5py.h5d.open(h5g, b"cumulative_length")
+    if idx is not None:
+        ds_n_rows = h5d_cl.get_space().shape[0]
+        idx = np.asarray(idx)
+        valid_mask = (idx >= 0) & (idx < ds_n_rows)
+        n_invalid = np.count_nonzero(~valid_mask)
+        if n_invalid > 0:
+            log.warning(
+                "Index array for '%s' in file '%s' contains %d out-of-range "
+                "entries (total %d); these indices will be ignored.",
+                oname,
+                fname,
+                n_invalid,
+                idx.size,
+            )
+        idx = idx[valid_mask]
+        if idx.size == 0:
+            log.warning(
+                "All indices for '%s' in file '%s' were out of range; "
+                "resulting selection is empty.",
+                oname,
+                fname,
+            )
     cumulative_length, n_rows_read = _h5_read_array(
         h5d_cl,
         fname,
@@ -63,29 +85,35 @@ def _h5_read_vector_of_vectors(
         # re-read cumulative_length with these indices
         # note this will allocate memory for fd_starts!
         fd_start = None
-        if idx2[0] == -1:
+        if idx2.size > 0 and idx2[0] == -1:
             idx2 = idx2[1:]
             fd_start = 0  # this variable avoids an ndarray append
 
-        fd_starts, _fds_n_rows_read = _h5_read_array(
-            h5d_cl,
-            fname,
-            f"{oname}/cumulative_length",
-            start_row=start_row,
-            n_rows=n_rows,
-            idx=idx2,
-            use_h5idx=use_h5idx,
-            obj_buf=None,
-        )
-        fd_starts = fd_starts.nda  # we just need the nda
-        if fd_start is None:
-            fd_start = fd_starts[0]
+        if idx2.size == 0:
+            fd_starts = np.empty(0, dtype=this_cumulen_nda.dtype)
+        else:
+            fd_starts, _fds_n_rows_read = _h5_read_array(
+                h5d_cl,
+                fname,
+                f"{oname}/cumulative_length",
+                start_row=start_row,
+                n_rows=n_rows,
+                idx=idx2,
+                use_h5idx=use_h5idx,
+                obj_buf=None,
+            )
+            fd_starts = fd_starts.nda  # we just need the nda
+            if fd_start is None:
+                fd_start = fd_starts[0]
 
         # compute the length that flattened_data will have after the
         # fancy-indexed read
-        fd_n_rows = np.sum(this_cumulen_nda[-len(fd_starts) :] - fd_starts)
-        if fd_start == 0:
-            fd_n_rows += this_cumulen_nda[0]
+        if fd_starts.size == 0:
+            fd_n_rows = this_cumulen_nda[0]
+        else:
+            fd_n_rows = np.sum(this_cumulen_nda[-len(fd_starts) :] - fd_starts)
+            if fd_start == 0:
+                fd_n_rows += this_cumulen_nda[0]
 
         # now make fd_idx
         fd_idx = np.empty(fd_n_rows, dtype="int32")
@@ -95,7 +123,8 @@ def _h5_read_vector_of_vectors(
         # to match the in-memory version of flattened_data. Note: these
         # operations on the view change the original array because they are
         # numpy arrays, not lists.
-        this_cumulen_nda[-len(fd_starts) :] -= fd_starts
+        if fd_starts.size > 0:
+            this_cumulen_nda[-len(fd_starts) :] -= fd_starts
         np.cumsum(this_cumulen_nda, out=this_cumulen_nda)
 
     else:
