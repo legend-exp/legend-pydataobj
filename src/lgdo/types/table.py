@@ -126,7 +126,10 @@ class Table(Struct, LGDOCollection):
             # TODO: if Array.__getitem__ is made to return LGDO, this
             # can be done more simply
             if isinstance(v, Array):
-                ret[k] = type(v)(v[i], attrs=v.attrs)
+                ret[k] = type(v)(
+                    nda=v[i],
+                    attrs={k1: v1 for k1, v1 in v.attrs.items() if k1 != "datatype"},
+                )
             else:
                 ret[k] = v[i]
         return ret
