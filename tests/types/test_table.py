@@ -64,6 +64,15 @@ def test_ak_array_init():
             "b": [[1, 2], [3], [4], [5, 6, 7]],
             "c": {"f1": [[], [5], [3, 7, 6], []], "f2": [5, 6, 7, 8]},
             "d": ["boh", "hello", "there", "!"],
+            "e": np.array([[1, 2], [3, 4], [5, 6], [7, 8]]),  # 2D RegularType
+            "f": np.array(
+                [
+                    [[1, 2], [3, 4]],
+                    [[5, 6], [7, 8]],
+                    [[9, 10], [11, 12]],
+                    [[13, 14], [15, 16]],
+                ]
+            ),  # 3D RegularType
         }
     )
     tbl = Table(array)
@@ -72,6 +81,8 @@ def test_ak_array_init():
     assert isinstance(tbl.c, Table)
     assert isinstance(tbl.c.f1, lgdo.VectorOfVectors)
     assert isinstance(tbl.c.f2, lgdo.Array)
+    assert isinstance(tbl.e, lgdo.Array)
+    assert isinstance(tbl.f, lgdo.Array)
 
 
 def test_ak_array_init_attrs():
