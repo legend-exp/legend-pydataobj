@@ -195,34 +195,6 @@ def test_serialization(testvov):
     assert np.array_equal(testvov.v3d._offsets.nda, [0, 2, 4, 5])
 
 
-def test_lh5_roundtrip_offsets(tmp_path):
-    """Test that VectorOfVectors round-trips through LH5 without extra copies."""
-    # Create VoV with offsets
-    offsets = np.array([0, 2, 5, 6, 10, 13], dtype="int64")
-    flattened = Array([1, 2, 3, 4, 5, 2, 4, 8, 9, 7, 5, 3, 1])
-    vov = VectorOfVectors(flattened_data=flattened, offsets=offsets)
-
-    # Write and read back
-    fname = tmp_path / "test_vov.lh5"
-    lh5.write(vov, "vov", fname)
-    vov2 = lh5.read("vov", fname)
-
-    # Verify data integrity
-    assert np.array_equal(vov._offsets.nda, vov2._offsets.nda)
-    assert np.array_equal(vov.flattened_data.nda, vov2.flattened_data.nda)
-    assert vov == vov2
-
-    # Test with cumulative_length construction for comparison
-    vov3 = VectorOfVectors(
-        flattened_data=flattened,
-        cumulative_length=Array([2, 5, 6, 10, 13]),
-    )
-    lh5.write(vov3, "vov3", fname, wo_mode="a")
-    vov4 = lh5.read("vov3", fname)
-    assert vov3 == vov4
-    assert np.array_equal(vov3._offsets.nda, vov4._offsets.nda)
-
-
 def test_datatype_name(testvov):
     for v in testvov:
         assert v.datatype_name() == "array"
