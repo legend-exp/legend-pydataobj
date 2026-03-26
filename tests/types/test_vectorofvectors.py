@@ -106,6 +106,43 @@ def test_init_with_units():
     assert vov.attrs["units"] == "mm"
 
 
+def test_init_with_offsets():
+    # Test creating VectorOfVectors with offsets parameter
+    offsets = np.array([0, 2, 5, 6, 10, 13], dtype="int64")
+    flattened = Array([1, 2, 3, 4, 5, 2, 4, 8, 9, 7, 5, 3, 1])
+    v = VectorOfVectors(flattened_data=flattened, offsets=offsets)
+
+    assert len(v) == 5
+    assert np.array_equal(v._offsets.nda, offsets)
+    assert np.array_equal(v.cumulative_length.nda, offsets[1:])
+    assert np.array_equal(v[0], [1, 2])
+    assert np.array_equal(v[1], [3, 4, 5])
+    assert np.array_equal(v[2], [2])
+    assert np.array_equal(v[3], [4, 8, 9, 7])
+    assert np.array_equal(v[4], [5, 3, 1])
+
+    # Test that offsets dtype is preserved
+    offsets_u32 = np.array([0, 3, 5], dtype="uint32")
+    flattened_u32 = Array([1, 2, 3, 4, 5])
+    v2 = VectorOfVectors(flattened_data=flattened_u32, offsets=offsets_u32)
+    assert v2._offsets.dtype == np.uint32
+    assert v2.cumulative_length.dtype == np.uint32
+
+    # Test that offsets and cumulative_length are mutually exclusive
+    with pytest.raises(ValueError, match="mutually exclusive"):
+        VectorOfVectors(
+            flattened_data=flattened,
+            offsets=offsets,
+            cumulative_length=Array([2, 5, 6, 10, 13]),
+        )
+
+    # Test view_as uses offsets directly
+    v3 = VectorOfVectors([[1, 2], [3, 4, 5]])
+    ak_arr = v3.view_as("ak")
+    assert ak.is_valid(ak_arr)
+    assert ak_arr.tolist() == [[1, 2], [3, 4, 5]]
+
+
 def test_eq(testvov):
     assert testvov.v2d == VectorOfVectors(
         [[1, 2], [3, 4, 5], [2], [4, 8, 9, 7], [5, 3, 1]]
@@ -152,6 +189,10 @@ def test_serialization(testvov):
     assert isinstance(testvov.v4d.flattened_data, VectorOfVectors)
     assert isinstance(testvov.v4d.flattened_data.flattened_data, VectorOfVectors)
     assert isinstance(testvov.v4d.flattened_data.flattened_data, VectorOfVectors)
+
+    # Test that offsets are correctly stored internally
+    assert np.array_equal(testvov.v2d._offsets.nda, [0, 2, 5, 6, 10, 13])
+    assert np.array_equal(testvov.v3d._offsets.nda, [0, 2, 4, 5])
 
 
 def test_datatype_name(testvov):
