@@ -41,14 +41,14 @@ _LETTER_TO_SUB = {c: i for i, c in enumerate(_SUB_SERIAL_LETTERS)}
 # Pre-compiled regex patterns for encoding
 _RE_C00ANG = re.compile(r"C00ANG([0-9])$")
 _RE_C000RG = re.compile(r"C000RG([0-9])$")
-_RE_HPGE = re.compile(r"([CBPV])(\d{5})([A-P])$")
-_RE_SIPM = re.compile(r"S(\d{3})$")
-_RE_PMT = re.compile(r"PMT(\d{3})$")
-_RE_PULS = re.compile(r"PULS(\d{2})(ANA)?$")
-_RE_AUX = re.compile(r"AUX(\d{2})$")
-_RE_DUMMY = re.compile(r"DUMMY(\d{1,2})$")
-_RE_BSLN = re.compile(r"BSLN(\d{2})$")
-_RE_MUON = re.compile(r"MUON(\d{2})$")
+_RE_HPGE = re.compile(r"([CBPV])([0-9]{5})([A-P])$")
+_RE_SIPM = re.compile(r"S([0-9]{3})$")
+_RE_PMT = re.compile(r"PMT([0-9]{3})$")
+_RE_PULS = re.compile(r"PULS([0-9]{2})(ANA)?$")
+_RE_AUX = re.compile(r"AUX([0-9]{2})$")
+_RE_DUMMY = re.compile(r"DUMMY([0-9]{1,2})$")
+_RE_BSLN = re.compile(r"BSLN([0-9]{2})$")
+_RE_MUON = re.compile(r"MUON([0-9]{2})$")
 
 
 def encode_detectorid(det_id: str) -> int:
