@@ -277,7 +277,7 @@ def test_decode_hpge_serial_out_of_range():
 
 def test_decode_sipm_serial_out_of_range():
     with pytest.raises(ValueError):
-        decode_detectorid((_TYPE_S := 0x09) << 24 | (1000 << 4))
+        decode_detectorid(0x09000000 | (1000 << 4))
 
 
 def test_decode_pmt_serial_out_of_range():
