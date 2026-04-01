@@ -49,7 +49,8 @@ class ArrayOfDetectorIDs(Array):
         """
 
         if nda is not None and nda.dtype != np.uint32:
-            raise ValueError("ArrayOfDetectorIDs only supports dtype uint32")
+            msg = "ArrayOfDetectorIDs only supports dtype uint32"
+            raise ValueError(msg)
 
         # Force uint32 behavior in superclass initialization.
         super().__init__(
