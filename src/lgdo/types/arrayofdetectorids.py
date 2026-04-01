@@ -34,7 +34,7 @@ class ArrayOfDetectorIDs(Array):
         nda
             An :class:`numpy.ndarray` or :class:`ak.Array` to be used for this
             object's internal array. If the Awkward array carries a ``units``
-            parameter, it will forwarded as LGDO attribute.
+            parameter, it will be forwarded as LGDO attribute.
         shape
             A numpy-format shape specification for shape of the internal
             ndarray. Required if `nda` is ``None``, otherwise unused.
@@ -48,14 +48,13 @@ class ArrayOfDetectorIDs(Array):
             carried by `nda`).
         """
 
-        if nda is not None and nda.dtype != np.uint32:
-            msg = "ArrayOfDetectorIDs only supports dtype uint32"
-            raise ValueError(msg)
-
         # Force uint32 behavior in superclass initialization.
         super().__init__(
             nda=nda, shape=shape, dtype=np.uint32, fill_val=fill_val, attrs=attrs
         )
+        if self.dtype != np.uint32:
+            msg = "ArrayOfDetectorIDs only supports dtype uint32"
+            raise ValueError(msg)
 
     def form_datatype(self) -> str:
         dt = self.datatype_name()
