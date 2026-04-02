@@ -16,7 +16,6 @@ import pandas as pd
 from numba import jit
 from numpy.typing import ArrayLike, DTypeLike, NDArray
 
-from .. import utils
 from . import arrayofequalsizedarrays as aoesa
 from .array import Array
 from .lgdo import LGDOCollection
@@ -319,12 +318,7 @@ class VectorOfVectors(LGDOCollection):
         return "array"
 
     def form_datatype(self) -> str:
-        eltype = (
-            "array<1>{" + utils.get_element_type(self) + "}"
-            if self.ndim == 2
-            else self.flattened_data.form_datatype()
-        )
-        return "array<1>{" + eltype + "}"
+        return f"array<1>{{{self.flattened_data.form_datatype()}}}"
 
     @property
     def cumulative_length(self) -> Array:

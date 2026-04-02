@@ -13,6 +13,8 @@ basic data object classes are:
   :attr:`nda` attribute.
 * :class:`.FixedSizeArray`: basic :class:`numpy.ndarray`. Access data via the
   :attr:`nda` attribute.
+* :class:`.ArrayOfDetectorIDs`: an array of uint32 values encoding the name of a detector
+  in the LEGEND experiment. Access data via the :attr:`nda` attribute.
 * :class:`.ArrayOfEqualSizedArrays`: multi-dimensional :class:`numpy.ndarray`.
   Access data via the :attr:`nda` attribute.
 * :class:`.VectorOfVectors`: an n-dimensional variable length array of variable
@@ -48,6 +50,7 @@ from ._version import version as __version__
 from .types import (
     LGDO,
     Array,
+    ArrayOfDetectorIDs,
     ArrayOfEncodedEqualSizedArrays,
     ArrayOfEqualSizedArrays,
     FixedSizeArray,
@@ -63,6 +66,7 @@ from .types import (
 __all__ = [
     "LGDO",
     "Array",
+    "ArrayOfDetectorIDs",
     "ArrayOfEncodedEqualSizedArrays",
     "ArrayOfEqualSizedArrays",
     "FixedSizeArray",

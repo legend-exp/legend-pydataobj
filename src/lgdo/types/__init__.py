@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from .array import Array
+from .arrayofdetectorids import ArrayOfDetectorIDs
 from .arrayofequalsizedarrays import ArrayOfEqualSizedArrays
 from .encoded import ArrayOfEncodedEqualSizedArrays, VectorOfEncodedVectors
 from .fixedsizearray import FixedSizeArray
@@ -17,6 +18,7 @@ from .waveformtable import WaveformTable
 __all__ = [
     "LGDO",
     "Array",
+    "ArrayOfDetectorIDs",
     "ArrayOfEncodedEqualSizedArrays",
     "ArrayOfEqualSizedArrays",
     "FixedSizeArray",
