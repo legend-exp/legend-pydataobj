@@ -188,9 +188,9 @@ class VectorOfEncodedVectors(LGDOCollection):
                     vec,
                     prefix=" ",
                     formatter={
-                        "int": lambda x, vec=vec: f"0x{x:02x}"
-                        if vec.dtype == np.ubyte
-                        else str(x)
+                        "int": lambda x, vec=vec: (
+                            f"0x{x:02x}" if vec.dtype == np.ubyte else str(x)
+                        )
                     },
                 )
                 + f" decoded_size = {size}"
@@ -419,9 +419,9 @@ class ArrayOfEncodedEqualSizedArrays(LGDOCollection):
                 vec,
                 prefix=" ",
                 formatter={
-                    "int": lambda x, vec=vec: f"0x{x:02x}"
-                    if vec.dtype == np.ubyte
-                    else str(x)
+                    "int": lambda x, vec=vec: (
+                        f"0x{x:02x}" if vec.dtype == np.ubyte else str(x)
+                    )
                 },
             )
 
