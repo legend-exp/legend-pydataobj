@@ -14,6 +14,7 @@ import awkward_pandas as akpd
 import numpy as np
 import pandas as pd
 import pint_pandas  # noqa: F401
+import pyarrow as pa
 
 from .. import utils
 from ..units import default_units_registry as u
@@ -111,9 +112,8 @@ class Array(LGDOCollection):
         elif isinstance(nda, Array):
             nda = nda.nda
 
-        elif getattr(type(nda), "__module__", "").startswith("pyarrow"):
+        elif isinstance(nda, (pa.Array, pa.ChunkedArray)):
             from .arrow import arrow_to_lgdo
-
             converted = arrow_to_lgdo(nda)
             nda = converted.nda
             if attrs is None:
@@ -327,7 +327,6 @@ class Array(LGDOCollection):
 
         if library == "arrow":
             from .arrow import lgdo_to_arrow
-
             return lgdo_to_arrow(self)
 
         msg = f"{library} is not a supported third-party format."

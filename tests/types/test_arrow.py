@@ -5,14 +5,13 @@ from __future__ import annotations
 import warnings
 
 import numpy as np
+import pyarrow as pa
 import pytest
 from numpy.testing import assert_array_equal
 
-pa = pytest.importorskip("pyarrow")
-
-from lgdo import Array, ArrayOfEqualSizedArrays, Table, VectorOfVectors  # noqa: E402
-from lgdo.types.arrow import arrow_to_lgdo, lgdo_to_arrow  # noqa: E402
-from lgdo.types.waveformtable import WaveformTable  # noqa: E402
+from lgdo import Array, ArrayOfEqualSizedArrays, Table, VectorOfVectors
+from lgdo.types.arrow import arrow_to_lgdo, lgdo_to_arrow
+from lgdo.types.waveformtable import WaveformTable
 
 # ============ Helpers ============
 
