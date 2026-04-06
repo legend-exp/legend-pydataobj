@@ -151,6 +151,18 @@ class VectorOfVectors(LGDOCollection):
         ):
             flattened_data = Array(flattened_data)
 
+        if data is not None and getattr(type(data), "__module__", "").startswith(
+            "pyarrow"
+        ):
+            from .arrow import arrow_to_lgdo
+
+            converted = arrow_to_lgdo(data)
+            data = None
+            flattened_data = converted.flattened_data
+            offsets = converted._offsets
+            if attrs is None and converted.getattrs():
+                attrs = converted.getattrs()
+
         if data is not None:
             if not isinstance(data, ak.Array):
                 data = ak.Array(data)
@@ -848,6 +860,11 @@ class VectorOfVectors(LGDOCollection):
                 raise ValueError(msg)
 
             return akpd.from_awkward(self.view_as("ak"))
+
+        if library == "arrow":
+            from .arrow import lgdo_to_arrow
+
+            return lgdo_to_arrow(self)
 
         msg = f"{library} is not a supported third-party format."
         raise ValueError(msg)

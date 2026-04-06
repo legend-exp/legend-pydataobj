@@ -59,7 +59,10 @@ write_to = "src/lgdo/_version.py"
 
 [project.optional-dependencies]
 all = [
-    "legend-pydataobj[docs,test]",
+    "legend-pydataobj[docs,test,arrow]",
+]
+arrow = [
+    "pyarrow",
 ]
 docs = [
     "furo",
@@ -76,7 +79,8 @@ test = [
     "pytest>=6.0",
     "pytest-cov",
     "h5py",
-    "dbetto"
+    "dbetto",
+    "pyarrow",
 ]
 
 [tool.setuptools]

@@ -89,6 +89,14 @@ class Table(Struct, LGDOCollection):
         if isinstance(col_dict, ak.Array):
             col_dict = _ak_to_lgdo_or_col_dict(col_dict)
 
+        if getattr(type(col_dict), "__module__", "").startswith("pyarrow"):
+            from .arrow import arrow_to_lgdo
+
+            converted = arrow_to_lgdo(col_dict)
+            col_dict = dict(converted.items())
+            if attrs is None and converted.getattrs():
+                attrs = converted.getattrs()
+
         # call Struct constructor
         Struct.__init__(self, obj_dict=col_dict, attrs=attrs)
         # no need to call the LGDOCollection constructor, as we are calling the
@@ -646,6 +654,11 @@ class Table(Struct, LGDOCollection):
             return ak.Array(
                 {col: self[col].view_as("ak", with_units=with_units) for col in cols}
             )
+
+        if library == "arrow":
+            from .arrow import lgdo_to_arrow
+
+            return lgdo_to_arrow(self)
 
         msg = f"{library!r} is not a supported third-party format."
         raise TypeError(msg)

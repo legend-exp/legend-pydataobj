@@ -111,6 +111,14 @@ class Array(LGDOCollection):
         elif isinstance(nda, Array):
             nda = nda.nda
 
+        elif getattr(type(nda), "__module__", "").startswith("pyarrow"):
+            from .arrow import arrow_to_lgdo
+
+            converted = arrow_to_lgdo(nda)
+            nda = converted.nda
+            if attrs is None:
+                attrs = converted.getattrs()
+
         self.nda = nda
 
         super().__init__(attrs)
@@ -316,6 +324,11 @@ class Array(LGDOCollection):
                 ak_arr = ak.with_parameter(ak_arr, "units", self.attrs["units"])
 
             return ak_arr
+
+        if library == "arrow":
+            from .arrow import lgdo_to_arrow
+
+            return lgdo_to_arrow(self)
 
         msg = f"{library} is not a supported third-party format."
         raise ValueError(msg)
