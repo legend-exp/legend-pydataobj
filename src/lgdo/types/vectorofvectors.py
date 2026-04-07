@@ -152,7 +152,11 @@ class VectorOfVectors(LGDOCollection):
         ):
             flattened_data = Array(flattened_data)
 
-        if isinstance(data, (pa.Array, pa.ChunkedArray)):
+        if isinstance(data, pa.ListArray) or (
+            isinstance(data, pa.ChunkedArray)
+            and isinstance(data.type.value_type, pa.DataType)
+            and pa.types.is_list(data.type)
+        ):
             from .arrow import arrow_to_lgdo
 
             converted = arrow_to_lgdo(data)
