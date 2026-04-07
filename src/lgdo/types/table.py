@@ -659,7 +659,10 @@ class Table(Struct, LGDOCollection):
         if library == "arrow":
             from .arrow import lgdo_to_arrow
 
-            return lgdo_to_arrow(self)
+            table = lgdo_to_arrow(self)
+            if list(cols) != list(self.keys()):
+                table = table.select(list(cols))
+            return table
 
         msg = f"{library!r} is not a supported third-party format."
         raise TypeError(msg)
