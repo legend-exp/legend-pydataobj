@@ -279,6 +279,7 @@ class WaveformTable(Table):
         """
         if library == "arrow":
             from .arrow import lgdo_to_arrow
+
             return lgdo_to_arrow(self)
 
         return super().view_as(library, with_units, cols, prefix)

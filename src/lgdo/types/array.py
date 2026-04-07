@@ -114,6 +114,7 @@ class Array(LGDOCollection):
 
         elif isinstance(nda, (pa.Array, pa.ChunkedArray)):
             from .arrow import arrow_to_lgdo
+
             converted = arrow_to_lgdo(nda)
             nda = converted.nda
             if attrs is None:
@@ -327,6 +328,7 @@ class Array(LGDOCollection):
 
         if library == "arrow":
             from .arrow import lgdo_to_arrow
+
             return lgdo_to_arrow(self)
 
         msg = f"{library} is not a supported third-party format."

@@ -204,9 +204,7 @@ def _arrow_col_to_lgdo(col: pa.Array, field: pa.Field | None):
         return Table(col_dict=col_dict, attrs=attrs)
 
     if isinstance(col.type, pa.FixedSizeListType):
-        return ArrayOfEqualSizedArrays(
-            nda=_nested_fixed_list_to_nda(col), attrs=attrs
-        )
+        return ArrayOfEqualSizedArrays(nda=_nested_fixed_list_to_nda(col), attrs=attrs)
 
     if isinstance(col.type, pa.ListType):
         offsets = col.offsets.to_numpy(zero_copy_only=True, writable=False)
@@ -218,9 +216,7 @@ def _arrow_col_to_lgdo(col: pa.Array, field: pa.Field | None):
         else:
             flattened = col.values.to_numpy(zero_copy_only=False, writable=False)
 
-        return VectorOfVectors(
-            flattened_data=flattened, offsets=offsets, attrs=attrs
-        )
+        return VectorOfVectors(flattened_data=flattened, offsets=offsets, attrs=attrs)
 
     return Array(nda=col.to_numpy(zero_copy_only=False, writable=False), attrs=attrs)
 

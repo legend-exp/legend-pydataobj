@@ -92,6 +92,7 @@ class Table(Struct, LGDOCollection):
 
         if isinstance(col_dict, pa.Table):
             from .arrow import arrow_to_lgdo
+
             converted = arrow_to_lgdo(col_dict)
             col_dict = dict(converted.items())
             if attrs is None and converted.getattrs():
@@ -657,6 +658,7 @@ class Table(Struct, LGDOCollection):
 
         if library == "arrow":
             from .arrow import lgdo_to_arrow
+
             return lgdo_to_arrow(self)
 
         msg = f"{library!r} is not a supported third-party format."

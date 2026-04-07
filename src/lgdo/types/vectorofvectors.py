@@ -154,6 +154,7 @@ class VectorOfVectors(LGDOCollection):
 
         if isinstance(data, (pa.Array, pa.ChunkedArray)):
             from .arrow import arrow_to_lgdo
+
             converted = arrow_to_lgdo(data)
             data = None
             flattened_data = converted.flattened_data
@@ -612,6 +613,7 @@ class VectorOfVectors(LGDOCollection):
             else:
                 nan_val = np.nan
             from .vovutils import _nb_fill
+
             self.flattened_data.resize(cum_lens[-1])
             self.cumulative_length.resize(i + len(lens))
 
@@ -860,6 +862,7 @@ class VectorOfVectors(LGDOCollection):
 
         if library == "arrow":
             from .arrow import lgdo_to_arrow
+
             return lgdo_to_arrow(self)
 
         msg = f"{library} is not a supported third-party format."

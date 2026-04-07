@@ -203,9 +203,7 @@ class TestRoundTrip:
 
 class TestAttrsRoundTrip:
     def test_string_attr(self):
-        tbl = Table(
-            col_dict={"x": Array(nda=np.array([1.0]), attrs={"units": "keV"})}
-        )
+        tbl = Table(col_dict={"x": Array(nda=np.array([1.0]), attrs={"units": "keV"})})
         back = arrow_to_lgdo(lgdo_to_arrow(tbl))
         assert back["x"].attrs["units"] == "keV"
 
@@ -222,18 +220,14 @@ class TestAttrsRoundTrip:
 
     def test_bool_attr(self):
         tbl = Table(
-            col_dict={
-                "x": Array(nda=np.array([1.0]), attrs={"calibrated": True})
-            }
+            col_dict={"x": Array(nda=np.array([1.0]), attrs={"calibrated": True})}
         )
         back = arrow_to_lgdo(lgdo_to_arrow(tbl))
         assert back["x"].attrs["calibrated"] is True
 
     def test_dict_attr(self):
         tbl = Table(
-            col_dict={
-                "x": Array(nda=np.array([1.0]), attrs={"info": {"a": 1, "b": 2}})
-            }
+            col_dict={"x": Array(nda=np.array([1.0]), attrs={"info": {"a": 1, "b": 2}})}
         )
         back = arrow_to_lgdo(lgdo_to_arrow(tbl))
         assert back["x"].attrs["info"] == {"a": 1, "b": 2}

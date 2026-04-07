@@ -69,6 +69,7 @@ class ArrayOfEqualSizedArrays(Array):
         """
         if isinstance(nda, (pa.Array, pa.ChunkedArray)):
             from .arrow import arrow_to_lgdo
+
             converted = arrow_to_lgdo(nda)
             nda = converted.nda
             if attrs is None and converted.getattrs():
@@ -156,6 +157,7 @@ class ArrayOfEqualSizedArrays(Array):
         """
         if library == "arrow":
             from .arrow import lgdo_to_arrow
+
             return lgdo_to_arrow(self)
 
         return super().view_as(library, with_units=with_units)
