@@ -73,7 +73,11 @@ def lgdo_to_arrow(obj) -> pa.Table | pa.Array:
     """
     if isinstance(obj, Table) and not isinstance(obj, WaveformTable):
         struct_arr = _lgdo_col_to_arrow(obj)
-        return pa.Table.from_batches([pa.RecordBatch.from_struct_array(struct_arr)])
+        table = pa.Table.from_batches([pa.RecordBatch.from_struct_array(struct_arr)])
+        if obj.attrs:
+            meta = {k: _serialize_attr(v) for k, v in obj.attrs.items()}
+            table = table.replace_schema_metadata(meta)
+        return table
     return _lgdo_col_to_arrow(obj)
 
 
@@ -156,7 +160,12 @@ def arrow_to_lgdo(obj):
                     stacklevel=2,
                 )
             col_dict[name] = _arrow_col_to_lgdo(col.combine_chunks(), field)
-        return Table(col_dict=col_dict)
+        attrs = (
+            {k.decode(): _deserialize_attr(v) for k, v in obj.schema.metadata.items()}
+            if obj.schema.metadata
+            else None
+        )
+        return Table(col_dict=col_dict, attrs=attrs)
 
     if isinstance(obj, pa.ChunkedArray):
         if obj.num_chunks != 1:

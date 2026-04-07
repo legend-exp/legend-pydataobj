@@ -239,6 +239,15 @@ class TestAttrsRoundTrip:
         assert back["wf"]["t0"].attrs["units"] == "us"
         assert back["wf"]["dt"].attrs["units"] == "ns"
 
+    def test_table_level_attrs(self):
+        tbl = Table(
+            col_dict={"x": Array(nda=np.array([1.0]))},
+            attrs={"description": "test table", "version": 42},
+        )
+        back = arrow_to_lgdo(lgdo_to_arrow(tbl))
+        assert back.attrs["description"] == "test table"
+        assert back.attrs["version"] == 42
+
 
 # ============ view_as("arrow") ============
 
