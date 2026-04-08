@@ -13,6 +13,7 @@ import awkward as ak
 import awkward_pandas as akpd
 import numpy as np
 import pandas as pd
+import pyarrow as pa
 from numba import jit
 from numpy.typing import ArrayLike, DTypeLike, NDArray
 
@@ -149,6 +150,20 @@ class VectorOfVectors(LGDOCollection):
             flattened_data, (Array, VectorOfVectors)
         ):
             flattened_data = Array(flattened_data)
+
+        if isinstance(data, pa.ListArray) or (
+            isinstance(data, pa.ChunkedArray)
+            and isinstance(data.type.value_type, pa.DataType)
+            and pa.types.is_list(data.type)
+        ):
+            from .arrow import arrow_to_lgdo
+
+            converted = arrow_to_lgdo(data)
+            data = None
+            flattened_data = converted.flattened_data
+            offsets = converted._offsets
+            if attrs is None and converted.getattrs():
+                attrs = converted.getattrs()
 
         if data is not None:
             if not isinstance(data, ak.Array):
@@ -595,7 +610,7 @@ class VectorOfVectors(LGDOCollection):
                 nan_val = np.iinfo(self.flattened_data.dtype).min
             else:
                 nan_val = np.nan
-            from .vovutils import _nb_fill  # noqa: PLC0415
+            from .vovutils import _nb_fill
 
             self.flattened_data.resize(cum_lens[-1])
             self.cumulative_length.resize(i + len(lens))
@@ -842,6 +857,11 @@ class VectorOfVectors(LGDOCollection):
                 raise ValueError(msg)
 
             return akpd.from_awkward(self.view_as("ak"))
+
+        if library == "arrow":
+            from .arrow import lgdo_to_arrow
+
+            return lgdo_to_arrow(self)
 
         msg = f"{library} is not a supported third-party format."
         raise ValueError(msg)

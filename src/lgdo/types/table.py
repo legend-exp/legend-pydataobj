@@ -15,6 +15,7 @@ import awkward as ak
 import numexpr as ne
 import numpy as np
 import pandas as pd
+import pyarrow as pa
 from pandas.io.formats import format as fmt
 
 import lgdo
@@ -88,6 +89,14 @@ class Table(Struct, LGDOCollection):
 
         if isinstance(col_dict, ak.Array):
             col_dict = _ak_to_lgdo_or_col_dict(col_dict)
+
+        if isinstance(col_dict, pa.Table):
+            from .arrow import arrow_to_lgdo
+
+            converted = arrow_to_lgdo(col_dict)
+            col_dict = dict(converted.items())
+            if attrs is None and converted.getattrs():
+                attrs = converted.getattrs()
 
         # call Struct constructor
         Struct.__init__(self, obj_dict=col_dict, attrs=attrs)
@@ -646,6 +655,14 @@ class Table(Struct, LGDOCollection):
             return ak.Array(
                 {col: self[col].view_as("ak", with_units=with_units) for col in cols}
             )
+
+        if library == "arrow":
+            from .arrow import lgdo_to_arrow
+
+            table = lgdo_to_arrow(self)
+            if list(cols) != list(self.keys()):
+                table = table.select(list(cols))
+            return table
 
         msg = f"{library!r} is not a supported third-party format."
         raise TypeError(msg)

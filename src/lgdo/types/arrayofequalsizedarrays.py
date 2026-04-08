@@ -11,6 +11,7 @@ from typing import Any
 import awkward as ak
 import numpy as np
 import pandas as pd
+import pyarrow as pa
 
 from .. import utils
 from . import vectorofvectors as vov
@@ -66,6 +67,14 @@ class ArrayOfEqualSizedArrays(Array):
         --------
         :class:`.Array`
         """
+        if isinstance(nda, (pa.Array, pa.ChunkedArray)):
+            from .arrow import arrow_to_lgdo
+
+            converted = arrow_to_lgdo(nda)
+            nda = converted.nda
+            if attrs is None and converted.getattrs():
+                attrs = converted.getattrs()
+
         if dims is None:
             # If no dims are provided, assume that it's a 1D Array of (N-1)-D Arrays
             if nda is None:
@@ -146,4 +155,9 @@ class ArrayOfEqualSizedArrays(Array):
         --------
         .LGDO.view_as
         """
+        if library == "arrow":
+            from .arrow import lgdo_to_arrow
+
+            return lgdo_to_arrow(self)
+
         return super().view_as(library, with_units=with_units)

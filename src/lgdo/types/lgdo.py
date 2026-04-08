@@ -58,10 +58,20 @@ class LGDO(ABC):
         - ``pd``: :mod:`pandas`
         - ``np``: :mod:`numpy`
         - ``ak``: :mod:`awkward`
+        - ``arrow``: :mod:`pyarrow`
 
         Note
         ----
         Awkward does not support attaching units through Pint, at the moment.
+
+        Note
+        ----
+        The ``arrow`` format uses zero-copy for numeric arrays. Booleans
+        (bit-packed in Arrow, byte-packed in NumPy) and null-containing columns
+        require allocation. WaveformTable ``t0`` and ``dt`` arrays are copied
+        to ensure writability, as required by
+        :func:`dspeed.build_processing_chain`. All attrs are preserved as
+        JSON-encoded Arrow field metadata.
 
         but the actual supported formats may vary depending on the concrete
         LGDO class.
