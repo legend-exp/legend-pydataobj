@@ -35,7 +35,6 @@ dependencies = [
     "awkward-pandas",
     "colorlog",
     "hist",
-    "legend-lh5io",
     "numba!=0.53.*,!=0.54.*",
     "numexpr",
     "numpy>=1.21",
@@ -71,6 +70,7 @@ docs = [
     "sphinx",
     "sphinx-copybutton",
     "sphinx-inline-tabs",
+    "legend-lh5io",
 ]
 test = [
     "pre-commit",
