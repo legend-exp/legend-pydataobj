@@ -153,7 +153,7 @@ class Table(Struct, LGDOCollection):
             to value; if `Mapping`, set capacity field-by-field.
         """
         if isinstance(capacity, int):
-            for obj in self.values():
+            for obj in super().values():
                 obj.reserve_capacity(capacity)
         else:
             for field, cap in capacity.items():
@@ -165,7 +165,7 @@ class Table(Struct, LGDOCollection):
 
     def trim_capacity(self) -> int:
         "Set capacity for each column to be minimum needed to support size"
-        for v in self.values():
+        for v in super().values():
             v.trim_capacity()
 
     def resize(

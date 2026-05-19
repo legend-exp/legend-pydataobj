@@ -166,7 +166,7 @@ class Array(LGDOCollection):
 
     def trim_capacity(self) -> None:
         "Set capacity to be minimum needed to support Array size"
-        self.reserve_capacity(np.prod(self.shape))
+        self.reserve_capacity(len(self))
 
     def resize(self, new_size: int | Collection[int], trim=False) -> None:
         """Set size of Array in rows. Only change capacity if it must be
