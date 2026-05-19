@@ -336,3 +336,13 @@ class Array(LGDOCollection):
 
         msg = f"{library} is not a supported third-party format."
         raise ValueError(msg)
+
+    def __getstate__(self):
+        """Get state for pickling. Use trimmed array to avoid pickling extra capacity."""
+        return {"attrs": self.attrs, "nda": self.nda}
+
+    def __setstate__(self, state):
+        """Set state for unpickling."""
+        self.attrs = state["attrs"]
+        self._nda = state["nda"]
+        self._size = len(self._nda) if self._nda.shape != () else 0
