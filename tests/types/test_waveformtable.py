@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 import lgdo
 from lgdo import WaveformTable
@@ -120,3 +121,22 @@ def test_init():
     wft = WaveformTable(10, wf_len=20)
     wft.wf_len = 30
     assert wft.wf_len == 30
+
+
+def test_iter_chunks():
+    wft = WaveformTable(size=5, wf_len=10)
+
+    chunks = list(wft.iter_chunks(2))
+    assert len(chunks) == 3
+    assert all(isinstance(c, WaveformTable) for c in chunks)
+    assert len(chunks[0]) == 2
+    assert len(chunks[1]) == 2
+    assert len(chunks[2]) == 1
+
+    # chunk data matches slice
+    chunks = list(wft.iter_chunks(3))
+    assert chunks[0] == wft[0:3]
+    assert chunks[1] == wft[3:5]
+
+    with pytest.raises(ValueError):
+        list(wft.iter_chunks(0))

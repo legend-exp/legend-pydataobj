@@ -646,6 +646,25 @@ def test_bytestrings():
     assert len(ak_arr[0]) == 0
 
 
+def test_iter_chunks():
+    vov = VectorOfVectors([[1, 2], [3, 4, 5], [2], [4, 8, 9, 7], [5, 3, 1]])
+
+    chunks = list(vov.iter_chunks(2))
+    assert len(chunks) == 3
+    assert all(isinstance(c, VectorOfVectors) for c in chunks)
+    assert len(chunks[0]) == 2
+    assert len(chunks[1]) == 2
+    assert len(chunks[2]) == 1
+
+    # chunk data matches corresponding slice
+    chunks = list(vov.iter_chunks(3))
+    assert chunks[0] == vov[0:3]
+    assert chunks[1] == vov[3:5]
+
+    with pytest.raises(ValueError):
+        list(vov.iter_chunks(0))
+
+
 def test_ak_input_validity(testvov):
     for v in testvov:
         assert VectorOfVectors._ak_is_jagged(v) is True

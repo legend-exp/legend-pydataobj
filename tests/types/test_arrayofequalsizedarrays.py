@@ -71,3 +71,21 @@ def test_view():
     v = aoesa.view_as("ak", with_units=True)
     assert isinstance(v, ak.Array)
     assert ak.parameters(v) == {"units": "m"}
+
+
+def test_iter_chunks():
+    aoesa = lgdo.ArrayOfEqualSizedArrays(
+        nda=np.array([[1, 2], [3, 4], [5, 6], [7, 8], [9, 10]])
+    )
+
+    chunks = list(aoesa.iter_chunks(2))
+    assert len(chunks) == 3
+    assert len(chunks[2]) == 1
+
+    # chunk data matches slice (Array.__getitem__ returns numpy)
+    chunks = list(aoesa.iter_chunks(3))
+    assert np.array_equal(chunks[0], aoesa.nda[0:3])
+    assert np.array_equal(chunks[1], aoesa.nda[3:5])
+
+    with pytest.raises(ValueError):
+        list(aoesa.iter_chunks(0))
