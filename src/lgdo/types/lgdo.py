@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Collection
+from collections.abc import Collection, Iterator
 from typing import Any
 
 import awkward as ak
@@ -164,3 +164,22 @@ class LGDOCollection(LGDO):
     def clear(self, trim: bool = False) -> None:
         "set size of LGDOCollection to zero"
         self.resize(0, trim=trim)
+
+    def iter_chunks(self, chunk_size: int) -> Iterator[LGDOCollection]:
+        """Iterate over the collection in chunks.
+
+        Parameters
+        ----------
+        chunk_size
+            number of rows per chunk. Must be positive.
+
+        Yields
+        ------
+        LGDOCollection
+            a view (not a copy) of ``chunk_size`` consecutive rows.
+        """
+        if chunk_size <= 0:
+            msg = "chunk_size must be positive"
+            raise ValueError(msg)
+        for start in range(0, len(self), chunk_size):
+            yield self[start : start + chunk_size]

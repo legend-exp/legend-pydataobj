@@ -381,3 +381,43 @@ def test_confict_resolution():
     assert {"a", "b", "c", "b_tb2", "d_tb2", "e_tb2"} == set(tb1)
     assert all(tb1["b"].nda == np.array([5, 6, 7, 8]))
     assert all(tb1["b_tb2"].nda == np.array([13, 14, 15, 16]))
+
+
+def test_iter_chunks():
+    col_dict = {
+        "a": lgdo.Array(nda=np.array([1, 2, 3, 4, 5])),
+        "b": lgdo.Array(nda=np.array([6, 7, 8, 9, 10])),
+    }
+    tbl = Table(col_dict=col_dict)
+
+    # evenly divisible
+    chunks = list(tbl.iter_chunks(1))
+    assert len(chunks) == 5
+    assert all(isinstance(c, Table) for c in chunks)
+
+    # last chunk is smaller when size doesn't divide evenly
+    chunks = list(tbl.iter_chunks(2))
+    assert len(chunks) == 3
+    assert len(chunks[0]) == 2
+    assert len(chunks[1]) == 2
+    assert len(chunks[2]) == 1
+
+    # chunk data matches corresponding slice
+    chunks = list(tbl.iter_chunks(3))
+    assert chunks[0] == tbl[0:3]
+    assert chunks[1] == tbl[3:5]
+
+    # chunk_size >= len yields a single chunk equal to the whole table
+    (only,) = tbl.iter_chunks(10)
+    assert only == tbl[:]
+
+    # chunks are views, not copies (share memory)
+    (chunk,) = tbl.iter_chunks(5)
+    assert np.shares_memory(chunk["a"].nda, tbl["a"].nda)
+
+    # invalid chunk_size
+    with pytest.raises(ValueError):
+        list(tbl.iter_chunks(0))
+
+    with pytest.raises(ValueError):
+        list(tbl.iter_chunks(-1))

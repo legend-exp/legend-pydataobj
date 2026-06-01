@@ -122,3 +122,25 @@ def test_pickle():
 def test_string_array():
     array = Array(ak.Array(["e", "sticazzi", "non", "ce", "li", "metti?"]))
     assert array.dtype == "<U16"
+
+
+def test_iter_chunks():
+    a = Array(nda=np.array([1, 2, 3, 4, 5]))
+
+    # last chunk is smaller when size doesn't divide evenly
+    chunks = list(a.iter_chunks(2))
+    assert len(chunks) == 3
+    assert len(chunks[0]) == 2
+    assert len(chunks[2]) == 1
+
+    # chunk data matches corresponding slice (Array.__getitem__ returns numpy)
+    chunks = list(a.iter_chunks(3))
+    assert np.array_equal(chunks[0], a.nda[0:3])
+    assert np.array_equal(chunks[1], a.nda[3:5])
+
+    # chunk_size >= len yields one chunk
+    chunks = list(a.iter_chunks(10))
+    assert len(chunks) == 1
+
+    with pytest.raises(ValueError):
+        list(a.iter_chunks(0))
