@@ -165,18 +165,17 @@ class LGDOCollection(LGDO):
         "set size of LGDOCollection to zero"
         self.resize(0, trim=trim)
 
-    def iter_chunks(self, chunk_size: int) -> Iterator[LGDOCollection]:
+    def iter_chunks(self, chunk_size: int) -> Iterator[Any]:
         """Iterate over the collection in chunks.
+
+        Yields ``self[start : start + chunk_size]`` for successive starting
+        positions. The concrete return type and whether each chunk is a view
+        or a copy depends on the subclass's ``__getitem__`` implementation.
 
         Parameters
         ----------
         chunk_size
             number of rows per chunk. Must be positive.
-
-        Yields
-        ------
-        LGDOCollection
-            a view (not a copy) of ``chunk_size`` consecutive rows.
         """
         if chunk_size <= 0:
             msg = "chunk_size must be positive"
