@@ -166,4 +166,4 @@ log_cli_level = "INFO"
 testpaths = "tests"
 
 [tool.codespell]
-ignore-words-list = "nd, unparseable, compiletime, crate"
+ignore-words-list = "nd, unparseable, compiletime, crate, puls"
