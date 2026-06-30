@@ -188,7 +188,7 @@ class Array(LGDOCollection):
 
         if isinstance(new_size, Collection):
             self._size = new_size[0]
-            self._nda.resize(new_size)
+            self._nda.resize(new_size, refcheck=False)
         else:
             self._size = new_size
 

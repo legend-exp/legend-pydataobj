@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pickle
+
 import numpy as np
 
 import lgdo
@@ -120,3 +122,12 @@ def test_init():
     wft = WaveformTable(10, wf_len=20)
     wft.wf_len = 30
     assert wft.wf_len == 30
+
+
+def test_pickle():
+    wft = WaveformTable(size=10, wf_len=1000)
+    wft_pickled = pickle.dumps(wft)
+    wft_unpickled = pickle.loads(wft_pickled)
+    assert (wft.t0.nda == wft_unpickled.t0.nda).all()
+    assert (wft.dt.nda == wft_unpickled.dt.nda).all()
+    assert (wft.values.nda == wft_unpickled.values.nda).all()
