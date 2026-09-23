@@ -11,12 +11,13 @@ from typing import Any
 
 import awkward as ak
 import awkward_pandas as akpd
+import numba
 import numpy as np
 import pandas as pd
 import pyarrow as pa
-from numba import jit
 from numpy.typing import ArrayLike, DTypeLike, NDArray
 
+from ..utils import numba_defaults_kwargs as nb_kwargs
 from . import arrayofequalsizedarrays as aoesa
 from .array import Array
 from .lgdo import LGDOCollection
@@ -867,7 +868,7 @@ class VectorOfVectors(LGDOCollection):
         raise ValueError(msg)
 
 
-@jit
+@numba.njit(**nb_kwargs)
 def _to_aoesa(flattened_array, cumulative_length, nda):
     prev_cl = 0
     for i, cl in enumerate(cumulative_length):
