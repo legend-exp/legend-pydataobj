@@ -207,20 +207,23 @@ class VectorOfVectors(LGDOCollection):
                 and len(data) > 0
             ):
                 diffs = np.diff(container[f"node{data.ndim - 1}-offsets"])
-                if (diffs != diffs[0]).all():
+                if len(diffs) == 0:  # every inner list is empty
+                    flattened_data = np.empty(0, dtype=dtype or "S1")
+                elif (diffs != diffs[0]).any():
                     err_msg = "Non uniform string lengths not supported"
                     raise NotImplementedError(err_msg)
-                flattened_data = np.asarray(
-                    ak.enforce_type(
-                        ak.unflatten(
-                            container.pop(
-                                f"node{data.ndim}-data", np.empty(0, dtype=dtype)
+                else:
+                    flattened_data = np.asarray(
+                        ak.enforce_type(
+                            ak.unflatten(
+                                container.pop(
+                                    f"node{data.ndim}-data", np.empty(0, dtype=dtype)
+                                ),
+                                diffs[0],
                             ),
-                            diffs[0],
-                        ),
-                        "bytes",
+                            "bytes",
+                        )
                     )
-                )
 
                 # if user-provided dtype is different than dtype from Awkward, cast
                 # NOTE: makes a copy only if needed

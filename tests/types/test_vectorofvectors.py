@@ -646,6 +646,25 @@ def test_bytestrings():
     assert len(ak_arr[0]) == 0
 
 
+def test_bytestrings_all_empty_from_ak():
+    # e.g. an evt column of detector names that no event in the file fills
+    ak_arr = ak.Array([[b"V00000A"], []])[1:]
+    ak_arr = ak.concatenate([ak_arr] * 123)
+    v = VectorOfVectors(ak_arr)
+    assert len(v) == 123
+    assert len(v.flattened_data) == 0
+    assert v.flattened_data.dtype.kind == "S"
+    assert ak.all(ak.num(v.view_as("ak", with_units=False)) == 0)
+
+    v = VectorOfVectors(ak_arr, dtype="S7")
+    assert v.flattened_data.dtype == "S7"
+
+
+def test_bytestrings_non_uniform_length_raises():
+    with pytest.raises(NotImplementedError):
+        VectorOfVectors(ak.Array([[b"V00000A", b"B00"], [b"S001"]]))
+
+
 def test_ak_input_validity(testvov):
     for v in testvov:
         assert VectorOfVectors._ak_is_jagged(v) is True
