@@ -47,6 +47,7 @@ browsed easily in python like any `HDF5 <https://www.hdfgroup.org>`_ file using
 from __future__ import annotations
 
 from ._version import version as __version__
+from .detectorid import decode_detectorid, encode_detectorid
 from .types import (
     LGDO,
     Array,
@@ -79,4 +80,6 @@ __all__ = [
     "VectorOfVectors",
     "WaveformTable",
     "__version__",
+    "decode_detectorid",
+    "encode_detectorid",
 ]
