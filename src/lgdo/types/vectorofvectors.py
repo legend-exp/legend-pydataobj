@@ -97,7 +97,7 @@ class VectorOfVectors(LGDOCollection):
         offsets: ArrayLike | None = None,
         shape_guess: Sequence[int, ...] | None = None,
         dtype: DTypeLike | None = None,
-        fill_val: int | float | None = None,
+        fill_val: float | None = None,
         attrs: Mapping[str, Any] | None = None,
     ) -> None:
         """
@@ -714,7 +714,7 @@ class VectorOfVectors(LGDOCollection):
     def to_aoesa(
         self,
         max_len: int | None = None,
-        fill_val: bool | int | float = np.nan,
+        fill_val: bool | float = np.nan,
         preserve_dtype: bool = False,
     ) -> aoesa.ArrayOfEqualSizedArrays:
         """Convert to :class:`ArrayOfEqualSizedArrays`.
@@ -763,7 +763,7 @@ class VectorOfVectors(LGDOCollection):
         self,
         library: str,
         with_units: bool = False,
-        fill_val: bool | int | float = np.nan,
+        fill_val: bool | float = np.nan,
         preserve_dtype: bool = False,
     ) -> pd.DataFrame | np.NDArray | ak.Array:
         r"""View the vector data as a third-party format data structure.

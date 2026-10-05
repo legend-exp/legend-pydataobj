@@ -5,7 +5,7 @@ import sys
 from warnings import warn
 
 try:
-    from lh5.compression import *  # noqa: F403
+    from lh5.compression import *
 except ModuleNotFoundError as e:
     msg = (
         "lgdo.compression has moved to its own package, legend-lh5io. "
