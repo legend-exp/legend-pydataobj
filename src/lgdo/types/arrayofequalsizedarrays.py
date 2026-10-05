@@ -31,7 +31,7 @@ class ArrayOfEqualSizedArrays(Array):
         nda: np.ndarray = None,
         shape: tuple[int, ...] = (),
         dtype: np.dtype = None,
-        fill_val: int | float | None = None,
+        fill_val: float | None = None,
         attrs: dict[str, Any] | None = None,
     ) -> None:
         """

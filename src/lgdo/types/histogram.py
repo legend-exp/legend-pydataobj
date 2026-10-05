@@ -194,10 +194,10 @@ class Histogram(Struct):
     def __init__(
         self,
         weights: hist.Hist | NDArray | Array,
-        binning: None
-        | Iterable[Histogram.Axis]
+        binning: Iterable[Histogram.Axis]
         | Iterable[NDArray]
-        | Iterable[tuple[float, float, float]] = None,
+        | Iterable[tuple[float, float, float]]
+        | None = None,
         isdensity: bool = False,
         attrs: dict[str, Any] | None = None,
         binedge_attrs: dict[str, Any] | None = None,
