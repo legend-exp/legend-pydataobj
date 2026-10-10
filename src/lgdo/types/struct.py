@@ -9,6 +9,7 @@ import copy
 import logging
 import re
 from collections.abc import Collection, Iterable, Iterator, Mapping, MutableMapping
+from contextlib import contextmanager
 from itertools import chain
 from typing import Any
 
@@ -31,6 +32,7 @@ class Struct(LGDO, MutableMapping):
     def __new__(cls, *args, **kwargs) -> Struct:
         obj = super().__new__(cls, *args, **kwargs)
         obj.obj_dict = {}
+        obj._defer_datatype = 0
         return obj
 
     def __init__(
@@ -81,6 +83,26 @@ class Struct(LGDO, MutableMapping):
     def update_datatype(self) -> None:
         self.attrs["datatype"] = self.form_datatype()
 
+    @contextmanager
+    def defer_update_datatype(self) -> None:
+        """Context manager that temporarily prevents :meth:`update_datatype` from
+        automatically running when fields are added or removed until exiting scope.
+        Use this when adding or removing a large number of fields::
+
+            with struct.defer_update_datatype():
+                for k in long_list:
+                    obj = get_obj(k)
+                    struct.add_field(k, obj)
+        """
+        self._defer_datatype += 1
+        try:
+            yield
+        finally:
+            self._defer_datatype -= 1
+
+            if self._defer_datatype == 0:
+                self.update_datatype()
+
     def add_field(self, name: str | int, obj: LGDO | Mapping[str, LGDO]) -> None:
         """Add a field to the table or set an existing field.
 
@@ -113,7 +135,9 @@ class Struct(LGDO, MutableMapping):
                     raise ValueError(msg)
 
             self.obj_dict[name1] = obj
-            self.update_datatype()
+
+            if self._defer_datatype == 0:
+                self.update_datatype()
 
     def __getitem__(self, name: str | Collection[str]) -> LGDO:
         """Get value associated with field. Name can be nested (e.g. ``name1.name2``
@@ -154,13 +178,14 @@ class Struct(LGDO, MutableMapping):
         other
             Struct/Mapping from fields to new values
         """
-        for k, v in chain(
-            other.items() if isinstance(other, Mapping) else other, kwargs.items()
-        ):
-            if isinstance(v, Mapping) and k in self:
-                self[k].update(v)
-            else:
-                self[k] = v
+        with self.defer_update_datatype():
+            for k, v in chain(
+                other.items() if isinstance(other, Mapping) else other, kwargs.items()
+            ):
+                if isinstance(v, Mapping) and k in self:
+                    self[k].update(v)
+                else:
+                    self[k] = v
 
     # Note: in principle these are automatically defined by Mapping; however, they will get the length wrong for Tables
     def keys(self):
@@ -200,7 +225,9 @@ class Struct(LGDO, MutableMapping):
                 del self.obj_dict[name1]
             else:
                 self.pop(name1)
-            self.update_datatype()
+
+            if self._defer_datatype == 0:
+                self.update_datatype()
 
     def __str__(self) -> str:
         """Convert to string (e.g. for printing)."""

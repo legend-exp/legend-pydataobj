@@ -324,11 +324,13 @@ class Table(Struct, LGDOCollection):
             )
         if cols is None:
             cols = other_table.keys()
-        for name in cols:
-            joined_name = f"{prefix}{name}{suffix}"
-            if joined_name in self and keep_mine:
-                continue
-            self.add_column(joined_name, other_table[name])
+
+        with self.defer_update_datatype():
+            for name in cols:
+                joined_name = f"{prefix}{name}{suffix}"
+                if joined_name in self and keep_mine:
+                    continue
+                self.add_column(joined_name, other_table[name])
 
     def get_dataframe(
         self,
@@ -383,11 +385,12 @@ class Table(Struct, LGDOCollection):
         dict_keys(['a', 'tbl__b', 'tbl__tbl1__z'])
         """
         flat_table = Table(size=self.size)
-        for key, obj in self.items():
-            if isinstance(obj, Table):
-                flat_table.join(obj.flatten(_prefix=f"{_prefix}{key}__"))
-            else:
-                flat_table.add_column(_prefix + key, obj)
+        with flat_table.defer_update_datatype():
+            for key, obj in self.items():
+                if isinstance(obj, Table):
+                    flat_table.join(obj.flatten(_prefix=f"{_prefix}{key}__"))
+                else:
+                    flat_table.add_column(_prefix + key, obj)
 
         return flat_table
 
